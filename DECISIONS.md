@@ -259,3 +259,18 @@ makes it fail). It is not part of `pnpm test` because it needs a browser and fre
 ports; CI runs it as a separate job that installs Chromium with `playwright-core
 install` (the sandbox's preinstalled Chromium is used here via `/opt/pw-browsers`
 or `CHROMIUM_PATH`).
+
+### D-040 · Staging topology and a manual deploy · 2026-10-01 · default
+Staging is two new Workers: `studio-api-staging` and `studio-show-tracker-staging`
+(`apps/show-tracker/wrangler.jsonc`, `worker.js`), the second serving `dist/` (built by
+`pnpm --filter @studio/show-tracker stage`) and forwarding `/v1/*` to the first by
+service binding (D-034). Assets use `html_handling: "none"`: the default redirects
+`/expenses.html` to `/expenses`, and a service worker can't replay a redirected
+response for a page navigation, so pages wouldn't open offline (found by running the
+browser tests on this topology). The bare `/` is mapped to `index.html` by the Worker.
+The deploy is `.github/workflows/deploy-staging.yml`, manual only ("Run workflow"):
+it checks the settings exist, runs typecheck and tests, applies migrations, deploys the
+API, creates `SIGNING_KEY` once (never shown), sets `RESEND_API_KEY`, deploys the
+tracker. Owner email and sender are repo *variables* (`OWNER_EMAILS`, `MAIL_FROM`),
+passed at deploy, so no personal address is committed. The live `art-show-tracker`
+is not part of it.

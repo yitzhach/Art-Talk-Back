@@ -1,0 +1,68 @@
+name: Deploy staging
+
+# Manual only: nothing deploys until someone presses "Run workflow".
+# Staging only. The live `art-show-tracker` is never touched from here; replacing
+# it needs Isaac's explicit OK (docs/phase-2.md, "Needs Isaac's OK" #5).
+#
+# Needs, in the repo's Settings -> Secrets and variables -> Actions:
+#   secrets:   CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID, RESEND_API_KEY
+#   variables: OWNER_EMAILS (the owner's email), MAIL_FROM (the sending address, e.g. "Studio <hello@yourdomain>")
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+      OWNER_EMAILS: ${{ vars.OWNER_EMAILS }}
+      MAIL_FROM: ${{ vars.MAIL_FROM }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - name: Check the settings are there
+        run: |
+          missing=""
+          for v in CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID OWNER_EMAILS; do
+            [ -n "${!v}" ] || missing="$missing $v"
+          done
+          if [ -n "$RESEND_API_KEY" ] && [ -z "$MAIL_FROM" ]; then missing="$missing MAIL_FROM"; fi
+          if [ -n "$missing" ]; then echo "::error::Not set:$missing (see the comment at the top of this file)"; exit 1; fi
+          [ -n "$RESEND_API_KEY" ] || echo "::warning::No RESEND_API_KEY: sign-in codes will not be emailed, so nobody can sign in on staging."
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck
+      - run: pnpm test
+
+      - name: Apply database migrations (staging)
+        working-directory: workers/studio-api
+        run: pnpm exec wrangler d1 migrations apply DB --remote --env staging
+
+      - name: Deploy studio-api-staging
+        working-directory: workers/studio-api
+        run: pnpm exec wrangler deploy --env staging --var "OWNER_EMAILS:$OWNER_EMAILS" --var "MAIL_FROM:$MAIL_FROM"
+
+      - name: Secrets (SIGNING_KEY is made once and never shown)
+        working-directory: workers/studio-api
+        run: |
+          if ! pnpm exec wrangler secret list --env staging | grep -q '"SIGNING_KEY"'; then
+            openssl rand -hex 32 | pnpm exec wrangler secret put SIGNING_KEY --env staging
+          fi
+          if [ -n "$RESEND_API_KEY" ]; then
+            printf %s "$RESEND_API_KEY" | pnpm exec wrangler secret put RESEND_API_KEY --env staging
+          fi
+
+      - name: Deploy the Show Tracker (staging)
+        run: |
+          pnpm --filter @studio/show-tracker build
+          pnpm --filter @studio/show-tracker stage
+          cd apps/show-tracker && pnpm exec wrangler deploy --env staging

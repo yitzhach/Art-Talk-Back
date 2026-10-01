@@ -48,3 +48,8 @@ jobs:
       - run: pnpm --filter @studio/show-tracker build
       - run: pnpm --filter @studio/show-tracker exec playwright-core install --with-deps chromium
       - run: pnpm --filter @studio/show-tracker e2e
+      # Again, in the deployed shape: the tracker Worker serving dist/ with studio-api behind a service binding.
+      - run: pnpm --filter @studio/show-tracker stage
+      - run: pnpm --filter @studio/show-tracker e2e
+        env:
+          E2E_WORKER: "1"

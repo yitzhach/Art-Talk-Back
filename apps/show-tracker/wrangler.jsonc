@@ -1,0 +1,24 @@
+// Show Tracker Worker (static app + /v1 forwarding). Serves ./dist, which
+// `pnpm --filter @studio/show-tracker stage` builds.
+//
+// Top level = local dev beside studio-api (see docs/phase-2.md). Staging is a
+// NEW Worker, so the live `art-show-tracker` is untouched. Replacing the live
+// one is a separate step that needs Isaac's explicit OK (it keeps its own
+// name so its saved data, which lives in that address's localStorage, can be
+// imported).
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "studio-show-tracker-dev",
+  "main": "worker.js",
+  "compatibility_date": "2026-08-15",
+  // html_handling "none": serve /expenses.html as itself. The default redirects it to /expenses, and a service
+  // worker can't hand a redirected response to a page navigation, so offline page opens would fail.
+  "assets": { "directory": "dist", "binding": "ASSETS", "run_worker_first": ["/", "/v1/*"], "html_handling": "none", "not_found_handling": "none" },
+  "services": [{ "binding": "API", "service": "studio-api-dev" }],
+  "env": {
+    "staging": {
+      "name": "studio-show-tracker-staging",
+      "services": [{ "binding": "API", "service": "studio-api-staging" }]
+    }
+  }
+}

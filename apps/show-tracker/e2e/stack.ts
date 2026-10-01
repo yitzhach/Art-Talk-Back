@@ -9,6 +9,7 @@ import { type Browser, type BrowserContext, type Page, chromium } from "playwrig
 import { startDevServer } from "../scripts/dev-server.mjs";
 
 const apiDir = new URL("../../../workers/studio-api/", import.meta.url).pathname;
+const trackerDir = new URL("../", import.meta.url).pathname;
 export const OWNER = "owner@example.com"; // wrangler.jsonc's dev OWNER_EMAILS
 const strip = (s: string) => s.replace(/\x1b\[[0-9;]*m/g, "");
 
@@ -28,12 +29,17 @@ export async function startStack(): Promise<Stack> {
 
   execFileSync("pnpm", ["exec", "wrangler", "d1", "migrations", "apply", "DB", "--local", "--persist-to", state], { cwd: apiDir, stdio: "pipe" });
   let log = "";
-  const api: ChildProcess = spawn("pnpm", ["exec", "wrangler", "dev", "--port", String(apiPort), "--persist-to", state], { cwd: apiDir, env: { ...process.env, NO_COLOR: "1" } });
+  // E2E_WORKER=1 runs the deployed topology instead: the tracker Worker (dist/) with studio-api behind a service binding.
+  const asWorker = !!process.env.E2E_WORKER;
+  const args = asWorker
+    ? ["exec", "wrangler", "dev", "-c", `${trackerDir}wrangler.jsonc`, "-c", `${apiDir}wrangler.jsonc`, "--port", String(webPort), "--persist-to", state]
+    : ["exec", "wrangler", "dev", "--port", String(apiPort), "--persist-to", state];
+  const api: ChildProcess = spawn("pnpm", args, { cwd: asWorker ? trackerDir : apiDir, env: { ...process.env, NO_COLOR: "1" } });
   api.stdout?.on("data", (d) => { log += strip(String(d)); });
   api.stderr?.on("data", (d) => { log += strip(String(d)); });
   await until(() => /Ready on/.test(log), 90_000, () => `studio-api did not start:\n${log.slice(-800)}`);
 
-  const web = await startDevServer({ port: webPort, api: `http://localhost:${apiPort}` });
+  const web = asWorker ? { close: async () => {} } : await startDevServer({ port: webPort, api: `http://localhost:${apiPort}` });
 
   const executablePath = process.env.CHROMIUM_PATH ?? (existsSync("/opt/pw-browsers/chromium") ? "/opt/pw-browsers/chromium" : undefined);
   const browser = await chromium.launch({ ...(executablePath ? { executablePath } : {}), args: ["--no-sandbox"] });
@@ -118,3 +124,7 @@ export const nudge = (page: Page) => page.evaluate(() => { window.dispatchEvent(
 
 export async function goOffline(d: Dev) { await d.ctx.setOffline(true); }
 export async function goOnline(d: Dev) { await d.ctx.setOffline(false); await nudge(d.page); }
+
+/** After an edit made offline: wait until the chip admits there is a change waiting to be sent. */
+export const waiting = (d: Dev) =>
+  until(async () => /offline/i.test(await chipText(d.page)) && /waiting/i.test(await chipText(d.page)), 10_000, () => `${d.name}'s chip never showed a change waiting`);

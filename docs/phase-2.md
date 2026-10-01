@@ -47,6 +47,11 @@ Step 5 notes). Step 8 needs the deploy OKs below.
 - **Known gaps:** D-033 (a sale's later price edit / delete doesn't update the show's sold row), D-036 (coarser conflicts on tracker-only fields). The 60-second timer and focus/online triggers are the only things that pull; no push channel.
 - **For step 8:** D-034 (same-origin `/v1` forwarding), real icons, and that `studio-sdk.js` must be built before deploying the tracker.
 
+## Step 8 prep (2026-10-01): built, not deployed
+
+Done without any credentials: tracker Worker + forwarding, `pnpm --filter @studio/show-tracker stage`, manual `Deploy staging` workflow, both staging configs dry-run clean, browser tests green on the deployed shape (D-040). Owner email received (not committed; goes in a repo variable).
+**Still needed from Isaac to run it:** GitHub secrets `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `RESEND_API_KEY`; repo variables `OWNER_EMAILS` (his email) and `MAIL_FROM` (a sending address Resend allows). Then Actions -> "Deploy staging" -> Run workflow.
+
 ## Order of work
 
 1. Migration 0002 + schema + routes for shows, with tests. Nothing else depends on the app.

@@ -2,7 +2,7 @@
 // real tracker pages, one real studio-api. Airplane mode is the browser's own
 // offline switch, and the offline page opens from the service worker's cache.
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { type Dev, type Stack, chipText, goOffline, goOnline, newDevice, nudge, startStack, synced, until } from "./stack";
+import { type Dev, type Stack, chipText, goOffline, goOnline, newDevice, nudge, startStack, synced, until, waiting } from "./stack";
 import { addShow, editShow, logSale, saleRow, showRow, storeShow } from "./ui";
 
 let stack: Stack;
@@ -31,6 +31,15 @@ async function sharedShow(phone: Dev, laptop: Dev, name: string, fields: Record<
   for (const d of [phone, laptop]) await d.page.evaluate(() => navigator.serviceWorker.ready.then(() => true));
   return (await storeShow(phone.page, name)).id as string;
 }
+
+describe("the address", () => {
+  it("the bare address opens the app, and every page opens as itself (no redirects the offline cache can't replay)", async () => {
+    for (const path of ["/", "/index.html", "/expenses.html", "/sw.js", "/manifest.webmanifest"]) {
+      const res = await fetch(`${stack.url}${path}`, { redirect: "manual" });
+      expect({ path, status: res.status }).toEqual({ path, status: 200 });
+    }
+  });
+});
 
 describe("the Phase 2 gate", () => {
   it("airplane mode, log a sale, reconnect: the other device shows it, and show, artwork and activity log agree", async () => {
@@ -75,6 +84,7 @@ describe("conflicts", () => {
     await goOffline(phone); await goOffline(laptop);
     await editShow(phone.page, "Merge Festival", { name: "Merge Festival 2027" });
     await editShow(laptop.page, "Merge Festival", { boothFee: "500" });
+    await waiting(phone); await waiting(laptop);
     await goOnline(laptop); await synced(laptop.page);
     await goOnline(phone); await synced(phone.page);
     await nudge(laptop.page); await synced(laptop.page);
@@ -95,6 +105,7 @@ describe("conflicts", () => {
     await goOffline(phone); await goOffline(laptop);
     await editShow(laptop.page, "Conflict Festival", { boothFee: "500" });
     await editShow(phone.page, "Conflict Festival", { boothFee: "650" });
+    await waiting(phone); await waiting(laptop);
     await goOnline(laptop); await synced(laptop.page);
     await goOnline(phone);
     await until(async () => /1 to review/i.test(await chipText(phone.page)), 20_000, () => "no review card appeared on the phone");

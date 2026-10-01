@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { apiError } from "./index";
+import { apiError } from "./errors";
 
 describe("apiError", () => {
   it("builds the spec's error shape", () => {

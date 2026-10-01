@@ -10,22 +10,28 @@
    read or write studio B's records gets 404 (D-016) and nothing changes.
 6. `pnpm typecheck` and `pnpm test` are green in GitHub Actions.
 
+## Gate status (2026-10-01)
+
+1–5 pass locally: 52 studio-api tests + 9 core tests, and a manual walk-through on `wrangler dev`
+(sign in → create → edit → stale edit 409 → activity → undo). 6 (green in GitHub Actions) is
+checked on the first push of this work.
+
 Not part of the gate: deploying to staging or production (needs Isaac's OK, below).
 
 ## Checklist (from SPEC → Phase 1)
 
 - [x] Monorepo skeleton: `packages/core`, `packages/sdk` (empty stub), `workers/studio-api`, `workers/assistant` (stub); TypeScript strict
-- [ ] Wrangler environments `dev`, `staging`, `production`, each with its own D1 and R2 bindings
-- [ ] CI: typecheck + test on every push; migrate staging + deploy only after Isaac's OK
-- [ ] Port `iaa-invoice-api` auth: email code (sha256, 15 min, 6 tries), sessions (hashed token, D-005), Cloudflare Access for the owner, 204 on code request (D-010)
-- [ ] Apply migration 0001 in local dev; Drizzle schema in `packages/core` written to match it and diffed against drizzle-kit output (D-012)
-- [ ] `defineAction` registry; CRUD actions with version checks, soft delete, activity logging and undo (D-007)
-- [ ] `Idempotency-Key` stored as `op_id`; repeats rebuilt from `activity_log.after` (D-017)
-- [ ] Signed R2 upload and download; keys `studios/<studio_id>/<file_id>-<name>` (D-018)
-- [ ] Tenancy test suite: cross-studio reads and writes fail on every route (404, D-016)
-- [ ] Generated OpenAPI matches `openapi.draft.yaml`; delete the draft (D-013)
-- [ ] ~~List scratch Workers; delete once Isaac confirms~~ — dropped, unused Workers are ignored (D-015)
-- [ ] Rate limits: only the sign-in code limit (D-019)
+- [x] Wrangler environments: `dev` working locally (`wrangler.jsonc`); `staging` / `production` stanzas written with placeholder ids — **filled in after Isaac's OK #1–#3**
+- [x] CI: typecheck + test + OpenAPI-up-to-date on every push (`.github/workflows/ci.yml`); migrate staging + deploy only after Isaac's OK
+- [x] Port `iaa-invoice-api` auth: email code (sha256, 15 min, 6 tries), sessions (hashed token, D-005), Cloudflare Access for the owner, 204 on code request (D-010)
+- [x] Apply migration 0001 in local dev; Drizzle schema in `packages/core` written to match it and diffed against drizzle-kit output (D-012)
+- [x] `defineAction` registry; CRUD actions with version checks, soft delete, activity logging and undo (D-007)
+- [x] `Idempotency-Key` stored as `op_id`; repeats rebuilt from `activity_log.after` (D-017)
+- [x] Signed R2 upload and download; keys `studios/<studio_id>/<file_id>-<name>` (D-018); links signed by studio-api (D-020)
+- [x] Tenancy test suite: cross-studio reads and writes fail on every route (404, D-016)
+- [x] Generated OpenAPI (`docs/openapi.json`) covers every Phase 1 route in the draft; draft trimmed to Phase 2 (D-013 amended)
+- [x] ~~List scratch Workers; delete once Isaac confirms~~ — dropped, unused Workers are ignored (D-015)
+- [x] Rate limits: only the sign-in code limit (D-019)
 
 ## Order of work
 
@@ -54,7 +60,7 @@ Nothing below happens until you say yes. Everything before it runs locally only.
 | 5 | Resend API key + sending domain as Worker secret `RESEND_API_KEY`, `MAIL_FROM` | Real sign-in emails (dev logs codes instead) | Resend free tier: 3,000/mo |
 | 6 | Cloudflare Access app for the owner: `ACCESS_TEAM_DOMAIN`, `ACCESS_AUD` | Owner auto sign-in | Free up to 50 users |
 | 7 | `OWNER_EMAILS` (your email) and the first studio's name/slug | Seed the first studio and owner | — |
-| 8 | R2 API token for signed URLs (`R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`) | Presigned upload/download | Free |
+| ~~8~~ | ~~R2 API token for signed URLs~~ | Not needed: studio-api signs its own file links (D-020). Instead: a `SIGNING_KEY` Worker secret per environment (any long random string) | Free |
 
 Anything that would move to a paid plan is flagged before it's done. Prices are
 as of the free tiers we know; confirm current limits when each piece is created.

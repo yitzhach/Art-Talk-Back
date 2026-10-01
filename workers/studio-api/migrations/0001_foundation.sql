@@ -38,7 +38,7 @@ CREATE TABLE studios (
 
 CREATE TABLE users (
   id            TEXT PRIMARY KEY,
-  email         TEXT NOT NULL UNIQUE COLLATE NOCASE,
+  email         TEXT NOT NULL UNIQUE,              -- stored lowercase (D-021)
   name          TEXT,
   phone         TEXT,
   created_at    TEXT NOT NULL,
@@ -57,7 +57,7 @@ CREATE TABLE clients (
   name          TEXT NOT NULL,
   kind          TEXT NOT NULL DEFAULT 'collector'
                 CHECK (kind IN ('collector','gallery','business','other')),
-  email         TEXT COLLATE NOCASE,
+  email         TEXT,                         -- stored lowercase (D-021)
   phone         TEXT,
   address       TEXT,
   notes         TEXT,
@@ -112,7 +112,7 @@ CREATE INDEX sessions_user ON sessions (user_id);
 CREATE INDEX sessions_expires ON sessions (expires_at);
 
 CREATE TABLE login_codes (
-  email       TEXT PRIMARY KEY COLLATE NOCASE,
+  email       TEXT PRIMARY KEY,                -- stored lowercase (D-021)
   code_hash   TEXT NOT NULL,
   attempts    INTEGER NOT NULL DEFAULT 0,
   expires_at  TEXT NOT NULL,

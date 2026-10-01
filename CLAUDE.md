@@ -38,10 +38,10 @@ entry in `CHANGELOG.md`.
 ## Layout
 
 ```
-docs/                     SPEC.md, phase-N.md plans, cloudflare-inventory.md
+docs/                     SPEC.md, phase-N.md plans, cloudflare-inventory.md, openapi.json (generated)
 packages/core/            Zod schemas, types, defineAction registry      (Phase 1)
 packages/sdk/             API client, IndexedDB, outbox sync, uploads    (Phase 2)
-workers/studio-api/       Hono API; migrations/; openapi.draft.yaml
+workers/studio-api/       Hono API; migrations/; openapi.phase2.draft.yaml
 workers/assistant/        model calls, tools, job Workflows              (Phase 3)
 apps/                     show-tracker first (Phase 2)
 ```

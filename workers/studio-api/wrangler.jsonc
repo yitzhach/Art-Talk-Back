@@ -1,0 +1,51 @@
+// studio-api — Wrangler config.
+// Top level = local dev (`wrangler dev`, tests). Nothing here deploys until Isaac
+// approves the staging/production resources in docs/phase-1.md ("Needs Isaac's OK").
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "studio-api-dev",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-08-15",
+  "compatibility_flags": ["nodejs_compat"],
+  "vars": {
+    "ENVIRONMENT": "dev",
+    "OWNER_EMAILS": "owner@example.com",
+    "STUDIO_NAME": "Dev Studio",
+    "MAIL_FROM": "Studio <onboarding@resend.dev>"
+  },
+  // Local only: wrangler keeps this in .wrangler/state. The id is a placeholder.
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "studio-db-dev",
+      "database_id": "00000000-0000-0000-0000-000000000000",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "r2_buckets": [{ "binding": "FILES", "bucket_name": "studio-files-dev" }],
+
+  // Secrets (set with `wrangler secret put`, or .dev.vars locally — never committed):
+  //   SIGNING_KEY       HMAC key for file links (D-020). Required.
+  //   RESEND_API_KEY    sign-in emails; without it, dev logs the code (D-010).
+  //   ACCESS_TEAM_DOMAIN, ACCESS_AUD   Cloudflare Access owner sign-in (optional).
+
+  "env": {
+    // Needs Isaac's OK (#1–#3): create these resources, then fill in the ids.
+    "staging": {
+      "name": "studio-api-staging",
+      "vars": { "ENVIRONMENT": "staging", "OWNER_EMAILS": "", "STUDIO_NAME": "Isaac Anderson Art", "MAIL_FROM": "" },
+      "d1_databases": [
+        { "binding": "DB", "database_name": "studio-db-staging", "database_id": "TODO-after-isaac-ok", "migrations_dir": "migrations" }
+      ],
+      "r2_buckets": [{ "binding": "FILES", "bucket_name": "studio-files-staging" }]
+    },
+    "production": {
+      "name": "studio-api",
+      "vars": { "ENVIRONMENT": "production", "OWNER_EMAILS": "", "STUDIO_NAME": "Isaac Anderson Art", "MAIL_FROM": "" },
+      "d1_databases": [
+        { "binding": "DB", "database_name": "studio-db-prod", "database_id": "TODO-after-isaac-ok", "migrations_dir": "migrations" }
+      ],
+      "r2_buckets": [{ "binding": "FILES", "bucket_name": "iaa-files" }]
+    }
+  }
+}

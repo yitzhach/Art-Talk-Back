@@ -107,3 +107,42 @@ Per-studio export and delete is one prefix.
 
 ### D-019 · Rate limits deferred to Phase 6 · 2026-10-01 · locked (Isaac)
 Only the sign-in code limit (6 tries per code) ships in Phase 1.
+
+### D-020 · File links are signed by studio-api, not S3 presigned URLs · 2026-10-01 · default
+`upload-url` / `download-url` return short-lived (15 min) links to
+`/v1/files/{id}/content`, HMAC-signed with the `SIGNING_KEY` secret over method,
+file id and expiry; studio-api streams the bytes to and from R2 through its
+binding. Same flow for apps as presigned URLs, works fully in local dev and
+tests, and removes the need for an R2 API token (Needs-OK #8). Limit: uploads
+go through the Worker, so they're capped by its request size (100 MB, matching
+the API's own cap).
+
+### D-021 · Emails are stored lowercase; no COLLATE NOCASE · 2026-10-01 · default
+Drizzle can't express column collations, so a Drizzle-generated migration
+(0002+) could silently drop them. The API lowercases every email instead.
+Migration 0001 was changed before it was applied anywhere.
+
+### D-022 · First studio is created on the owner's first sign-in · 2026-10-01 · default
+An email listed in `OWNER_EMAILS` with no membership gets a studio (named
+`STUDIO_NAME`), an owner membership and default settings, in one batch logged
+as `studio.create`. Sign-in bookkeeping (login codes, sessions, users) isn't
+studio data and isn't written to activity_log.
+
+### D-023 · Role permissions for Phase 1 · 2026-10-01 · default
+Owner: everything. Staff: read and write artworks, clients and files, read
+settings and activity, undo; no deletes, no settings changes. Client role: no
+studio routes until the client portal (Phase 4). Missing permission → 403
+(other-studio records are still 404, D-016).
+
+### D-024 · activity_log stores the API shape · 2026-10-01 · default
+`before` / `after` are the record exactly as the API returns it (camelCase),
+so undo, sync and idempotent repeats replay it without translation.
+
+### D-025 · compatibility_date 2026-08-15 · 2026-10-01 · default
+The newest date the bundled local Workers runtime supports. Bump it with
+Wrangler upgrades.
+
+### D-013 (amended) · 2026-10-01
+Phase 1 routes now come from the code (`docs/openapi.json`, `pnpm openapi`,
+checked in CI). The draft keeps only the Phase 2 routes, as
+`workers/studio-api/openapi.phase2.draft.yaml`, and is deleted once those are built.

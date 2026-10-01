@@ -17,11 +17,13 @@ description: Use for any change to studio-api, packages/core, migrations, or the
 - Every write: validate → permission → write + `activity_log` in one D1 batch.
 - Schema changes only as a new numbered migration; never edit an applied one.
 - Money in integer cents, percentages in basis points, ids are ULIDs.
+- Writes go through `defineAction` + `runAction`; never `env.DB` writes from a route.
 
 ## Done Means
 - `pnpm typecheck` exits 0 (strict TS, every package).
-- `pnpm test` exits 0 (Vitest).
-- (migrate command added when wrangler lands)
+- `pnpm test` exits 0 (Vitest; studio-api runs in the Workers runtime on a fresh local D1).
+- New migration → `pnpm --filter @studio/api db:migrate` applies it locally, and the drift test passes.
+- Route added or changed → `pnpm openapi`, commit `docs/openapi.json`, and cover the route in `test/tenancy.test.ts`.
 
 ## Report
 End every item with:

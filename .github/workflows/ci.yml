@@ -1,0 +1,29 @@
+name: CI
+
+# Typecheck and test on every push. Nothing deploys from here until Isaac
+# approves the staging/production resources (docs/phase-1.md, "Needs Isaac's OK").
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck
+      - run: pnpm test
+      - name: docs/openapi.json matches the code
+        run: |
+          pnpm openapi
+          git diff --exit-code docs/openapi.json

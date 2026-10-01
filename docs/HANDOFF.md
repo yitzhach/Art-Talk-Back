@@ -1,13 +1,27 @@
-# Handoff — 2026-10-01 (updated after steps 5–7)
+# Handoff — 2026-10-01 (updated after step 8 prep)
 
 Read this first in a new session, then `CLAUDE.md`, then `docs/phase-2.md`.
 Work is on branch `claude/laughing-archimedes-y1d3aj`.
+
+## Paste this into a new chat
+
+> Read `docs/HANDOFF.md`, then `CLAUDE.md` and `docs/phase-2.md`. Continue Phase 2 at step 8 using the backend-builder skill. Stop and ask before replacing the live `art-show-tracker`. GitHub secrets/variables added so far: <list what you've added: CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID, RESEND_API_KEY, OWNER_EMAILS, MAIL_FROM, or "none">. The "Deploy staging" workflow has / hasn't been run: <say which, and paste the failed job's log if it failed>.
+
+## To-do list, in order
+
+- [ ] **You (Isaac):** add GitHub **secrets** `CLOUDFLARE_API_TOKEN` (template "Edit Cloudflare Workers" + D1 Edit), `CLOUDFLARE_ACCOUNT_ID`, `RESEND_API_KEY`; and **variables** `OWNER_EMAILS` (your email) and `MAIL_FROM` (a sending address Resend accepts). Repo → Settings → Secrets and variables → Actions.
+- [ ] **You:** Actions → "Deploy staging" → Run workflow. If it fails, paste the log into the new chat.
+- [ ] **Claude:** fix whatever the first real deploy trips on (token scopes, first `wrangler secret put`), re-run until green.
+- [ ] **You + Claude:** the real-phone run on staging (Phase 2 gate item 4): sign in on phone and laptop, add a show, airplane mode, log a sale, reconnect, see it on the other device, press "Import my existing data" only if you want your saved shows moved (that needs the live tracker's address, so do it after the swap below).
+- [ ] **You decide:** replace the live `art-show-tracker` with the new version (same Worker name so your saved data can be imported). Claude won't do it without an explicit yes.
+- [ ] **Claude:** phase-end routine: 3–4 eval tasks for Phase 3, prune CLAUDE.md + the skill (with your OK), write `docs/phase-3.md`. Update `CHANGELOG.md`, tick Phase 2 done.
+- [ ] Optional: real app icons (placeholder now), then Phase 3 (the assistant).
 
 ## Where things stand
 
 - **Phase 0 (decide)** and **Phase 1 (foundation)**: done, gates passed.
 - **Phase 2 (offline sync + Show Tracker)**: steps 1–7 of 8 done. Only step 8 is left, and it needs Isaac.
-  - 119 unit/API tests (`pnpm test`) + 4 browser tests (`pnpm e2e`, CI job `e2e`).
+  - 119 unit/API tests (`pnpm test`) + 5 browser tests (`pnpm e2e`; CI job `e2e` runs them twice, plain and on the deployed Worker shape).
   - Show Tracker lives in `apps/show-tracker/` (snapshot of `yitzhach/art-show-tracker` at d32e9f1). It syncs the artist's **ledger shows and sales** only (D-031, Isaac's choice); everything else stays on the device. `store-studio.js` is the adapter, `studio-ui.js` the sign-in chip / review cards / import button, `sw.js` + `manifest.webmanifest` the PWA.
   - "Import my existing data" is built and tested (step 6, D-038).
 - Nothing is deployed. Cloudflare resources created: D1 `studio-db-staging`, D1 `studio-db-prod`, R2 `studio-files-staging` (ids in `workers/studio-api/wrangler.jsonc`). Production files will use the existing `iaa-files` bucket.

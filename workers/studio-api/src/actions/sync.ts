@@ -9,7 +9,7 @@ import type { Actor, Env } from "../env";
 import { HttpError } from "../lib/errors";
 import { publicFile } from "./files";
 import { type EntityDef, findRecord, getEntity, getRecord } from "./records";
-import { type Snapshot, getAction, runAction } from "./runner";
+import { type ActionDef, type Snapshot, getAction, runAction } from "./runner";
 
 type Op = z.infer<typeof SyncOp>;
 type OpResult = z.infer<typeof SyncOpResult>;
@@ -52,7 +52,8 @@ async function fieldsChangedSince(env: Env, studioId: string, e: EntityDef, id: 
 
 export async function applyOp(env: Env, actor: Actor, origin: string, op: Op): Promise<OpResult> {
   const run = (name: string, input: unknown) =>
-    runAction<Snapshot>(getAction(name)!, input, { env, actor, origin, source: "sync", opId: op.opId });
+    // Every syncable action responds with a record snapshot.
+    runAction<Snapshot>(getAction(name) as ActionDef<z.ZodType, Snapshot>, input, { env, actor, origin, source: "sync", opId: op.opId });
 
   try {
     if (!SYNCABLE.has(op.action) || !getAction(op.action)) {

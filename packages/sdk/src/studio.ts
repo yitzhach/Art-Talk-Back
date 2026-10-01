@@ -239,7 +239,7 @@ export class Studio {
   // --------------------------------------------------------------- events
 
   on<K extends keyof StudioEvents>(event: K, fn: Listener<K>): () => void {
-    const set = (this.listeners[event] ??= new Set()) as Set<Listener<K>>;
+    const set = (this.listeners[event] ??= new Set() as never) as Set<Listener<K>>;
     set.add(fn);
     return () => set.delete(fn);
   }

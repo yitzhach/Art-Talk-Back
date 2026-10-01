@@ -17,6 +17,7 @@ description: Use for any change to studio-api, packages/core, migrations, or the
 - Schema changes only as a new numbered migration; never edit an applied one.
 - Money in integer cents, percentages in basis points, ids are ULIDs.
 - Writes go through `defineAction` + `runAction`; never `env.DB` writes from a route.
+- "Passes" means the exit code is 0 (`cmd; echo $?`). Grepping filtered output for errors isn't a check: `pnpm -s typecheck | grep error` hid real errors in Phase 2.
 
 ## Done Means
 - `pnpm typecheck` exits 0 (strict TS, every package).

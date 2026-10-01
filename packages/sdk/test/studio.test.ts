@@ -156,3 +156,15 @@ describe("two devices edit the same record offline", () => {
     expect((await phone.studio.list("artwork")).map((a) => a.id)).not.toContain(id);
   });
 });
+
+describe("background sync errors", () => {
+  it("a sync that fails for a reason other than being offline (signed out) raises an error event", async () => {
+    const d = device(server);
+    const studio = await Studio.open({ baseUrl: "https://api.test", fetch: d.fetch, dbName: `device-${++n}` });
+    const errors = events(studio, "error");
+    studio.start(60_000);
+    await vi.waitFor(() => expect(errors).toHaveLength(1));
+    expect((errors[0]!.error as { status: number }).status).toBe(401);
+    studio.close();
+  });
+});

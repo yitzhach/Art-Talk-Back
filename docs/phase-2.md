@@ -24,7 +24,7 @@ and a second device shows it. Concretely:
 - [x] `POST /v1/sync/push`: each op runs through its action with `source: "sync"`; `op_id` makes retries safe (D-017); `baseVersion` drives the merge rules
 - [x] `GET /v1/sync/pull?since=<seq>`: current state of every record changed since the cursor, deletions included; cursor = `activity_log.seq`
 - [x] SDK (`packages/sdk`): API client, IndexedDB cache (`idb`), outbox, push/pull on open / focus / reconnect / after each write / every 60 s, conflict cards as events
-- [ ] Show Tracker into `apps/show-tracker/` on the SDK; installable PWA (manifest + service worker for the app shell)
+- [x] Show Tracker into `apps/show-tracker/` on the SDK; installable PWA (manifest + service worker for the app shell) — thin slice: ledger shows + sales (D-031…D-037)
 - [ ] "Import my existing data" from localStorage, once, through sync push
 - [ ] Offline test: automated two-device Playwright test (gate 1–3)
 - [ ] Deploy `studio-api-staging` + Show Tracker staging; real-device run (gate 4)
@@ -32,10 +32,21 @@ and a second device shows it. Concretely:
 
 ## Progress (2026-10-01)
 
-Steps 1–4 done: 97 tests (core 9, SDK 8, studio-api 80). The SDK tests run two
-simulated devices against the real studio-api code and a local D1: offline sale
-reaching the other device, merges, review cards, retry after a lost reply,
-deletes. Steps 5–8 wait on Show Tracker's source (OK #1) and the deploy OKs.
+Steps 1–5 done: 110 tests (core 9, SDK 9, Show Tracker 12 + studio-api 80). The
+SDK and Show Tracker tests run two simulated devices against the real studio-api
+code and a local D1: offline sale reaching the other device, merges, review cards,
+retry after a lost reply, deletes. Step 5 was also run by hand in Chromium (see
+Step 5 notes). Step 6 (import) and 7 (Playwright in CI) need nothing from Isaac;
+step 8 needs the deploy OKs below.
+
+## Step 5 notes (2026-10-01)
+
+- **What syncs:** the ledger's own shows and sales. Everything else (catalogue picks, rankings, applications, expenses, reviews) stays on-device; contacts never leave it (the tracker's own rule). D-031.
+- **How:** `store-studio.js` is a store backend like `store-supabase.js`. The tracker's local store stays the read/write path (so offline just works); every show/sale write is also queued in the SDK's outbox, and pulled changes are written back to the local store. Per-page it's one line (`ASTStudio.onData(...)`) that redraws on pulled changes.
+- **Look:** a small chip bottom-right on every page ("Synced", "Offline · 2 waiting", "Sign in to sync") that opens the email-code sign-in and any "review change" cards. It doesn't exist unless `studio-config.js` has an `apiUrl`.
+- **Verified in Chromium** (local `wrangler dev` + `scripts/dev-server.mjs` on one origin): sign in on two browser contexts, add a show through the real form, go offline, reload from the service worker cache, log a sale on the Money page, reconnect, second device shows it; all seven pages load with no errors in solo and studio mode.
+- **Known gaps:** D-033 (a sale's later price edit / delete doesn't update the show's sold row), D-036 (coarser conflicts on tracker-only fields). The 60-second timer and focus/online triggers are the only things that pull; no push channel.
+- **For step 8:** D-034 (same-origin `/v1` forwarding), real icons, and that `studio-sdk.js` must be built before deploying the tracker.
 
 ## Order of work
 
@@ -54,7 +65,7 @@ Each step: unit tests + one API test before moving on (backend-builder skill).
 
 | # | What | Why | Cost |
 |---|---|---|---|
-| 1 | **Show Tracker's source** (Isaac is getting the files).  Cloudflare dashboard → Workers & Pages → `art-show-tracker` → download, or tell me where the files live | The connector can't read static-asset Workers; step 5 needs the real app | — |
+| ~~1~~ | ~~**Show Tracker's source**~~ **Done:** `github.com/yitzhach/art-show-tracker` (public), copied 2026-10-01. Original ask:  Cloudflare dashboard → Workers & Pages → `art-show-tracker` → download, or tell me where the files live | The connector can't read static-asset Workers; step 5 needs the real app | — |
 | 2 | **Cloudflare API token** as GitHub secrets `CLOUDFLARE_API_TOKEN` (template "Edit Cloudflare Workers", plus D1 Edit) and `CLOUDFLARE_ACCOUNT_ID` | Lets CI apply migrations and deploy. `wrangler deploy` creates the `studio-api-staging` Worker itself; nothing to create by hand | Free |
 | ~~3~~ | ~~Production database~~ | **Done:** `studio-db-prod` created 2026-10-01 (Isaac's choice); `iaa-db` untouched | Free tier |
 | 4 | **Resend** API key and a sending address on your domain | Signing in from a phone needs a real email. Alternative: Cloudflare Access for your own logins | Free tier |

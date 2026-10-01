@@ -23,6 +23,8 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm typecheck
       - run: pnpm test
+      - name: Show Tracker's SDK bundle builds
+        run: pnpm --filter @studio/show-tracker build
       - name: docs/openapi.json matches the code
         run: |
           pnpm openapi

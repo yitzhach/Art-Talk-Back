@@ -33,6 +33,25 @@ importers:
         specifier: ^4.145.0
         version: 4.145.0(@cloudflare/workers-types@5.20261001.1)(@types/node@22.20.4)
 
+  apps/show-tracker:
+    dependencies:
+      '@studio/sdk':
+        specifier: workspace:*
+        version: link:../../packages/sdk
+    devDependencies:
+      esbuild:
+        specifier: ^0.25.0
+        version: 0.25.12
+      fake-indexeddb:
+        specifier: ^6.2.5
+        version: 6.2.5
+      playwright-core:
+        specifier: ^1.63.0
+        version: 1.63.0
+      wrangler:
+        specifier: ^4.145.0
+        version: 4.145.0(@cloudflare/workers-types@5.20261001.1)(@types/node@22.20.4)
+
   packages/core:
     dependencies:
       drizzle-orm:
@@ -1686,6 +1705,11 @@ packages:
     resolution: {integrity: sha512-qcJu88Q2IWqJsDD529JKMdwGm/dvInW4HvQnRwiH9JtihJvzGOscDtHE3x1pBKeUOTysQ8kVmLnJ2kJu7yhcGA==}
     engines: {node: '>=12'}
 
+  playwright-core@1.63.0:
+    resolution: {integrity: sha512-rYCsBF/M5HjUch52bbtVONEFjv6Xu8sm8h72dNlR5bzIE1fvC/bxgspzkjSfU+MweEMmPM8KJebG6nnyxo5mCg==}
+    engines: {node: '>=20'}
+    hasBin: true
+
   postcss@8.5.28:
     resolution: {integrity: sha512-RRuzqDtt5Y9h3quz5hWhK+TPnsmVs6WwSU6LkJMeY4HstUEDuYTG8UJSdawMRzmzAtV+KEoG8N3Qg2qLy5vM/A==}
     engines: {node: ^10 || ^12 || >=14}
@@ -2999,6 +3023,8 @@ snapshots:
   picocolors@1.1.1: {}
 
   picomatch@4.0.7: {}
+
+  playwright-core@1.63.0: {}
 
   postcss@8.5.28:
     dependencies:

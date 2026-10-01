@@ -6,3 +6,4 @@ dist/
 *.log
 .DS_Store
 coverage/
+apps/show-tracker/studio-sdk.js

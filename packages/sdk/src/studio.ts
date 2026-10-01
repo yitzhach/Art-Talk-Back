@@ -23,6 +23,8 @@ export interface StudioEvents {
   change: { types: RecordType[] };
   /** Online/offline as last seen by a sync attempt. */
   status: { online: boolean; pending: number };
+  /** A background sync failed for a reason other than being offline (e.g. the session expired: ApiError 401). */
+  error: { error: unknown };
 }
 
 type Listener<K extends keyof StudioEvents> = (e: StudioEvents[K]) => void;
@@ -133,10 +135,15 @@ export class Studio {
 
   private afterWrite(types: RecordType[]) {
     this.emit("change", { types });
-    if (this.timer) void this.sync();
+    if (this.timer) this.syncQuietly();
   }
 
   // ----------------------------------------------------------------- sync
+
+  /** Background trigger: failures become an `error` event instead of an unhandled rejection. */
+  private syncQuietly() {
+    this.sync().catch((error) => this.emit("error", { error }));
+  }
 
   /** Push the outbox, then pull. Safe to call often: overlapping calls share one run. */
   sync(): Promise<void> {
@@ -214,14 +221,14 @@ export class Studio {
   /** Sync now, then on focus, reconnect, after each write, and every intervalMs. */
   start(intervalMs = 60_000) {
     if (this.timer) return;
-    this.timer = setInterval(() => void this.sync(), intervalMs);
+    this.timer = setInterval(() => this.syncQuietly(), intervalMs);
     const g = globalThis as { addEventListener?: (t: string, f: () => void) => void; removeEventListener?: (t: string, f: () => void) => void; document?: { visibilityState?: string } };
     const kick = () => {
-      if (g.document?.visibilityState !== "hidden") void this.sync();
+      if (g.document?.visibilityState !== "hidden") this.syncQuietly();
     };
     for (const t of ["online", "focus", "visibilitychange"]) g.addEventListener?.(t, kick);
     this.detach = () => { for (const t of ["online", "focus", "visibilitychange"]) g.removeEventListener?.(t, kick); };
-    void this.sync();
+    this.syncQuietly();
   }
 
   stop() {

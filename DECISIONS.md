@@ -177,3 +177,60 @@ client, show, time); at a show it also updates `show_artworks`. Phase 4's
 ### D-030 · Production database is a new `studio-db-prod` · 2026-10-01 · locked (Isaac)
 Created in eastern North America. The empty legacy `iaa-db` stays untouched.
 Production files use the existing `iaa-files` bucket.
+
+### D-031 · Show Tracker joins the platform as a thin slice · 2026-10-01 · locked (Isaac)
+The tracker's data model (catalogue, fit scores, applications, expenses, sales,
+contacts…) is far bigger than the platform's shows + artworks. Phase 2 syncs only
+the artist's own ledger shows and their sales. Everything else stays on the
+device exactly as before; contacts stay device-only by the tracker's own rule.
+Moving the rest onto the platform is later-phase work. The tracker's `Store`
+already takes a swappable backend, so this is one new adapter
+(`apps/show-tracker/store-studio.js`) beside `store-supabase.js`; no screen changed.
+
+### D-032 · How a tracker record maps onto a platform record · 2026-10-01 · default
+The platform's columns are the shared truth: show name, city, dates, fee
+(dollars ↔ integer cents), status and notes. Everything the platform has no
+column for (rating, hidden, lat/lng, jury fee…) rides in `meta.tracker`, the
+tracker's own id in `meta.trackerId`, so a second device rebuilds the same show
+with the same id. Status: interested→planned, waitlist→applied (+`meta.tracker.waitlist`),
+not_applying→cancelled; the other way, done→accepted. Text over a platform limit
+keeps its full copy in `meta.tracker.full`. A show with no name isn't mirrored yet.
+
+### D-033 · A sale is one artwork, and its limits · 2026-10-01 · default
+Until Phase 4's transactions table, a tracker sale is one platform artwork
+(`meta.trackerSale` holds the rest), `artwork.mark_sold` with the show's id when
+priced (D-029). An unpriced sale is created already sold, because `mark_sold`
+needs a price and an unpriced sale is null, never $0. Known gap: editing a
+synced sale's price updates the artwork and `meta.sale`, but the show's sold
+row (`show_artworks.soldPriceCents`) keeps the old figure, and deleting a sale
+leaves that row behind. The tracker's own numbers are right; Phase 4 replaces
+this with a proper sale record. Verified in a probe on 2026-10-01.
+
+### D-034 · The app talks to the API on its own origin · 2026-10-01 · default
+The session cookie is SameSite=Lax and studio-api sends no CORS headers, so a
+page on another origin can't sign in. The tracker therefore calls `/v1/*` on its
+own origin and something forwards that to studio-api (`apps/show-tracker/scripts/dev-server.mjs`
+locally). In production the existing `art-show-tracker` Worker (same name, so
+its localStorage import still works) gets a small script that forwards `/v1/*`
+to `studio-api` through a service binding. To be set up in step 8, not before
+Isaac's OK to replace the live tracker.
+
+### D-035 · Offline app shell: network first · 2026-10-01 · default
+`sw.js` serves the live file when online and the cached copy only when the
+network fails, so "is the page stale?" (the tracker's long-standing trap) can't
+come back. It never caches `/v1/*`: data lives in IndexedDB via the SDK.
+Leaflet and the fonts are cached as they're first used. Placeholder icons until
+Isaac supplies real artwork (`scripts/icons.mjs`).
+
+### D-036 · Conflicts on tracker-only fields are coarser · 2026-10-01 · default
+The server merges field by field, but `meta` is one field. Two devices editing
+different columns (name vs. fee) merge cleanly; two devices editing different
+tracker-only fields (rating vs. jury fee) offline get a "review change" card
+for `meta`, and the server's copy stays until the artist picks "Use mine".
+Rare for one artist; revisit if it isn't.
+
+### D-037 · The SDK reaches the browser as a built bundle · 2026-10-01 · default
+`pnpm --filter @studio/show-tracker build` bundles `@studio/sdk` (esbuild, one
+classic script, global `StudioSDK`, ~500 KB, mostly zod) into `studio-sdk.js`.
+It's built, not committed. The tracker's own files stay classic scripts with no
+build, and pages work without the bundle (solo mode).

@@ -31,3 +31,6 @@
 - `POST /v1/sync/push` (op ids, merge rules D-028) and `GET /v1/sync/pull` (cursor = activity_log seq, deletions included). The OpenAPI draft is now fully built and deleted (D-013).
 - `@studio/sdk`: `Studio` (IndexedDB cache, outbox, push-then-pull sync, review-card and status events), `ApiClient`. Tested with two simulated devices against the real API and a local D1.
 - Fix: three type errors that reached CI in steps 3–4 (local checks had filtered them out); skill now requires exit codes.
+- Show Tracker (snapshot of `art-show-tracker` d32e9f1) in `apps/show-tracker/`, now syncing its shows and sales through the SDK: `store-studio.js` adapter, sign-in chip + "review change" cards (`studio-ui.js`), installable PWA (manifest, offline service worker, placeholder icons). Solo mode unchanged: no chip unless `studio-config.js` sets an `apiUrl`. All nine of the tracker's own test suites still pass on it.
+- SDK: background sync failures now raise an `error` event instead of an unhandled rejection.
+- 13 new tests: the tracker's real scripts on two simulated devices against the real API (gate flow, merges, review cards, deletes, demo-season handling, nothing-lost round trips). Decisions D-031…D-037.

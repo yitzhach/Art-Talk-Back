@@ -1,0 +1,516 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#2f5d4f">
+<!-- Theme, before first paint. Everything else about the theme lives in
+     core.js, but Theme.init() runs after the body has already been painted
+     with the light :root defaults — which flashes white on every navigation
+     for anyone in dark mode. This is the same read, done early enough to
+     matter, and core.js re-applying the same value later is a no-op. Inline
+     on purpose: an external file is a round trip, and a round trip is the
+     flash. -->
+<script>
+(function () {
+  try {
+    var t = localStorage.getItem('artShowTracker.theme');
+    if (t !== 'dark' && t !== 'light') {
+      t = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
+        ? 'dark' : 'light';
+    }
+    document.documentElement.setAttribute('data-theme', t);
+  } catch (_) {
+    /* Private mode or blocked storage. Falling through leaves the CSS
+       defaults in charge, which is exactly what happened before. */
+  }
+})();
+</script>
+<title>Collectors — Show Ledger</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;600&display=swap">
+<link rel="stylesheet" href="app.css?v=5cc94564">
+<link rel="stylesheet" href="intel.css?v=5cc94564">
+</head>
+<body>
+<header class="app-header">
+  <div class="brand">
+    <h1>Collectors</h1>
+    <span class="sub">Who you met, who to follow up, and how the show went</span>
+  </div>
+  <div class="header-actions">
+    <a class="btn btn-quiet" href="index.html">&larr; Back to ledger</a>
+    <button class="btn btn-icon" id="btnTheme" type="button" aria-label="Switch theme" title="Switch theme">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.3"
+           stroke-linecap="round" id="iconSun">
+        <circle cx="10" cy="10" r="3.6"/>
+        <path d="M10 1.6v2.2M10 16.2v2.2M2.6 10H4.8M15.2 10h2.2M4.8 4.8l1.6 1.6M13.6 13.6l1.6 1.6M15.2 4.8l-1.6 1.6M6.4 13.6l-1.6 1.6"/>
+      </svg>
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.3"
+           stroke-linecap="round" stroke-linejoin="round" id="iconMoon" hidden>
+        <path d="M16.5 11.8A6.9 6.9 0 0 1 8.2 3.5a6.9 6.9 0 1 0 8.3 8.3z"/>
+      </svg>
+    </button>
+  </div>
+</header>
+
+<!-- §7 Stage 4 (ideas 20 and 22). Contacts are other people's details: they
+     stay on this device, are never synced, and leave only through the CSV
+     export, which drops anyone who said no. Nothing on this page sends
+     anything to anybody. -->
+<div class="exp-toolbar">
+  <div class="exp-field">
+    <label class="label" for="ctShow">Show</label>
+    <select class="control" id="ctShow"></select>
+  </div>
+  <button class="btn btn-primary" id="ctAdd" type="button">Add contact</button>
+  <span class="spacer"></span>
+  <button class="btn-mini" id="ctCsv" type="button">Export CSV</button>
+</div>
+
+<p class="hint ct-privacy" id="ctPrivacy">Stored on this device only. Contacts are
+  never synced, even when you are signed in &mdash; they are other people&rsquo;s
+  details. The export leaves out anyone marked &ldquo;do not contact&rdquo;.</p>
+
+<div class="exp-page">
+  <main class="exp-main">
+    <section class="panel">
+      <div class="panel-head">
+        <h2>Contacts</h2>
+        <span class="hint" id="ctCount"></span>
+      </div>
+      <div id="ctList"></div>
+      <p class="hint" id="ctEmpty" hidden>
+        Nobody yet. Add the people who stopped, asked, or bought &mdash; with what
+        they looked at, so the follow-up has something to say.
+      </p>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head">
+        <h2>Post-show debrief</h2>
+        <span class="hint">Ninety seconds, while you still remember</span>
+      </div>
+      <div id="dbAwaiting"></div>
+      <div id="dbDone"></div>
+    </section>
+  </main>
+
+  <aside class="rail">
+    <section class="panel">
+      <div class="panel-head"><h2>Follow up</h2></div>
+      <p class="hint" id="fuChannel"></p>
+      <div id="fuDue"></div>
+      <div id="fuUpcoming"></div>
+      <p class="hint" id="fuWithheld" hidden></p>
+    </section>
+
+    <section class="panel">
+      <h2>Who you met</h2>
+      <div class="stat-grid" id="ctStats"></div>
+    </section>
+  </aside>
+</div>
+
+<div class="overlay" id="ctOverlay" hidden></div>
+
+<section class="modal" id="ctModal" role="dialog" aria-modal="true" aria-labelledby="ctTitle" hidden>
+  <div class="modal-card">
+    <div class="modal-head">
+      <h2 id="ctTitle">Add contact</h2>
+      <button class="btn btn-icon" id="ctClose" type="button" aria-label="Close"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"><path d="M5 5l10 10M15 5L5 15"/></svg></button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row">
+        <label class="label" for="ctName">Name</label>
+        <input class="control" id="ctName" autocomplete="off">
+      </div>
+      <div class="grid-2">
+        <div class="form-row">
+          <label class="label" for="ctEmail">Email</label>
+          <input class="control" id="ctEmail" type="email" autocomplete="off">
+          <div class="hint" id="ctEmailWarn" hidden>That does not look like an email address.</div>
+        </div>
+        <div class="form-row">
+          <label class="label" for="ctPhone">Phone</label>
+          <input class="control" id="ctPhone" type="tel" autocomplete="off">
+        </div>
+      </div>
+      <div class="grid-2">
+        <div class="form-row">
+          <label class="label" for="ctShowPick">Where you met</label>
+          <select class="control" id="ctShowPick"></select>
+        </div>
+        <div class="form-row">
+          <label class="label" for="ctMetOn">On</label>
+          <input class="control" id="ctMetOn" type="date">
+        </div>
+      </div>
+      <div class="form-row">
+        <label class="label" for="ctInterest">What they looked at</label>
+        <input class="control" id="ctInterest" autocomplete="off" placeholder="e.g. the large blue harbour piece">
+      </div>
+      <div class="grid-2">
+        <div class="form-row">
+          <label class="label" for="ctOutcome">What happened</label>
+          <select class="control" id="ctOutcome"></select>
+        </div>
+        <div class="form-row">
+          <label class="label" for="ctConsent">May you contact them?</label>
+          <select class="control" id="ctConsent"></select>
+        </div>
+      </div>
+      <div class="form-row" id="ctSalesRow" hidden>
+        <span class="label">What they bought</span>
+        <div id="ctSales"></div>
+        <div class="hint">Links to sale rows on the Money page. The sale row stays the one record of the money.</div>
+      </div>
+      <div class="grid-2">
+        <div class="form-row">
+          <label class="label" for="ctFollow">Follow up on</label>
+          <input class="control" id="ctFollow" type="date">
+          <div class="hint">A reminder for you. Nothing is sent.</div>
+        </div>
+        <div class="form-row">
+          <label class="label" for="ctDone">Followed up on</label>
+          <input class="control" id="ctDone" type="date">
+        </div>
+      </div>
+      <div class="form-row">
+        <label class="label" for="ctNotes">Notes</label>
+        <textarea class="control" id="ctNotes"></textarea>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-primary" id="ctSave" type="button">Save</button>
+      <button class="btn btn-quiet" id="ctCancel" type="button">Cancel</button>
+      <span class="spacer"></span>
+      <button class="btn btn-quiet btn-danger" id="ctDelete" type="button" hidden>Delete</button>
+    </div>
+  </div>
+</section>
+
+<section class="modal" id="dbModal" role="dialog" aria-modal="true" aria-labelledby="dbTitle" hidden>
+  <div class="modal-card">
+    <div class="modal-head">
+      <h2 id="dbTitle">Debrief</h2>
+      <button class="btn btn-icon" id="dbClose" type="button" aria-label="Close"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"><path d="M5 5l10 10M15 5L5 15"/></svg></button>
+    </div>
+    <div class="modal-body">
+      <p class="hint">Every answer is optional. A skipped one stays blank &mdash; it
+        is never counted as a middling score. 10 is always good for you. Private:
+        this never leaves the device.</p>
+      <div class="grid-2" id="dbScores"></div>
+      <div class="form-row">
+        <label class="label" for="dbAgain">Would you do it again?</label>
+        <select class="control" id="dbAgain"></select>
+      </div>
+      <div class="form-row">
+        <label class="label" for="dbSold">What sold</label>
+        <input class="control" id="dbSold" autocomplete="off">
+      </div>
+      <div class="form-row">
+        <label class="label" for="dbStuck">What did not</label>
+        <input class="control" id="dbStuck" autocomplete="off">
+      </div>
+      <div class="form-row">
+        <label class="label" for="dbNext">Next time I would</label>
+        <input class="control" id="dbNext" autocomplete="off">
+      </div>
+      <div class="form-row">
+        <span class="label">Your P&amp;L for this show</span>
+        <div id="dbPnl"></div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-primary" id="dbSave" type="button">Save</button>
+      <button class="btn btn-quiet" id="dbCancel" type="button">Cancel</button>
+    </div>
+  </div>
+</section>
+
+<p class="exp-foot" id="buildStamp"></p>
+
+<script src="core.js?v=5cc94564"></script>
+<script src="studio-sdk.js"></script>
+<script src="studio-config.js"></script>
+<script src="store-studio.js"></script>
+<script src="studio-ui.js"></script>
+<script src="pwa.js"></script>
+<script src="nav.js?v=5cc94564"></script>
+<script src="version.js?v=5cc94564"></script>
+<script src="expenses.js?v=5cc94564"></script>
+<script src="sales.js?v=5cc94564"></script>
+<script src="contacts.js?v=5cc94564"></script>
+<script>
+(function () {
+'use strict';
+var A = window.AST, K = window.ASTContacts, S = window.ASTSales;
+var Store = A.Store, esc = A.esc, fmtDay = A.fmtDay;
+var $ = function (sel) { return document.querySelector(sel); };
+A.Theme.init($('#btnTheme'));
+
+var state = { contacts: [], debriefs: [], shows: [], sales: [], expenses: [],
+              showId: '', editingId: null, debriefShowId: null };
+var money = function (n) { return n == null ? '\u2014' : '$' + Math.round(n).toLocaleString(); };
+var opts = function (list, sel) {
+  return list.map(function (o) {
+    return '<option value="' + esc(o.value) + '"' + (o.value === sel ? ' selected' : '') + '>' +
+      esc(o.label) + '</option>';
+  }).join('');
+};
+function showName(id) {
+  var s = state.shows.filter(function (x) { return x.id === id; })[0];
+  return s ? s.name : '';
+}
+
+function refresh() {
+  return Promise.all([Store.listContacts(), Store.listDebriefs(), Store.list(),
+                      Store.listSales(), Store.listExpenses()])
+    .then(function (r) {
+      state.contacts = r[0]; state.debriefs = r[1]; state.shows = r[2];
+      state.sales = r[3]; state.expenses = r[4];
+      render();
+    });
+}
+
+function filtered() {
+  return state.contacts.filter(function (c) { return !state.showId || c.showId === state.showId; });
+}
+
+function render() {
+  var keep = state.showId;
+  $('#ctShow').innerHTML = '<option value="">All shows</option>' +
+    state.shows.map(function (s) {
+      return '<option value="' + esc(s.id) + '">' + esc(s.name) + '</option>';
+    }).join('');
+  $('#ctShow').value = keep;
+
+  var rows = filtered().slice().sort(function (a, b) {
+    return (b.metOn || '').localeCompare(a.metOn || '') || a.name.localeCompare(b.name);
+  });
+  $('#ctCount').textContent = rows.length + (rows.length === 1 ? ' person' : ' people');
+  $('#ctEmpty').hidden = rows.length > 0;
+  $('#ctList').innerHTML = rows.map(function (c) {
+    var p = K.purchases(c, state.sales);
+    var sub = [
+      showName(c.showId) || 'no show',
+      c.metOn ? fmtDay(c.metOn) : '',
+      c.interest,
+      c.outcome ? A.CONTACT_OUTCOME_LABEL[c.outcome] : 'outcome not recorded',
+      c.consent === 'no' ? 'do not contact' : c.consent === 'yes' ? 'may contact' : 'did not ask'
+    ].filter(Boolean).join(' \u00b7 ');
+    var amt = p.rows.length
+      ? money(p.sum && p.sum.amount) + (p.sum && !p.sum.complete ? ' <span class="exp-unknown">partial</span>' : '')
+      : '';
+    return '<div class="exp-row ct-row" data-id="' + esc(c.id) + '" tabindex="0" role="button">' +
+      '<div class="exp-cell"><strong>' + esc(c.name || 'No name') + '</strong>' +
+        '<div class="exp-sub">' + esc(sub) + '</div></div>' +
+      '<div class="exp-amt">' + amt + '</div></div>';
+  }).join('');
+
+  var sm = K.summary(state.contacts, state.showId);
+  $('#ctStats').innerHTML = [['People', sm.total], ['Bought', sm.bought],
+    ['Interested', sm.interested], ['May contact', sm.mayContact]].map(function (x) {
+      return '<div class="stat"><div class="n">' + esc(String(x[1])) + '</div><div class="k">' + esc(x[0]) + '</div></div>';
+    }).join('');
+
+  var fu = K.followUps(state.contacts);
+  $('#fuChannel').textContent = K.NO_CHANNEL;
+  var fuRow = function (c, late) {
+    return '<div class="exp-row fu-row" data-id="' + esc(c.id) + '">' +
+      '<div class="exp-cell"><strong>' + esc(c.name || 'No name') + '</strong>' +
+      '<div class="exp-sub">' + esc((late ? 'Due ' : 'On ') + fmtDay(c.followUpOn) +
+        (c.interest ? ' \u00b7 ' + c.interest : '') +
+        (c.consent ? '' : ' \u00b7 you did not ask if you may')) + '</div></div>' +
+      '<button class="btn-mini" type="button" data-done="' + esc(c.id) + '">Mark done</button></div>';
+  };
+  $('#fuDue').innerHTML = fu.due.length
+    ? '<div class="label">Due now</div>' + fu.due.map(function (c) { return fuRow(c, true); }).join('')
+    : '<p class="hint">Nothing due.</p>';
+  $('#fuUpcoming').innerHTML = fu.upcoming.length
+    ? '<div class="label">Coming up</div>' + fu.upcoming.map(function (c) { return fuRow(c, false); }).join('')
+    : '';
+  $('#fuWithheld').hidden = !fu.withheld;
+  $('#fuWithheld').textContent = fu.withheld
+    ? fu.withheld + ' follow-up' + (fu.withheld === 1 ? ' is' : 's are') +
+      ' held back because the person said not to contact them.' : '';
+
+  var wait = K.awaitingDebrief(state.shows, state.debriefs);
+  $('#dbAwaiting').innerHTML = wait.length
+    ? wait.map(function (s) {
+        return '<div class="exp-row"><div class="exp-cell"><strong>' + esc(s.name) + '</strong>' +
+          '<div class="exp-sub">Ended ' + esc(fmtDay(s.endDate || s.startDate)) + ' \u00b7 not debriefed</div></div>' +
+          '<button class="btn-mini" type="button" data-debrief="' + esc(s.id) + '">Debrief</button></div>';
+      }).join('')
+    : '<p class="hint">No finished show is waiting. Shows you were accepted into appear here once they end.</p>';
+  $('#dbDone').innerHTML = state.debriefs.map(function (d) {
+    var a = K.answered(d);
+    return '<div class="exp-row db-row" data-debrief="' + esc(d.showId) + '" tabindex="0" role="button">' +
+      '<div class="exp-cell"><strong>' + esc(showName(d.showId) || 'A show no longer in the ledger') + '</strong>' +
+      '<div class="exp-sub">' + esc(a.scored + ' of ' + a.of + ' scored' +
+        (d.again ? ' \u00b7 again: ' + A.DEBRIEF_RETURN_LABEL[d.again] : '')) + '</div></div></div>';
+  }).join('');
+}
+
+/* ---- the contact editor ------------------------------------------------- */
+function saleBoxes(showId, selected) {
+  var rows = S.forShow(state.sales, showId);
+  $('#ctSalesRow').hidden = !rows.length;
+  $('#ctSales').innerHTML = rows.map(function (r) {
+    var v = S.valueOf(r);
+    return '<label class="check"><input type="checkbox" value="' + esc(r.id) + '"' +
+      (selected.indexOf(r.id) !== -1 ? ' checked' : '') + '><span>' +
+      esc((r.piece || 'Untitled piece') + ' \u00b7 ' + (v == null ? 'not priced' : money(v))) +
+      '</span></label>';
+  }).join('');
+}
+function openModal(id) { $(id).hidden = false; $('#ctOverlay').hidden = false; }
+function closeModals() { $('#ctModal').hidden = true; $('#dbModal').hidden = true; $('#ctOverlay').hidden = true; }
+
+function openEditor(c) {
+  state.editingId = c ? c.id : null;
+  $('#ctTitle').textContent = c ? 'Edit contact' : 'Add contact';
+  $('#ctName').value = c ? c.name : '';
+  $('#ctEmail').value = c ? c.email : '';
+  $('#ctPhone').value = c ? c.phone : '';
+  $('#ctShowPick').innerHTML = '<option value="">No show</option>' +
+    state.shows.map(function (s) { return '<option value="' + esc(s.id) + '">' + esc(s.name) + '</option>'; }).join('');
+  $('#ctShowPick').value = c ? c.showId : state.showId;
+  $('#ctMetOn').value = c ? c.metOn : '';
+  $('#ctInterest').value = c ? c.interest : '';
+  $('#ctOutcome').innerHTML = opts(A.CONTACT_OUTCOMES, c ? c.outcome : '');
+  $('#ctConsent').innerHTML = opts(A.CONSENT, c ? c.consent : '');
+  $('#ctFollow').value = c ? c.followUpOn : '';
+  $('#ctDone').value = c ? c.followedUpAt : '';
+  $('#ctNotes').value = c ? c.notes : '';
+  $('#ctEmailWarn').hidden = true;
+  $('#ctDelete').hidden = !c;
+  saleBoxes($('#ctShowPick').value, c ? c.saleIds : []);
+  openModal('#ctModal');
+  $('#ctName').focus();
+}
+function save() {
+  var prev = state.contacts.filter(function (x) { return x.id === state.editingId; })[0] || {};
+  var showId = $('#ctShowPick').value;
+  var show = state.shows.filter(function (s) { return s.id === showId; })[0];
+  var rec = Object.assign({}, prev, {
+    name: $('#ctName').value, email: $('#ctEmail').value, phone: $('#ctPhone').value,
+    showId: showId, catalogueId: show ? show.catalogueId : '',
+    metOn: $('#ctMetOn').value, interest: $('#ctInterest').value,
+    outcome: $('#ctOutcome').value, consent: $('#ctConsent').value,
+    followUpOn: $('#ctFollow').value, followedUpAt: $('#ctDone').value,
+    notes: $('#ctNotes').value,
+    saleIds: Array.prototype.map.call(document.querySelectorAll('#ctSales input:checked'),
+      function (i) { return i.value; })
+  });
+  if (!String(rec.name).trim() && !String(rec.email).trim() && !String(rec.phone).trim()) {
+    $('#ctName').focus(); return;
+  }
+  Store.upsertContact(rec).then(function () { closeModals(); refresh(); });
+}
+
+/* ---- the debrief editor ------------------------------------------------- */
+function openDebrief(showId) {
+  var show = state.shows.filter(function (s) { return s.id === showId; })[0];
+  var cycle = show ? (show.startDate || '').slice(0, 4) : '';
+  var d = K.debriefFor(state.debriefs, showId, cycle);
+  state.debriefShowId = showId;
+  $('#dbTitle').textContent = 'Debrief \u2014 ' + (show ? show.name : 'show');
+  var scale = [{ value:'', label:'Skip' }].concat([1,2,3,4,5,6,7,8,9,10].map(function (n) {
+    return { value:String(n), label:String(n) };
+  }));
+  $('#dbScores').innerHTML = K.DEBRIEF_SCORES.map(function (f) {
+    return '<div class="form-row"><label class="label" for="db_' + f.key + '">' + esc(f.label) + '</label>' +
+      '<select class="control" id="db_' + f.key + '">' +
+      opts(scale, d && d[f.key] != null ? String(d[f.key]) : '') + '</select></div>';
+  }).join('');
+  $('#dbAgain').innerHTML = opts(A.DEBRIEF_RETURN, d ? d.again : '');
+  $('#dbSold').value = d ? d.sold : '';
+  $('#dbStuck').value = d ? d.stuck : '';
+  $('#dbNext').value = d ? d.nextTime : '';
+
+  var r = show && K.pnl(show, state.expenses, state.sales);
+  $('#dbPnl').innerHTML = !r ? '<p class="hint">Not available.</p>'
+    : r.net == null
+      ? '<p class="hint">Not enough to work it out: needs ' + esc(r.missing.join(' and ')) +
+        '. Add them on the Money page or the show itself.</p>'
+      : '<div class="stat"><div class="n">' + (r.net < 0 ? '\u2212' : '') + esc(money(Math.abs(r.net))) +
+        '</div><div class="k">' + (r.net < 0 ? 'short of covering it' : 'left after costs') + '</div></div>' +
+        '<p class="hint">' + esc(money(r.gross)) + ' taken (' +
+        (r.grossSource === 'stated' ? 'your stated gross' : 'your sale rows added up') + '), ' +
+        esc(money(r.spent.amount)) + ' spent' +
+        (r.provisional ? ' \u2014 only ' + r.spent.known + ' of ' + r.spent.total +
+          ' expense rows have a figure, so this is a best case' : '') + '. ' +
+        (r.commissionKnown ? 'Commission taken off.' : 'Before any commission \u2014 none is recorded.') + '</p>';
+  openModal('#dbModal');
+}
+function saveDebrief() {
+  var show = state.shows.filter(function (s) { return s.id === state.debriefShowId; })[0];
+  var cycle = show ? (show.startDate || '').slice(0, 4) : '';
+  var prev = K.debriefFor(state.debriefs, state.debriefShowId, cycle) || {};
+  var rec = Object.assign({}, prev, {
+    showId: state.debriefShowId, catalogueId: show ? show.catalogueId : '', cycle: cycle,
+    again: $('#dbAgain').value, sold: $('#dbSold').value,
+    stuck: $('#dbStuck').value, nextTime: $('#dbNext').value
+  });
+  K.DEBRIEF_SCORES.forEach(function (f) { rec[f.key] = $('#db_' + f.key).value; });
+  Store.upsertDebrief(rec).then(function () { closeModals(); refresh(); });
+}
+
+function exportCsv() {
+  var out = K.toCsv(state.contacts, state.shows);
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([out.csv], { type: 'text/csv' }));
+  a.download = 'contacts.csv';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  $('#ctPrivacy').textContent = 'Exported ' + out.exported + ' contact' + (out.exported === 1 ? '' : 's') +
+    (out.withheld ? '; ' + out.withheld + ' marked \u201cdo not contact\u201d left out' : '') +
+    '. The file is on your computer now \u2014 look after it.';
+}
+
+$('#ctShow').addEventListener('change', function (e) { state.showId = e.target.value; render(); });
+$('#ctAdd').addEventListener('click', function () { openEditor(null); });
+$('#ctCsv').addEventListener('click', exportCsv);
+$('#ctSave').addEventListener('click', save);
+$('#ctCancel').addEventListener('click', closeModals);
+$('#ctClose').addEventListener('click', closeModals);
+$('#dbSave').addEventListener('click', saveDebrief);
+$('#dbCancel').addEventListener('click', closeModals);
+$('#dbClose').addEventListener('click', closeModals);
+$('#ctOverlay').addEventListener('click', closeModals);
+$('#ctDelete').addEventListener('click', function () {
+  if (!state.editingId) return;
+  Store.removeContact(state.editingId).then(function () { closeModals(); refresh(); });
+});
+$('#ctShowPick').addEventListener('change', function (e) { saleBoxes(e.target.value, []); });
+$('#ctEmail').addEventListener('blur', function (e) {
+  $('#ctEmailWarn').hidden = !e.target.value.trim() || K.looksLikeEmail(e.target.value);
+});
+document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeModals(); });
+document.addEventListener('click', function (e) {
+  var done = e.target.closest('[data-done]');
+  if (done) {
+    var c = state.contacts.filter(function (x) { return x.id === done.dataset.done; })[0];
+    var t = new Date();
+    var iso = t.getFullYear() + '-' + ('0' + (t.getMonth() + 1)).slice(-2) + '-' + ('0' + t.getDate()).slice(-2);
+    if (c) Store.upsertContact(Object.assign({}, c, { followedUpAt: iso })).then(refresh);
+    return;
+  }
+  var db = e.target.closest('[data-debrief]');
+  if (db) { openDebrief(db.dataset.debrief); return; }
+  var row = e.target.closest('.ct-row');
+  if (row) openEditor(state.contacts.filter(function (x) { return x.id === row.dataset.id; })[0]);
+});
+
+refresh();
+window.ASTVersion.mount(document.getElementById('buildStamp'));
+window.ASTNav.auto();
+/* A change pulled from the studio: redraw from the local copy. */
+if (window.ASTStudio) ASTStudio.onData(function () { refresh(); });
+})();
+</script>
+</body>
+</html>

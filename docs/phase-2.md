@@ -23,12 +23,19 @@ and a second device shows it. Concretely:
 - [x] Show actions in the registry: `show.add_artwork`, `show.remove_artwork`, `artwork.mark_sold` (risk: confirm; one batch updates artwork + show + log)
 - [x] `POST /v1/sync/push`: each op runs through its action with `source: "sync"`; `op_id` makes retries safe (D-017); `baseVersion` drives the merge rules
 - [x] `GET /v1/sync/pull?since=<seq>`: current state of every record changed since the cursor, deletions included; cursor = `activity_log.seq`
-- [ ] SDK (`packages/sdk`): API client, IndexedDB cache (`idb`), outbox, push/pull on open / focus / reconnect / after each write / every 60 s, conflict cards as events
+- [x] SDK (`packages/sdk`): API client, IndexedDB cache (`idb`), outbox, push/pull on open / focus / reconnect / after each write / every 60 s, conflict cards as events
 - [ ] Show Tracker into `apps/show-tracker/` on the SDK; installable PWA (manifest + service worker for the app shell)
 - [ ] "Import my existing data" from localStorage, once, through sync push
 - [ ] Offline test: automated two-device Playwright test (gate 1–3)
 - [ ] Deploy `studio-api-staging` + Show Tracker staging; real-device run (gate 4)
 - [x] Move the built routes out of `openapi.phase2.draft.yaml`; delete it when empty (D-013)
+
+## Progress (2026-10-01)
+
+Steps 1–4 done: 97 tests (core 9, SDK 8, studio-api 80). The SDK tests run two
+simulated devices against the real studio-api code and a local D1: offline sale
+reaching the other device, merges, review cards, retry after a lost reply,
+deletes. Steps 5–8 wait on Show Tracker's source (OK #1) and the deploy OKs.
 
 ## Order of work
 

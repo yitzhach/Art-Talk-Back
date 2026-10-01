@@ -1,0 +1,904 @@
+# studio-api — OpenAPI draft for Phase 1 and Phase 2 routes (Phase 0 review copy)
+#
+# Hand-written so the contract can be reviewed before any code exists.
+# From Phase 1 on, the spec is generated from the Zod schemas in
+# packages/core via @hono/zod-openapi; this file is the target that
+# generated output must match, and is deleted once it does.
+#
+# x-phase on each operation says which phase ships it.
+openapi: 3.1.0
+info:
+  title: Studio Platform API
+  version: 0.1.0-draft
+  description: |
+    One versioned API for every studio app, the assistant and outside tools.
+    Changes are additive only. The studio always comes from the session,
+    never from the request body.
+servers:
+  - url: https://studio-api.{account}.workers.dev/v1
+    variables:
+      account: { default: example }
+security:
+  - session: []
+
+tags:
+  - { name: auth, description: Email-code sign-in and the current user }
+  - { name: records, description: 'Plain CRUD on artworks, clients and shows' }
+  - { name: actions, description: Named business actions from the tool registry }
+  - { name: files, description: Signed R2 upload and download }
+  - { name: activity, description: Audit log and undo }
+  - { name: sync, description: Offline outbox push and change-feed pull }
+  - { name: settings, description: Per-studio defaults }
+
+paths:
+  # ------------------------------------------------------------ auth ---
+  /auth/code:
+    post:
+      tags: [auth]
+      operationId: auth.requestCode
+      x-phase: 1
+      security: []
+      summary: Email a 6-digit sign-in code
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties: { email: { type: string, format: email } }
+      responses:
+        '204': { description: "Code sent (always 204, so addresses can't be probed)" }
+        '429': { $ref: '#/components/responses/Error' }
+  /auth/verify:
+    post:
+      tags: [auth]
+      operationId: auth.verify
+      x-phase: 1
+      security: []
+      summary: Exchange the code for a session cookie
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, code]
+              properties:
+                email: { type: string, format: email }
+                code: { type: string, pattern: '^[0-9]{6}$' }
+      responses:
+        '200':
+          description: Signed in. Sets the `studio_session` cookie.
+          headers:
+            Set-Cookie: { schema: { type: string } }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Me' }
+        '400': { $ref: '#/components/responses/Error' }
+        '429': { $ref: '#/components/responses/Error' }
+  /auth/logout:
+    post:
+      tags: [auth]
+      operationId: auth.logout
+      summary: End the session
+      x-phase: 1
+      responses:
+        '204': { description: Session ended and cookie cleared }
+  /auth/studio:
+    post:
+      tags: [auth]
+      operationId: auth.switchStudio
+      x-phase: 1
+      summary: Set the session's active studio (must be one the user belongs to)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [studioId]
+              properties: { studioId: { $ref: '#/components/schemas/Id' } }
+      responses:
+        '200':
+          description: Active studio changed
+          content: { application/json: { schema: { $ref: '#/components/schemas/Me' } } }
+        '403': { $ref: '#/components/responses/Error' }
+  /me:
+    get:
+      tags: [auth]
+      operationId: me.get
+      x-phase: 1
+      summary: Who am I, which studios I belong to, which one is active
+      responses:
+        '200':
+          content: { application/json: { schema: { $ref: '#/components/schemas/Me' } } }
+          description: Current user
+        '401': { $ref: '#/components/responses/Error' }
+
+  # -------------------------------------------------------- settings ---
+  /settings:
+    get:
+      tags: [settings]
+      operationId: settings.get
+      summary: Get the active studio's settings
+      x-phase: 1
+      responses:
+        '200':
+          description: The active studio's settings
+          content: { application/json: { schema: { $ref: '#/components/schemas/StudioSettings' } } }
+    patch:
+      tags: [settings]
+      operationId: settings.update
+      summary: Update studio settings
+      x-phase: 1
+      x-permission: settings:write
+      parameters: [{ $ref: '#/components/parameters/IfMatch' }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/StudioSettingsPatch' } } }
+      responses:
+        '200':
+          description: Updated
+          content: { application/json: { schema: { $ref: '#/components/schemas/StudioSettings' } } }
+        '409': { $ref: '#/components/responses/VersionConflict' }
+
+  # --------------------------------------------------------- records ---
+  /artworks:
+    get:
+      tags: [records]
+      operationId: artworks.list
+      summary: List artworks
+      x-phase: 1
+      parameters:
+        - { $ref: '#/components/parameters/Cursor' }
+        - { $ref: '#/components/parameters/Limit' }
+        - name: status
+          in: query
+          schema: { $ref: '#/components/schemas/ArtworkStatus' }
+      responses:
+        '200':
+          description: Page of artworks
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ArtworkPage' }
+    post:
+      tags: [records]
+      operationId: artworks.create
+      summary: Create an artwork
+      x-phase: 1
+      x-permission: artworks:write
+      parameters: [{ $ref: '#/components/parameters/IdempotencyKey' }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/ArtworkInput' } } }
+      responses:
+        '201':
+          description: Created
+          content: { application/json: { schema: { $ref: '#/components/schemas/Artwork' } } }
+        '400': { $ref: '#/components/responses/Error' }
+  /artworks/{id}:
+    parameters: [{ $ref: '#/components/parameters/PathId' }]
+    get:
+      tags: [records]
+      operationId: artworks.get
+      summary: Get an artwork
+      x-phase: 1
+      responses:
+        '200':
+          description: The artwork
+          content: { application/json: { schema: { $ref: '#/components/schemas/Artwork' } } }
+        '404': { $ref: '#/components/responses/Error' }
+    patch:
+      tags: [records]
+      operationId: artworks.update
+      summary: Update an artwork
+      x-phase: 1
+      x-permission: artworks:write
+      x-note: Changing price_cents or status is risk "confirm" when the assistant calls it.
+      parameters: [{ $ref: '#/components/parameters/IfMatch' }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/ArtworkPatch' } } }
+      responses:
+        '200':
+          description: Updated
+          content: { application/json: { schema: { $ref: '#/components/schemas/Artwork' } } }
+        '409': { $ref: '#/components/responses/VersionConflict' }
+    delete:
+      tags: [records]
+      operationId: artworks.delete
+      summary: Soft-delete an artwork
+      x-phase: 1
+      x-permission: artworks:delete
+      parameters: [{ $ref: '#/components/parameters/IfMatch' }]
+      responses:
+        '200': { $ref: '#/components/responses/Deleted' }
+        '409': { $ref: '#/components/responses/VersionConflict' }
+
+  /clients:
+    get:
+      tags: [records]
+      operationId: clients.list
+      summary: List clients
+      x-phase: 1
+      parameters:
+        - { $ref: '#/components/parameters/Cursor' }
+        - { $ref: '#/components/parameters/Limit' }
+      responses:
+        '200':
+          description: Page of clients (a client-role user sees only their own record)
+          content: { application/json: { schema: { $ref: '#/components/schemas/ClientPage' } } }
+    post:
+      tags: [records]
+      operationId: clients.create
+      summary: Create a client
+      x-phase: 1
+      x-permission: clients:write
+      parameters: [{ $ref: '#/components/parameters/IdempotencyKey' }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/ClientInput' } } }
+      responses:
+        '201':
+          description: Created
+          content: { application/json: { schema: { $ref: '#/components/schemas/Client' } } }
+  /clients/{id}:
+    parameters: [{ $ref: '#/components/parameters/PathId' }]
+    get:
+      tags: [records]
+      operationId: clients.get
+      summary: Get a client
+      x-phase: 1
+      responses:
+        '200':
+          description: The client
+          content: { application/json: { schema: { $ref: '#/components/schemas/Client' } } }
+        '404': { $ref: '#/components/responses/Error' }
+    patch:
+      tags: [records]
+      operationId: clients.update
+      summary: Update a client
+      x-phase: 1
+      x-permission: clients:write
+      parameters: [{ $ref: '#/components/parameters/IfMatch' }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/ClientPatch' } } }
+      responses:
+        '200':
+          description: Updated
+          content: { application/json: { schema: { $ref: '#/components/schemas/Client' } } }
+        '409': { $ref: '#/components/responses/VersionConflict' }
+    delete:
+      tags: [records]
+      operationId: clients.delete
+      summary: Soft-delete a client
+      x-phase: 1
+      x-permission: clients:delete
+      parameters: [{ $ref: '#/components/parameters/IfMatch' }]
+      responses:
+        '200': { $ref: '#/components/responses/Deleted' }
+        '409': { $ref: '#/components/responses/VersionConflict' }
+
+  /shows:
+    get:
+      tags: [records]
+      operationId: shows.list
+      summary: List shows
+      x-phase: 2
+      parameters:
+        - { $ref: '#/components/parameters/Cursor' }
+        - { $ref: '#/components/parameters/Limit' }
+      responses:
+        '200':
+          description: Page of shows
+          content: { application/json: { schema: { $ref: '#/components/schemas/ShowPage' } } }
+    post:
+      tags: [records]
+      operationId: shows.create
+      summary: Create a show
+      x-phase: 2
+      x-permission: shows:write
+      parameters: [{ $ref: '#/components/parameters/IdempotencyKey' }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/ShowInput' } } }
+      responses:
+        '201':
+          description: Created
+          content: { application/json: { schema: { $ref: '#/components/schemas/Show' } } }
+  /shows/{id}:
+    parameters: [{ $ref: '#/components/parameters/PathId' }]
+    get:
+      tags: [records]
+      operationId: shows.get
+      x-phase: 2
+      summary: A show with the artworks that went to it
+      responses:
+        '200':
+          description: The show
+          content: { application/json: { schema: { $ref: '#/components/schemas/ShowDetail' } } }
+    patch:
+      tags: [records]
+      operationId: shows.update
+      summary: Update a show
+      x-phase: 2
+      x-permission: shows:write
+      parameters: [{ $ref: '#/components/parameters/IfMatch' }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/ShowPatch' } } }
+      responses:
+        '200':
+          description: Updated
+          content: { application/json: { schema: { $ref: '#/components/schemas/Show' } } }
+        '409': { $ref: '#/components/responses/VersionConflict' }
+    delete:
+      tags: [records]
+      operationId: shows.delete
+      summary: Soft-delete a show
+      x-phase: 2
+      x-permission: shows:delete
+      parameters: [{ $ref: '#/components/parameters/IfMatch' }]
+      responses:
+        '200': { $ref: '#/components/responses/Deleted' }
+
+  # --------------------------------------------------------- actions ---
+  /actions/{name}:
+    post:
+      tags: [actions]
+      operationId: actions.run
+      x-phase: 1
+      summary: Run a named action from the tool registry
+      description: |
+        Every action is defined once with defineAction (name, Zod input,
+        permission, risk). Phase 1 registers the CRUD actions behind the
+        record routes (artwork.create, client.update, …). Phase 2 adds:
+
+        | name | input | risk |
+        |---|---|---|
+        | show.add_artwork | { showId, artworkId } | auto |
+        | show.remove_artwork | { showId, artworkId } | auto |
+        | artwork.mark_sold | { artworkId, priceCents, showId?, clientId? } | confirm |
+      parameters:
+        - name: name
+          in: path
+          required: true
+          schema: { type: string, pattern: '^[a-z_]+\.[a-z_]+$', example: artwork.mark_sold }
+        - { $ref: '#/components/parameters/IdempotencyKey' }
+      requestBody:
+        required: true
+        content: { application/json: { schema: { type: object, additionalProperties: true } } }
+      responses:
+        '200':
+          description: Action ran
+          content: { application/json: { schema: { $ref: '#/components/schemas/ActionResult' } } }
+        '400': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+
+  # ----------------------------------------------------------- files ---
+  /files/upload-url:
+    post:
+      tags: [files]
+      operationId: files.uploadUrl
+      x-phase: 1
+      x-permission: files:write
+      summary: Create a pending file row and a signed, expiring R2 upload URL
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, contentType, size]
+              properties:
+                name: { type: string, maxLength: 200 }
+                contentType: { type: string }
+                size: { type: integer, minimum: 1, maximum: 104857600 }
+                kind: { $ref: '#/components/schemas/FileKind' }
+      responses:
+        '200':
+          description: Upload with PUT to uploadUrl, then call attach
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [file, uploadUrl, expiresAt]
+                properties:
+                  file: { $ref: '#/components/schemas/File' }
+                  uploadUrl: { type: string, format: uri }
+                  expiresAt: { $ref: '#/components/schemas/Timestamp' }
+  /files/{id}/attach:
+    parameters: [{ $ref: '#/components/parameters/PathId' }]
+    post:
+      tags: [files]
+      operationId: files.attach
+      x-phase: 1
+      x-permission: files:write
+      summary: Confirm the upload landed and link the file to a record
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [entityType, entityId]
+              properties:
+                entityType: { type: string, enum: [artwork, client, show] }
+                entityId: { $ref: '#/components/schemas/Id' }
+      responses:
+        '200':
+          description: File is ready and attached
+          content: { application/json: { schema: { $ref: '#/components/schemas/File' } } }
+        '409': { $ref: '#/components/responses/Error' }
+  /files/{id}/download-url:
+    parameters: [{ $ref: '#/components/parameters/PathId' }]
+    get:
+      tags: [files]
+      operationId: files.downloadUrl
+      summary: Get a signed download URL
+      x-phase: 1
+      parameters:
+        - { name: thumb, in: query, schema: { type: boolean, default: false } }
+      responses:
+        '200':
+          description: Signed, expiring download URL
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [url, expiresAt]
+                properties:
+                  url: { type: string, format: uri }
+                  expiresAt: { $ref: '#/components/schemas/Timestamp' }
+
+  # -------------------------------------------------------- activity ---
+  /activity:
+    get:
+      tags: [activity]
+      operationId: activity.list
+      summary: List activity
+      x-phase: 1
+      parameters:
+        - { $ref: '#/components/parameters/Cursor' }
+        - { $ref: '#/components/parameters/Limit' }
+        - { name: entityType, in: query, schema: { type: string } }
+        - { name: entityId, in: query, schema: { $ref: '#/components/schemas/Id' } }
+      responses:
+        '200':
+          description: Newest first
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items: { type: array, items: { $ref: '#/components/schemas/Activity' } }
+                  nextCursor: { type: [string, 'null'] }
+  /activity/{id}/undo:
+    parameters: [{ $ref: '#/components/parameters/PathId' }]
+    post:
+      tags: [activity]
+      operationId: activity.undo
+      x-phase: 1
+      summary: Undo one change (or, from Phase 4, every step of a job)
+      description: |
+        Writes a new change that restores `before`, logged with undo_of = id.
+        Fails with 409 if the record changed since, so a later edit is never
+        silently overwritten.
+      responses:
+        '200':
+          description: Undone
+          content: { application/json: { schema: { $ref: '#/components/schemas/ActionResult' } } }
+        '409': { $ref: '#/components/responses/Error' }
+
+  # ------------------------------------------------------------ sync ---
+  /sync/push:
+    post:
+      tags: [sync]
+      operationId: sync.push
+      x-phase: 2
+      summary: Apply a device's outbox
+      description: |
+        Each op runs through the same action function as a normal API call.
+        op_id makes retries safe: a repeated op returns its original result.
+        Ops are applied in order; one op's failure does not stop the rest.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [ops]
+              properties:
+                ops:
+                  type: array
+                  maxItems: 200
+                  items: { $ref: '#/components/schemas/SyncOp' }
+      responses:
+        '200':
+          description: One result per op, same order
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [results, cursor]
+                properties:
+                  results: { type: array, items: { $ref: '#/components/schemas/SyncOpResult' } }
+                  cursor: { type: string }
+  /sync/pull:
+    get:
+      tags: [sync]
+      operationId: sync.pull
+      x-phase: 2
+      summary: Every record changed since the cursor, deletions included
+      parameters:
+        - name: since
+          in: query
+          description: The cursor from the last pull ('0' for a first sync). It is activity_log.seq.
+          schema: { type: string, default: '0' }
+        - { $ref: '#/components/parameters/Limit' }
+      responses:
+        '200':
+          description: Changes; call again with cursor while hasMore is true
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [changes, cursor, hasMore]
+                properties:
+                  changes:
+                    type: array
+                    items:
+                      type: object
+                      required: [entityType, entityId, record]
+                      properties:
+                        entityType: { type: string }
+                        entityId: { $ref: '#/components/schemas/Id' }
+                        record:
+                          description: Current row; deleted_at is set for deletions
+                          type: object
+                          additionalProperties: true
+                  cursor: { type: string }
+                  hasMore: { type: boolean }
+
+components:
+  securitySchemes:
+    session:
+      type: apiKey
+      in: cookie
+      name: studio_session
+
+  parameters:
+    PathId:
+      name: id
+      in: path
+      required: true
+      schema: { $ref: '#/components/schemas/Id' }
+    IfMatch:
+      name: If-Match
+      in: header
+      required: true
+      description: The record version the change was based on
+      schema: { type: integer, minimum: 1 }
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: false
+      description: Optional ULID; a repeat with the same key returns the first result
+      schema: { $ref: '#/components/schemas/Id' }
+    Cursor:
+      name: cursor
+      in: query
+      schema: { type: string }
+    Limit:
+      name: limit
+      in: query
+      schema: { type: integer, minimum: 1, maximum: 200, default: 50 }
+
+  responses:
+    Error:
+      description: Error
+      content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+    VersionConflict:
+      description: The record moved on; details.current holds the server copy
+      content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+    Deleted:
+      description: Soft-deleted; undo via the returned activity id
+      content: { application/json: { schema: { $ref: '#/components/schemas/ActionResult' } } }
+
+  schemas:
+    Id:
+      type: string
+      description: ULID
+      pattern: '^[0-9A-HJKMNP-TV-Z]{26}$'
+    Timestamp:
+      type: string
+      format: date-time
+      description: UTC ISO-8601
+    Currency:
+      type: string
+      pattern: '^[A-Z]{3}$'
+      default: USD
+    SizeUnit:
+      type: string
+      enum: [in, cm]
+    ActorType:
+      type: string
+      enum: [user, assistant, system, api]
+
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code:
+              type: string
+              enum: [bad_request, unauthenticated, forbidden, not_found, version_conflict,
+                     rate_limited, needs_confirmation, internal]
+            message: { type: string }
+            details: { type: object, additionalProperties: true }
+
+    RecordMeta:
+      type: object
+      required: [id, studioId, createdAt, updatedAt, actorType, version]
+      properties:
+        id: { $ref: '#/components/schemas/Id' }
+        studioId: { $ref: '#/components/schemas/Id' }
+        createdAt: { $ref: '#/components/schemas/Timestamp' }
+        updatedAt: { $ref: '#/components/schemas/Timestamp' }
+        createdBy: { type: [string, 'null'] }
+        actorType: { $ref: '#/components/schemas/ActorType' }
+        version: { type: integer, minimum: 1 }
+        deletedAt: { oneOf: [{ $ref: '#/components/schemas/Timestamp' }, { type: 'null' }] }
+        meta: { type: object, additionalProperties: true }
+
+    Me:
+      type: object
+      required: [user, memberships]
+      properties:
+        user:
+          type: object
+          required: [id, email]
+          properties:
+            id: { $ref: '#/components/schemas/Id' }
+            email: { type: string, format: email }
+            name: { type: [string, 'null'] }
+        memberships:
+          type: array
+          items:
+            type: object
+            required: [studioId, studioName, role]
+            properties:
+              studioId: { $ref: '#/components/schemas/Id' }
+              studioName: { type: string }
+              role: { type: string, enum: [owner, staff, client] }
+              clientId: { type: [string, 'null'] }
+        activeStudioId: { type: [string, 'null'] }
+
+    StudioSettingsPatch:
+      type: object
+      minProperties: 1
+      properties:
+        currency: { $ref: '#/components/schemas/Currency' }
+        paymentTermsDays: { type: integer, minimum: 0 }
+        depositBps: { type: integer, minimum: 0, maximum: 10000, description: '5000 = 50%' }
+        taxRateBps: { type: integer, minimum: 0, maximum: 10000, description: '825 = 8.25%' }
+        sizeUnit: { $ref: '#/components/schemas/SizeUnit' }
+        timezone: { type: string, example: America/New_York }
+        emailTone: { type: [string, 'null'] }
+        signature: { type: [string, 'null'] }
+    StudioSettings:
+      allOf:
+        - { $ref: '#/components/schemas/StudioSettingsPatch' }
+        - type: object
+          required: [studioId, version, currency, paymentTermsDays, depositBps, taxRateBps, sizeUnit, timezone]
+          properties:
+            studioId: { $ref: '#/components/schemas/Id' }
+            version: { type: integer }
+
+    ArtworkStatus:
+      type: string
+      enum: [available, reserved, sold, not_for_sale, archived]
+    ArtworkPatch:
+      type: object
+      minProperties: 1
+      properties:
+        title: { type: string, minLength: 1, maxLength: 300 }
+        inventoryCode: { type: [string, 'null'] }
+        medium: { type: [string, 'null'] }
+        year: { type: [integer, 'null'] }
+        width: { type: [number, 'null'], minimum: 0 }
+        height: { type: [number, 'null'], minimum: 0 }
+        depth: { type: [number, 'null'], minimum: 0 }
+        sizeUnit: { $ref: '#/components/schemas/SizeUnit' }
+        priceCents: { type: [integer, 'null'], minimum: 0 }
+        currency: { $ref: '#/components/schemas/Currency' }
+        status: { $ref: '#/components/schemas/ArtworkStatus' }
+        description: { type: [string, 'null'] }
+        primaryFileId: { type: [string, 'null'] }
+        meta: { type: object, additionalProperties: true }
+    ArtworkInput:
+      allOf:
+        - { $ref: '#/components/schemas/ArtworkPatch' }
+        - type: object
+          required: [title]
+          properties:
+            id: { $ref: '#/components/schemas/Id', description: Client may supply the ULID (offline create) }
+    Artwork:
+      allOf:
+        - { $ref: '#/components/schemas/RecordMeta' }
+        - { $ref: '#/components/schemas/ArtworkPatch' }
+    ArtworkPage:
+      type: object
+      required: [items]
+      properties:
+        items: { type: array, items: { $ref: '#/components/schemas/Artwork' } }
+        nextCursor: { type: [string, 'null'] }
+
+    ClientPatch:
+      type: object
+      minProperties: 1
+      properties:
+        name: { type: string, minLength: 1, maxLength: 200 }
+        kind: { type: string, enum: [collector, gallery, business, other] }
+        email: { type: [string, 'null'], format: email }
+        phone: { type: [string, 'null'] }
+        address: { type: [string, 'null'] }
+        notes: { type: [string, 'null'] }
+        notifyEmail: { type: boolean }
+        notifySms: { type: boolean }
+        meta: { type: object, additionalProperties: true }
+    ClientInput:
+      allOf:
+        - { $ref: '#/components/schemas/ClientPatch' }
+        - type: object
+          required: [name]
+          properties:
+            id: { $ref: '#/components/schemas/Id' }
+    Client:
+      allOf:
+        - { $ref: '#/components/schemas/RecordMeta' }
+        - { $ref: '#/components/schemas/ClientPatch' }
+    ClientPage:
+      type: object
+      required: [items]
+      properties:
+        items: { type: array, items: { $ref: '#/components/schemas/Client' } }
+        nextCursor: { type: [string, 'null'] }
+
+    ShowPatch:
+      type: object
+      minProperties: 1
+      properties:
+        name: { type: string, minLength: 1, maxLength: 200 }
+        venue: { type: [string, 'null'] }
+        city: { type: [string, 'null'] }
+        startsOn: { type: [string, 'null'], format: date }
+        endsOn: { type: [string, 'null'], format: date }
+        booth: { type: [string, 'null'] }
+        feeCents: { type: [integer, 'null'], minimum: 0 }
+        currency: { $ref: '#/components/schemas/Currency' }
+        status: { type: string, enum: [planned, applied, accepted, declined, done, cancelled] }
+        notes: { type: [string, 'null'] }
+        meta: { type: object, additionalProperties: true }
+    ShowInput:
+      allOf:
+        - { $ref: '#/components/schemas/ShowPatch' }
+        - type: object
+          required: [name]
+          properties:
+            id: { $ref: '#/components/schemas/Id' }
+    Show:
+      allOf:
+        - { $ref: '#/components/schemas/RecordMeta' }
+        - { $ref: '#/components/schemas/ShowPatch' }
+    ShowDetail:
+      allOf:
+        - { $ref: '#/components/schemas/Show' }
+        - type: object
+          required: [artworks]
+          properties:
+            artworks:
+              type: array
+              items:
+                type: object
+                required: [artworkId, outcome]
+                properties:
+                  artworkId: { $ref: '#/components/schemas/Id' }
+                  outcome: { type: string, enum: [brought, sold, returned] }
+                  soldPriceCents: { type: [integer, 'null'] }
+                  clientId: { type: [string, 'null'] }
+    ShowPage:
+      type: object
+      required: [items]
+      properties:
+        items: { type: array, items: { $ref: '#/components/schemas/Show' } }
+        nextCursor: { type: [string, 'null'] }
+
+    FileKind:
+      type: string
+      enum: [photo, reference, agreement, coa, receipt, document, other]
+      default: other
+    File:
+      allOf:
+        - { $ref: '#/components/schemas/RecordMeta' }
+        - type: object
+          required: [name, kind, status]
+          properties:
+            name: { type: string }
+            contentType: { type: [string, 'null'] }
+            size: { type: [integer, 'null'] }
+            kind: { $ref: '#/components/schemas/FileKind' }
+            status: { type: string, enum: [pending, ready] }
+            entityType: { type: [string, 'null'] }
+            entityId: { type: [string, 'null'] }
+            locked: { type: boolean }
+
+    Activity:
+      type: object
+      required: [id, actorType, source, action, entityType, entityId, createdAt]
+      properties:
+        id: { $ref: '#/components/schemas/Id' }
+        actorId: { type: [string, 'null'] }
+        actorType: { $ref: '#/components/schemas/ActorType' }
+        source: { type: string, enum: [app, assistant, job, api_key, sync, system] }
+        action: { type: string, example: artwork.update }
+        entityType: { type: string }
+        entityId: { $ref: '#/components/schemas/Id' }
+        before: { type: [object, 'null'], additionalProperties: true }
+        after: { type: [object, 'null'], additionalProperties: true }
+        undoOf: { type: [string, 'null'] }
+        undoneAt: { type: [string, 'null'] }
+        createdAt: { $ref: '#/components/schemas/Timestamp' }
+
+    ActionResult:
+      type: object
+      required: [ok, activityIds]
+      properties:
+        ok: { type: boolean }
+        result: { type: object, additionalProperties: true }
+        activityIds:
+          type: array
+          description: Log entries written; pass any to /activity/{id}/undo
+          items: { $ref: '#/components/schemas/Id' }
+
+    SyncOp:
+      type: object
+      required: [opId, action, entityId, input]
+      properties:
+        opId: { $ref: '#/components/schemas/Id' }
+        action: { type: string, example: artwork.update }
+        entityId: { $ref: '#/components/schemas/Id' }
+        baseVersion:
+          type: [integer, 'null']
+          description: Version the device edited from; null for creates
+        input: { type: object, additionalProperties: true }
+    SyncOpResult:
+      type: object
+      required: [opId, status]
+      properties:
+        opId: { $ref: '#/components/schemas/Id' }
+        status:
+          type: string
+          enum: [applied, merged, conflict, rejected, duplicate]
+          description: |
+            merged   — different fields changed; server merged both.
+            conflict — same field changed on two devices, or a money/status field;
+                       server kept its value, app shows a "review change" card.
+        record: { type: object, additionalProperties: true }
+        conflicts:
+          type: array
+          items:
+            type: object
+            required: [field, serverValue, deviceValue]
+            properties:
+              field: { type: string }
+              serverValue: {}
+              deviceValue: {}
+        error: { $ref: '#/components/schemas/Error' }

@@ -1,0 +1,11 @@
+{
+  "name": "studio-platform",
+  "private": true,
+  "packageManager": "pnpm@10.28.0",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "lint:openapi": "npx -y @redocly/cli@latest lint workers/studio-api/openapi.draft.yaml"
+  }
+}

@@ -146,3 +146,30 @@ Wrangler upgrades.
 Phase 1 routes now come from the code (`docs/openapi.json`, `pnpm openapi`,
 checked in CI). The draft keeps only the Phase 2 routes, as
 `workers/studio-api/openapi.phase2.draft.yaml`, and is deleted once those are built.
+
+### D-026 · Migrations stay hand-written SQL · 2026-10-01 · default
+Amends D-012. The drift test compares columns, indexes and foreign keys, but
+not CHECK constraints, and drizzle-kit doesn't know the SQL-only CHECKs. A
+drizzle-kit-generated migration that rebuilds a table could drop them. So every
+migration is hand-written SQL, Drizzle mirrors it, and the drift test guards the
+mirror. drizzle-kit is used only inside that test.
+
+### D-027 · One undo for a multi-record action · 2026-10-01 · default
+When an action writes more than one record (e.g. `artwork.mark_sold` changes
+the artwork and the show), its log entries share a `job_id`. Undoing any of
+them undoes all of them, newest first, each version-checked; it's all or
+nothing. This is the spec's "undo a whole job", ahead of Phase 4's Workflows.
+
+### D-028 · Sync merge rules · 2026-10-01 · default
+For an update whose `baseVersion` is behind the server: fields the server
+changed since `baseVersion` (read from activity_log) keep the server's value
+and come back as conflicts; money fields (`*Cents`), `status`, `outcome` and
+`currency` from the device never auto-merge either; every other field merges.
+A delete from a device that's behind is a conflict. Creates and named actions
+run as-is. A conflict is reported once and then dropped from the device's
+outbox: the "review change" card is how the artist re-applies it.
+
+### D-029 · A sale's price lives on the artwork until Phase 4 · 2026-10-01 · default
+`artwork.mark_sold` sets `status: sold` and records `meta.sale` (price, currency,
+client, show, time); at a show it also updates `show_artworks`. Phase 4's
+`transactions` table takes over the money side and imports these.

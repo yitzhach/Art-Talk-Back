@@ -25,3 +25,6 @@
 - Plan, gate and "Needs Isaac's OK" list in `docs/phase-2.md`.
 - Staging resources created: D1 `studio-db-staging`, R2 `studio-files-staging`.
 - 4 eval tasks for Phase 2 work in `.claude/skills/backend-builder/evals/tasks.json` (not yet reviewed).
+- Migration 0002 (`shows`, `show_artworks`) + `/v1/shows` (show page lists its artworks).
+- Actions `show.add_artwork`, `show.remove_artwork`, `artwork.mark_sold` (risk: confirm; artwork + show in one batch).
+- Multi-record actions share a `job_id`; one undo reverts them all (D-027). Decisions D-026…D-029.

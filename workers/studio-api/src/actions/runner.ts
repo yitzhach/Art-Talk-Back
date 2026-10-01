@@ -111,6 +111,9 @@ export async function runAction<R>(def: ActionDef<z.ZodType, R>, rawInput: unkno
   const activityIds: string[] = [];
   const afters: (Snapshot | null)[] = [];
 
+  // Several logged records in one action share a job id, so one undo reverts them all (D-027).
+  const jobId = plan.writes.filter((w) => w.log).length > 1 ? newId() : null;
+
   for (const w of plan.writes) {
     const q = "toSQL" in w.query ? w.query.toSQL() : w.query;
     statements.push(opts.env.DB.prepare(q.sql).bind(...q.params));
@@ -122,13 +125,14 @@ export async function runAction<R>(def: ActionDef<z.ZodType, R>, rawInput: unkno
       statements.push(
         opts.env.DB.prepare(
           `INSERT INTO activity_log (id, studio_id, actor_id, actor_type, source, action, entity_type,
-             entity_id, before, after, op_id, undo_of, created_at)
-           VALUES (?, ?, ?, 'user', ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+             entity_id, before, after, op_id, job_id, undo_of, created_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         ).bind(
-          id, ctx.actor.studioId, ctx.actor.userId, ctx.source, def.name, w.log.entityType, w.log.entityId,
+          id, ctx.actor.studioId, ctx.actor.userId, ctx.source === "assistant" ? "assistant" : "user",
+          ctx.source, def.name, w.log.entityType, w.log.entityId,
           w.log.before ? JSON.stringify(w.log.before) : null,
           w.log.after ? JSON.stringify(w.log.after) : null,
-          opId, w.log.undoOf ?? null, ctx.now,
+          opId, jobId, w.log.undoOf ?? null, ctx.now,
         ),
       );
     }

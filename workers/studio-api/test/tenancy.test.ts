@@ -24,6 +24,7 @@ beforeAll(async () => {
   B = await makeStudio("B");
   b.artwork = (await call("/v1/artworks", { method: "POST", cookie: B.cookie, json: { title: "B's heron" } })).data;
   b.client = (await call("/v1/clients", { method: "POST", cookie: B.cookie, json: { name: "B's client" } })).data;
+  b.show = (await call("/v1/shows", { method: "POST", cookie: B.cookie, json: { name: "B's show" } })).data;
   const up = (await call("/v1/files/upload-url", { method: "POST", cookie: B.cookie, json: { name: "b.jpg", contentType: "image/jpeg", size: 3 } })).data;
   await call(up.uploadUrl.replace(BASE, ""), { method: "PUT", body: "abc", headers: { "Content-Length": "3" } });
   b.file = (await call(`/v1/files/${up.file.id}/attach`, { method: "POST", cookie: B.cookie, json: { entityType: "artwork", entityId: b.artwork.id } })).data;
@@ -45,6 +46,12 @@ attempt("delete", "/artworks/{id}", () => call(`/v1/artworks/${b.artwork.id}`, {
 attempt("get", "/clients/{id}", () => call(`/v1/clients/${b.client.id}`, { cookie: A.cookie }));
 attempt("patch", "/clients/{id}", () => call(`/v1/clients/${b.client.id}`, { method: "PATCH", cookie: A.cookie, headers: { "If-Match": "1" }, json: { name: "pwned" } }));
 attempt("delete", "/clients/{id}", () => call(`/v1/clients/${b.client.id}`, { method: "DELETE", cookie: A.cookie, headers: { "If-Match": "1" } }));
+attempt("get", "/shows/{id}", () => call(`/v1/shows/${b.show.id}`, { cookie: A.cookie }));
+attempt("patch", "/shows/{id}", () => call(`/v1/shows/${b.show.id}`, { method: "PATCH", cookie: A.cookie, headers: { "If-Match": "1" }, json: { name: "pwned" } }));
+attempt("delete", "/shows/{id}", () => call(`/v1/shows/${b.show.id}`, { method: "DELETE", cookie: A.cookie, headers: { "If-Match": "1" } }));
+// Named actions with B's ids (these all go through POST /actions/{name}).
+cases.push(["post", "/actions/show.add_artwork", () => call("/v1/actions/show.add_artwork", { method: "POST", cookie: A.cookie, json: { showId: b.show.id, artworkId: b.artwork.id } })]);
+cases.push(["post", "/actions/artwork.mark_sold", () => call("/v1/actions/artwork.mark_sold", { method: "POST", cookie: A.cookie, json: { artworkId: b.artwork.id, priceCents: 1 } })]);
 attempt("post", "/activity/{id}/undo", () => call(`/v1/activity/${b.logId}/undo`, { method: "POST", cookie: A.cookie }));
 attempt("post", "/files/{id}/attach", () => call(`/v1/files/${b.file.id}/attach`, { method: "POST", cookie: A.cookie, json: { entityType: "artwork", entityId: b.artwork.id } }));
 attempt("get", "/files/{id}/download-url", () => call(`/v1/files/${b.file.id}/download-url`, { cookie: A.cookie }));
@@ -87,6 +94,8 @@ describe("studio A can't reach studio B", () => {
       const res = await call("/v1/artworks", { method: "POST", cookie: A.cookie, headers: { "Idempotency-Key": b.opKey }, json: { title: "A keyed" } });
       expect(res.data).toMatchObject({ title: "A keyed", studioId: A.studioId });
     }],
+    ["get", "/shows", async () => expect((await call("/v1/shows", { cookie: A.cookie })).data.items).toEqual([])],
+    ["post", "/shows", async () => expect((await call("/v1/shows", { method: "POST", cookie: A.cookie, json: { name: "A's" } })).data.studioId).toBe(A.studioId)],
     ["post", "/clients", async () => expect((await call("/v1/clients", { method: "POST", cookie: A.cookie, json: { name: "A's" } })).data.studioId).toBe(A.studioId)],
     ["post", "/files/upload-url", async () => {
       const res = await call("/v1/files/upload-url", { method: "POST", cookie: A.cookie, json: { name: "x.jpg", contentType: "image/jpeg", size: 1 } });

@@ -1,7 +1,7 @@
 // Studio-owned record types and their CRUD actions. Every action reads with
 // studio_id from the session, so another studio's id is simply "not found" (D-016).
 import {
-  ArtworkInput, ArtworkPatch, ClientInput, ClientPatch, Id, SettingsPatch, db as schema, newId,
+  ArtworkInput, ArtworkPatch, ClientInput, ClientPatch, Id, SettingsPatch, ShowInput, ShowPatch, db as schema, newId,
 } from "@studio/core";
 import { and, eq, isNull } from "drizzle-orm";
 import type { SQLiteColumn, SQLiteTable } from "drizzle-orm/sqlite-core";
@@ -61,6 +61,21 @@ export const fileEntity = define({
   version: schema.files.version, deletedAt: schema.files.deletedAt, perm: "files",
   defaults: { ...recordDefaults, thumbKey: null, contentType: null, size: null, kind: "other", status: "pending",
     entityType: null, entityId: null, locked: false },
+});
+
+export const showEntity = define({
+  type: "show", table: schema.shows, key: schema.shows.id, studio: schema.shows.studioId,
+  version: schema.shows.version, deletedAt: schema.shows.deletedAt, perm: "shows",
+  defaults: {
+    ...recordDefaults, venue: null, city: null, startsOn: null, endsOn: null, booth: null, feeCents: null,
+    currency: "USD", status: "planned", notes: null,
+  },
+});
+
+export const showArtworkEntity = define({
+  type: "show_artwork", table: schema.showArtworks, key: schema.showArtworks.id, studio: schema.showArtworks.studioId,
+  version: schema.showArtworks.version, deletedAt: schema.showArtworks.deletedAt, perm: "shows",
+  defaults: { ...recordDefaults, outcome: "brought", soldPriceCents: null, currency: "USD", clientId: null, soldAt: null },
 });
 
 /** Read one record in the caller's studio. Missing, other-studio and (unless asked) deleted → null. */
@@ -159,6 +174,7 @@ function crudActions(e: EntityDef, input: z.ZodType<Snapshot>, patch: z.ZodType<
 
 export const artworkActions = crudActions(artworkEntity, ArtworkInput, ArtworkPatch);
 export const clientActions = crudActions(clientEntity, ClientInput, ClientPatch);
+export const showActions = crudActions(showEntity, ShowInput, ShowPatch);
 
 export const settingsUpdate = defineAction({
   name: "settings.update",

@@ -1,4 +1,4 @@
-// D-012: the hand-written migration and the Drizzle schema must describe the
+// D-012: the migrations and the Drizzle schema must describe the
 // same database. Loads both into SQLite and compares tables, columns and indexes.
 import { readFileSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
@@ -6,10 +6,12 @@ import { generateSQLiteDrizzleJson, generateSQLiteMigration } from "drizzle-kit/
 import { describe, expect, it } from "vitest";
 import * as schema from "./schema";
 
-const migration = readFileSync(
-  new URL("../../../../workers/studio-api/migrations/0001_foundation.sql", import.meta.url),
-  "utf8",
-);
+import { readdirSync } from "node:fs";
+
+// Every migration, applied in order.
+const dir = new URL("../../../../workers/studio-api/migrations/", import.meta.url);
+const migration = readdirSync(dir).filter((f) => f.endsWith(".sql")).sort()
+  .map((f) => readFileSync(new URL(f, dir), "utf8")).join("\n");
 
 function shape(db: DatabaseSync) {
   const tables = (db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name").all() as { name: string }[]).map((r) => r.name);
@@ -45,7 +47,7 @@ function shape(db: DatabaseSync) {
   );
 }
 
-describe("migration 0001 vs Drizzle schema", () => {
+describe("migrations vs Drizzle schema", () => {
   it("define the same tables, columns, indexes and foreign keys", async () => {
     const fromMigration = new DatabaseSync(":memory:");
     fromMigration.exec(migration);

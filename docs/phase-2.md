@@ -19,8 +19,8 @@ and a second device shows it. Concretely:
 
 ## Checklist (from SPEC → Phase 2)
 
-- [ ] Migration 0002: `shows`, `show_artworks` (+ Drizzle schema, drift test, Zod, routes, tenancy coverage)
-- [ ] Show actions in the registry: `show.add_artwork`, `show.remove_artwork`, `artwork.mark_sold` (risk: confirm; one batch updates artwork + show + log)
+- [x] Migration 0002: `shows`, `show_artworks` (+ Drizzle schema, drift test, Zod, routes, tenancy coverage)
+- [x] Show actions in the registry: `show.add_artwork`, `show.remove_artwork`, `artwork.mark_sold` (risk: confirm; one batch updates artwork + show + log)
 - [ ] `POST /v1/sync/push`: each op runs through its action with `source: "sync"`; `op_id` makes retries safe (D-017); `baseVersion` drives the merge rules
 - [ ] `GET /v1/sync/pull?since=<seq>`: current state of every record changed since the cursor, deletions included; cursor = `activity_log.seq`
 - [ ] SDK (`packages/sdk`): API client, IndexedDB cache (`idb`), outbox, push/pull on open / focus / reconnect / after each write / every 60 s, conflict cards as events

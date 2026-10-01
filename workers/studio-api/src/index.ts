@@ -4,6 +4,7 @@ import { apiError } from "@studio/core";
 import "./actions/records";
 import "./actions/undo";
 import "./actions/files";
+import "./actions/shows";
 import { loadAuth } from "./auth/session";
 import type { AppEnv } from "./env";
 import { HttpError } from "./lib/errors";

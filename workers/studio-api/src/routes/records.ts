@@ -1,9 +1,14 @@
-import { Artwork, ArtworkInput, ArtworkPatch, ArtworkStatus, Client, ClientInput, ClientPatch, Settings, SettingsPatch } from "@studio/core";
+import {
+  Artwork, ArtworkInput, ArtworkPatch, ArtworkStatus, Client, ClientInput, ClientPatch, Settings, SettingsPatch,
+  Show, ShowDetail, ShowInput, ShowPatch, ShowStatus, db as schema,
+} from "@studio/core";
 import { createRoute } from "@hono/zod-openapi";
 import { and, desc, eq, isNull, lt } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { z } from "zod";
-import { type EntityDef, artworkEntity, clientEntity, getRecord, settingsEntity } from "../actions/records";
+import { type EntityDef, artworkEntity, clientEntity, getRecord, settingsEntity, showEntity } from "../actions/records";
+import type { Snapshot } from "../actions/runner";
+import type { Db } from "../env";
 import { type Permission, requirePermission } from "../auth/permissions";
 import { requireActor } from "../auth/session";
 import { IdempotencyHeader, IfMatchHeader, PageQuery, PathId, body, errors, ifMatch, json, newApp, run, send } from "./common";
@@ -18,9 +23,11 @@ interface RecordRoutesDef {
   input: z.ZodType;
   patch: z.ZodType;
   filters?: z.ZodObject;
+  /** GET /{id} returns this instead of the bare record (e.g. a show with its artworks). */
+  detail?: { schema: z.ZodType; load: (db: Db, studioId: string, row: Snapshot) => Promise<Snapshot> };
 }
 
-function mountRecordRoutes({ entity: e, path, tag, record, input, patch, filters }: RecordRoutesDef) {
+function mountRecordRoutes({ entity: e, path, tag, record, input, patch, filters, detail }: RecordRoutesDef) {
   const Page = z.object({ items: z.array(record), nextCursor: z.string().nullable() });
   const noun = e.type;
 
@@ -36,7 +43,7 @@ function mountRecordRoutes({ entity: e, path, tag, record, input, patch, filters
       const q = c.req.valid("query") as { cursor?: string; limit: number; status?: string };
       const where = [eq(e.studio, actor.studioId), isNull(e.deletedAt)];
       if (q.cursor) where.push(lt(e.key, q.cursor));
-      if (q.status && "status" in e.table) where.push(eq((e.table as typeof artworkEntity.table & { status: never }).status, q.status as never));
+      if (q.status && "status" in e.table) where.push(eq((e.table as unknown as { status: typeof schema.artworks.status }).status, q.status as never));
       const rows = await drizzle(c.env.DB).select().from(e.table).where(and(...where)).orderBy(desc(e.key)).limit(q.limit + 1);
       const items = rows.slice(0, q.limit) as { id: string }[];
       return send(c, { items, nextCursor: rows.length > q.limit ? items.at(-1)!.id : null });
@@ -59,12 +66,14 @@ function mountRecordRoutes({ entity: e, path, tag, record, input, patch, filters
     createRoute({
       method: "get", path: `/${path}/{id}`, tags: [tag], summary: `Get a ${noun}`,
       request: { params: PathId },
-      responses: { 200: json(record), 401: errors[401], 404: errors[404] },
+      responses: { 200: json(detail?.schema ?? record), 401: errors[401], 404: errors[404] },
     }),
     async (c) => {
       const actor = requireActor(c);
       requirePermission(actor.role, `${e.perm}:read` as Permission);
-      return send(c, await getRecord(drizzle(c.env.DB), e, actor.studioId, c.req.valid("param").id));
+      const db = drizzle(c.env.DB);
+      const row = await getRecord(db, e, actor.studioId, c.req.valid("param").id);
+      return send(c, detail ? await detail.load(db, actor.studioId, row) : row);
     },
   );
 
@@ -100,6 +109,21 @@ mountRecordRoutes({
 mountRecordRoutes({
   entity: clientEntity, path: "clients", tag: "records", record: Client.meta({ id: "Client" }),
   input: ClientInput, patch: ClientPatch,
+});
+
+mountRecordRoutes({
+  entity: showEntity, path: "shows", tag: "records", record: Show.meta({ id: "Show" }),
+  input: ShowInput, patch: ShowPatch, filters: z.object({ status: ShowStatus.optional() }),
+  detail: {
+    schema: ShowDetail.meta({ id: "ShowDetail" }),
+    load: async (db, studioId, row) => {
+      const t = schema.showArtworks;
+      const artworks = await db.select().from(t)
+        .where(and(eq(t.studioId, studioId), eq(t.showId, row.id as string), isNull(t.deletedAt)))
+        .orderBy(t.id);
+      return { ...row, artworks };
+    },
+  },
 });
 
 recordRoutes.openapi(

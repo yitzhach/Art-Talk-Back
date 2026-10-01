@@ -152,3 +152,79 @@ export const Me = z.object({
   })),
   activeStudioId: z.string().nullable(),
 });
+
+// ------------------------------------------------------------------- shows
+
+const IsoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "YYYY-MM-DD");
+export const ShowStatus = z.enum(["planned", "applied", "accepted", "declined", "done", "cancelled"]);
+
+export const ShowFields = z.object({
+  name: z.string().trim().min(1).max(200),
+  venue: nullableText(200),
+  city: nullableText(200),
+  startsOn: IsoDate.nullable(),
+  endsOn: IsoDate.nullable(),
+  booth: nullableText(100),
+  feeCents: z.number().int().nonnegative().nullable(),
+  currency: Currency,
+  status: ShowStatus,
+  notes: nullableText(),
+  meta: Meta,
+});
+export const ShowPatch = ShowFields.partial().strict()
+  .refine((v) => Object.keys(v).length > 0, "Send at least one field");
+export const ShowInput = ShowFields.partial().required({ name: true })
+  .extend({ id: Id.optional() }).strict();
+export const Show = RecordMeta.extend(ShowFields.shape);
+
+export const ShowArtwork = RecordMeta.extend({
+  showId: Id,
+  artworkId: Id,
+  outcome: z.enum(["brought", "sold", "returned"]),
+  soldPriceCents: z.number().int().nullable(),
+  currency: Currency,
+  clientId: z.string().nullable(),
+  soldAt: z.string().nullable(),
+});
+export const ShowDetail = Show.extend({ artworks: z.array(ShowArtwork) });
+
+export const MarkSoldInput = z.object({
+  artworkId: Id,
+  priceCents: z.number().int().nonnegative(),
+  currency: Currency.optional(),
+  showId: Id.optional(),
+  clientId: Id.optional(),
+  /** The artwork version the artist saw; omit to use the current one. */
+  version: z.number().int().min(1).optional(),
+}).strict();
+
+// -------------------------------------------------------------------- sync
+
+export const SyncOp = z.object({
+  opId: Id,
+  action: z.string().regex(/^[a-z_]+\.[a-z_]+$/),
+  entityId: Id,
+  /** The version the device edited from; null for creates and actions. */
+  baseVersion: z.number().int().min(1).nullable(),
+  input: z.record(z.string(), z.unknown()),
+});
+export const SyncPushRequest = z.object({ ops: z.array(SyncOp).min(1).max(200) });
+
+export const SyncStatus = z.enum(["applied", "merged", "conflict", "rejected", "duplicate"]);
+export const SyncConflict = z.object({ field: z.string(), serverValue: z.unknown(), deviceValue: z.unknown() });
+export const SyncOpResult = z.object({
+  opId: Id,
+  status: SyncStatus,
+  record: Meta.optional(),
+  conflicts: z.array(SyncConflict).optional(),
+  error: z.object({ code: z.string(), message: z.string(), details: Meta.optional() }).optional(),
+});
+export const SyncPushResponse = z.object({ results: z.array(SyncOpResult), cursor: z.string() });
+
+export const SyncChange = z.object({ entityType: z.string(), entityId: z.string(), record: Meta });
+export const SyncPullResponse = z.object({ changes: z.array(SyncChange), cursor: z.string(), hasMore: z.boolean() });
+
+/** Fields that never auto-merge when two devices disagree (spec → Conflicts). */
+export const NEVER_MERGE = ["status", "outcome", "currency"] as const;
+export const isProtectedField = (field: string) =>
+  (NEVER_MERGE as readonly string[]).includes(field) || /Cents$/.test(field);

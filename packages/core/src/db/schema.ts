@@ -173,6 +173,56 @@ export const artworks = sqliteTable(
   ],
 );
 
+export const shows = sqliteTable(
+  "shows",
+  {
+    id: text("id").primaryKey(),
+    studioId: text("studio_id").notNull().references(() => studios.id),
+    name: text("name").notNull(),
+    venue: text("venue"),
+    city: text("city"),
+    startsOn: text("starts_on"),
+    endsOn: text("ends_on"),
+    booth: text("booth"),
+    feeCents: integer("fee_cents"),
+    currency: text("currency").notNull().default("USD"),
+    status: text("status", { enum: ["planned", "applied", "accepted", "declined", "done", "cancelled"] })
+      .notNull()
+      .default("planned"),
+    notes: text("notes"),
+    ...recordColumns(),
+  },
+  (t) => [
+    index("shows_studio_updated").on(t.studioId, t.updatedAt),
+    index("shows_studio_starts").on(t.studioId, t.startsOn),
+    actorCheck("shows_actor"),
+    metaCheck("shows_meta"),
+  ],
+);
+
+export const showArtworks = sqliteTable(
+  "show_artworks",
+  {
+    id: text("id").primaryKey(),
+    studioId: text("studio_id").notNull().references(() => studios.id),
+    showId: text("show_id").notNull().references(() => shows.id),
+    artworkId: text("artwork_id").notNull().references(() => artworks.id),
+    outcome: text("outcome", { enum: ["brought", "sold", "returned"] }).notNull().default("brought"),
+    soldPriceCents: integer("sold_price_cents"),
+    currency: text("currency").notNull().default("USD"),
+    clientId: text("client_id").references(() => clients.id),
+    soldAt: text("sold_at"),
+    ...recordColumns(),
+  },
+  (t) => [
+    uniqueIndex("show_artworks_show_artwork").on(t.showId, t.artworkId).where(sql`deleted_at IS NULL`),
+    index("show_artworks_studio_artwork").on(t.studioId, t.artworkId),
+    index("show_artworks_studio_updated").on(t.studioId, t.updatedAt),
+    actorCheck("show_artworks_actor"),
+    metaCheck("show_artworks_meta"),
+  ],
+);
+
 export const files = sqliteTable(
   "files",
   {
@@ -232,4 +282,6 @@ export type ArtworkRow = typeof artworks.$inferSelect;
 export type ClientRow = typeof clients.$inferSelect;
 export type FileRow = typeof files.$inferSelect;
 export type SettingsRow = typeof studioSettings.$inferSelect;
+export type ShowRow = typeof shows.$inferSelect;
+export type ShowArtworkRow = typeof showArtworks.$inferSelect;
 export type ActivityRow = typeof activityLog.$inferSelect;

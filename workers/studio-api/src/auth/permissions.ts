@@ -4,6 +4,7 @@ import { HttpError } from "../lib/errors";
 export type Permission =
   | "artworks:read" | "artworks:write" | "artworks:delete"
   | "clients:read" | "clients:write" | "clients:delete"
+  | "shows:read" | "shows:write" | "shows:delete"
   | "files:read" | "files:write"
   | "settings:read" | "settings:write"
   | "activity:read" | "activity:undo";
@@ -11,7 +12,7 @@ export type Permission =
 // D-023: staff can do day-to-day work but not delete or change settings.
 // Client-role users get nothing here until the client portal (Phase 4).
 const STAFF: readonly Permission[] = [
-  "artworks:read", "artworks:write", "clients:read", "clients:write",
+  "artworks:read", "artworks:write", "clients:read", "clients:write", "shows:read", "shows:write",
   "files:read", "files:write", "settings:read", "activity:read", "activity:undo",
 ];
 

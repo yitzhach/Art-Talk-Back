@@ -13,8 +13,10 @@
 ## Gate status (2026-10-01)
 
 1–5 pass locally: 52 studio-api tests + 9 core tests, and a manual walk-through on `wrangler dev`
-(sign in → create → edit → stale edit 409 → activity → undo). 6 (green in GitHub Actions) is
-checked on the first push of this work.
+(sign in → create → edit → stale edit 409 → activity → undo). 6: CI run #1 green on
+`a7870bf` (https://github.com/yitzhach/Art-Talk-Back/actions/runs/36892264216).
+
+**Gate passed 2026-10-01** (local + CI). Staging/production deploy waits on "Needs Isaac's OK".
 
 Not part of the gate: deploying to staging or production (needs Isaac's OK, below).
 

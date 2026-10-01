@@ -14,7 +14,7 @@ starts.
 - [x] Draft OpenAPI for Phase 1 + 2 routes → `workers/studio-api/openapi.draft.yaml`
       (passes `redocly lint`)
 - [x] Unused Workers: ignore, don't delete (D-015, Isaac 2026-10-01)
-- [ ] **Isaac:** review migration 0001 and the OpenAPI draft
+- [x] **Isaac:** reviewed migration 0001 and the OpenAPI draft; open questions answered (D-016..D-019). **Gate passed 2026-10-01.**
 
 ## What to look at when reviewing
 

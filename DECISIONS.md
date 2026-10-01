@@ -92,3 +92,18 @@ the Workers listed under *In the platform* in
 the platform keep their existing Worker name, because the localStorage import
 only works from the same address. Brand-new Workers are named `studio-*` so
 they can't overwrite an existing tool.
+
+### D-016 · Other-studio ids return 404 · 2026-10-01 · locked (Isaac)
+A record id from another studio is answered exactly like a missing one, so
+existence never leaks across studios.
+
+### D-017 · Idempotency-Key repeats rebuild from activity_log · 2026-10-01 · locked (Isaac)
+The key is stored as `op_id`; a repeat returns the result rebuilt from the
+logged `after`. No response table.
+
+### D-018 · R2 keys are `studios/<studio_id>/<file_id>-<name>` · 2026-10-01 · locked (Isaac)
+Flat per studio; moving a file between records never moves the object.
+Per-studio export and delete is one prefix.
+
+### D-019 · Rate limits deferred to Phase 6 · 2026-10-01 · locked (Isaac)
+Only the sign-in code limit (6 tries per code) ships in Phase 1.

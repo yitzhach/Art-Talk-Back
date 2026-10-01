@@ -234,3 +234,17 @@ Rare for one artist; revisit if it isn't.
 classic script, global `StudioSDK`, ~500 KB, mostly zod) into `studio-sdk.js`.
 It's built, not committed. The tracker's own files stay classic scripts with no
 build, and pages work without the bundle (solo mode).
+
+### D-038 · "Import my existing data" · 2026-10-01 · default
+A button in the sync panel (shown only when this device holds shows or sales the
+studio doesn't have yet, and never for the demo season). It first syncs, and
+refuses when offline, so it always knows what the studio already holds. Then it
+creates the live shows and sales through the SDK's outbox (ordinary
+`/v1/sync/push` creates). Safe to repeat: a record already linked is skipped, and
+one the studio already has under the same tracker id (the artist's other device,
+or the old Supabase sync) is linked, never copied. Deleted rows stay behind; so do
+shows with no name (reported, not hidden). Contacts, expenses, applications,
+reviews and the catalogue are never read. It runs only when the artist presses
+it: signing in on its own copies nothing. It reads the browser's own saved data,
+so it works for whichever origin the page runs on, which is why the live tracker
+keeps its address (D-034).

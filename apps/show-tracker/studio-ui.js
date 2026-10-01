@@ -17,7 +17,7 @@ window.ASTStudioUI = (function () {
   if (!ST || !A || !SDK || !cfg.apiUrl) return { mounted: false };
 
   var esc = A.esc;
-  var root, chip, panel, step = 'email', pendingEmail = '', busy = false, message = '';
+  var root, chip, panel, step = 'email', pendingEmail = '', busy = false, message = '', importInfo = null, importMsg = '';
 
   var CSS =
     '.studio-chip{position:fixed;right:12px;bottom:12px;z-index:60;font:600 11px/1 var(--font);letter-spacing:.08em;' +
@@ -96,6 +96,17 @@ window.ASTStudioUI = (function () {
       if (s.error) html += '<div class="err" role="alert">' + esc(s.error) + '</div>';
     }
     if (message) html += '<div class="err" role="alert">' + esc(message) + '</div>';
+    if ((s.state === 'online' || s.state === 'offline') && importInfo) {
+      var n = importInfo.shows + importInfo.sales;
+      if (importMsg) html += '<p class="muted" role="status">' + esc(importMsg) + '</p>';
+      else if (!importInfo.demo && n && !importInfo.doneAt) {
+        html += '<h2 style="margin-top:14px">Your existing data</h2><p class="muted">This device holds ' + plural(importInfo.shows, 'show') +
+          ' and ' + plural(importInfo.sales, 'sale') + ' that are not in your studio yet. Importing adds them once and changes nothing here.</p>' +
+          '<div class="row"><button class="btn primary" data-act="import"' + (busy ? ' disabled' : '') + '>Import my existing data</button></div>';
+      } else if (importInfo.doneAt) {
+        html += '<p class="muted">Existing data imported ' + esc(String(importInfo.doneAt).slice(0, 10)) + '.</p>';
+      }
+    }
     var cards = ST.Reviews.list();
     if (cards.length) html += '<h2 style="margin-top:14px">Review changes</h2>' + cards.map(cardHTML).join('');
     if (s.state === 'online' || s.state === 'offline') {
@@ -104,7 +115,42 @@ window.ASTStudioUI = (function () {
     panel.innerHTML = html;
   }
 
-  function paint() { paintChip(); if (!panel.hidden) paintPanel(); }
+  function plural(n, word) { return n + ' ' + word + (n === 1 ? '' : 's'); }
+  var loadingImport = false;
+  function paint() {
+    paintChip();
+    if (!panel.hidden) {
+      paintPanel();
+      /* Signed in with nothing known about this device's data yet: look. */
+      if (!importInfo && !loadingImport && (ST.status().state === 'online' || ST.status().state === 'offline')) refreshImport();
+    }
+  }
+  function refreshImport() {
+    var s = ST.status();
+    if (s.state !== 'online' && s.state !== 'offline') { importInfo = null; return Promise.resolve(); }
+    loadingImport = true;
+    return ST.importPreview().then(function (i) { importInfo = i; }, function () {}).then(function () {
+      loadingImport = false;
+      if (!panel.hidden) paintPanel();
+    });
+  }
+
+  async function runImport() {
+    var i = importInfo;
+    if (!i || !window.confirm('Add ' + plural(i.shows, 'show') + ' and ' + plural(i.sales, 'sale') +
+      ' from this device to your studio? They stay on this device too.')) return;
+    busy = true; importMsg = ''; paintPanel();
+    try {
+      var r = await ST.importExisting();
+      importMsg = r.demo ? 'This device only has the demo season, so there is nothing to import.'
+        : 'Imported ' + plural(r.imported.shows, 'show') + ' and ' + plural(r.imported.sales, 'sale') +
+          (r.linked.shows + r.linked.sales ? '; ' + (r.linked.shows + r.linked.sales) + ' were already in the studio and were linked, not copied' : '') +
+          (r.skipped ? '; ' + plural(r.skipped, 'show') + ' with no name ' + (r.skipped === 1 ? 'was' : 'were') + ' left on this device' : '') + '.';
+    } catch (err) { message = err.message || 'The import did not finish.'; }
+    busy = false;
+    await refreshImport();
+    paintPanel();
+  }
 
   async function send() {
     var email = (panel.querySelector('#studioEmail').value || '').trim();
@@ -139,6 +185,7 @@ window.ASTStudioUI = (function () {
     try { if (st) await st.api.logout(); } catch (_) { /* offline: the cookie just expires */ }
     ST.Session.clear();
     await ST.disconnect();
+    importInfo = null; importMsg = '';
     paint();
   }
 
@@ -150,6 +197,7 @@ window.ASTStudioUI = (function () {
     else if (act === 'verify') verify();
     else if (act === 'back') { step = 'email'; message = ''; paintPanel(); }
     else if (act === 'out') signOut();
+    else if (act === 'import') runImport();
     else if (act === 'mine') ST.useMine(id).then(paint);
     else if (act === 'theirs' || act === 'dismiss') { ST.keepTheirs(id); paint(); }
   }
@@ -173,6 +221,7 @@ window.ASTStudioUI = (function () {
       panel.hidden = !panel.hidden;
       chip.setAttribute('aria-expanded', String(!panel.hidden));
       paint();
+      if (!panel.hidden) refreshImport();
     });
     panel.addEventListener('click', onClick);
     ST.onChange(paint);

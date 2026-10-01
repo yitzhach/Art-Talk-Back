@@ -34,3 +34,4 @@
 - Show Tracker (snapshot of `art-show-tracker` d32e9f1) in `apps/show-tracker/`, now syncing its shows and sales through the SDK: `store-studio.js` adapter, sign-in chip + "review change" cards (`studio-ui.js`), installable PWA (manifest, offline service worker, placeholder icons). Solo mode unchanged: no chip unless `studio-config.js` sets an `apiUrl`. All nine of the tracker's own test suites still pass on it.
 - SDK: background sync failures now raise an `error` event instead of an unhandled rejection.
 - 13 new tests: the tracker's real scripts on two simulated devices against the real API (gate flow, merges, review cards, deletes, demo-season handling, nothing-lost round trips). Decisions D-031…D-037.
+- "Import my existing data" in the tracker's sync panel: uploads saved shows and sales once, links instead of duplicating, refuses offline; tested against fixtures of the real localStorage shapes (current and a pre-versioning bare list). D-038.

@@ -34,6 +34,7 @@ window.ASTStudio = (function () {
   var MAP_KEY = 'artShowTracker.studioMap';
   var SESSION_KEY = 'artShowTracker.studioSession';
   var REVIEW_KEY = 'artShowTracker.studioReview';
+  var IMPORT_KEY = 'artShowTracker.studioImported';
   var ISO_DAY = /^\d{4}-\d{2}-\d{2}$/;
 
   /* ---- Mapping: tracker record <-> platform record ----------------------- */
@@ -443,6 +444,69 @@ window.ASTStudio = (function () {
   }
   function keepTheirs(cardId) { Reviews.remove(cardId); return Promise.resolve(); }
 
+  /* ---- "Import my existing data" ------------------------------------------
+     Everything this device already holds (shows and sales; nothing else) goes
+     up once. It's safe to run again: a record that is already linked to the
+     studio is skipped, and one the studio already has under the same tracker
+     id (this artist's other device got there first) is linked, never doubled.
+     The writes are ordinary creates in the SDK's outbox, so they go out
+     through /v1/sync/push like any other change, offline or not. */
+  function countBy(list, key) { var m = {}; list.forEach(function (x) { m[x.meta && x.meta[key]] = x; }); return m; }
+
+  /** What an import would do right now, without doing it. */
+  async function importPreview() {
+    var out = { demo: Local.isPristineSeed(), shows: 0, sales: 0, skipped: 0, doneAt: (readJSON(IMPORT_KEY) || {}).at || null };
+    if (out.demo) return out;
+    (await Local.listAll()).forEach(function (x) {
+      if (x.deletedAt || map.shows[x.id]) return;
+      if (toPlatformShow(x)) out.shows++; else out.skipped++;
+    });
+    (await Local.listAllSales()).forEach(function (x) { if (!x.deletedAt && !map.sales[x.id]) out.sales++; });
+    return out;
+  }
+
+  function importExisting() {
+    if (!studio) return Promise.reject(new Error('Sign in first.'));
+    /* Look at what the studio already holds before adding anything, or a device
+       that was only just opened would upload copies of records another device
+       already sent. No connection, no import. */
+    return studio.sync().then(function () {
+      if (!studio.online) throw new Error('You need a connection to import, so it can check what is already in your studio.');
+      return enqueue(importNow);
+    }).then(function (res) { return refreshPending().then(function () { return res; }); });
+  }
+
+  async function importNow() {
+    var res = { imported: { shows: 0, sales: 0 }, linked: { shows: 0, sales: 0 }, skipped: 0, already: 0, demo: false };
+    if (Local.isPristineSeed()) { res.demo = true; return res; } /* the demo season isn't yours */
+
+    var theirShows = countBy(await studio.list('show'), 'trackerId');
+    var shows = (await Local.listAll()).filter(function (x) { return !x.deletedAt; });
+    for (var i = 0; i < shows.length; i++) {
+      var show = shows[i], f = toPlatformShow(show);
+      if (!f) { res.skipped++; continue; }
+      if (map.shows[show.id]) { res.already++; continue; }
+      var theirs = theirShows[show.id];
+      if (theirs) { map.shows[show.id] = { id: theirs.id, f: toPlatformShow(fromPlatformShow(theirs)) }; res.linked.shows++; continue; }
+      await mirrorShow(show);
+      res.imported.shows++;
+    }
+
+    var theirSales = countBy((await studio.list('artwork')).filter(function (a) { return a.meta && a.meta.trackerSale; }), 'trackerId');
+    var sales = (await Local.listAllSales()).filter(function (x) { return !x.deletedAt; });
+    for (var j = 0; j < sales.length; j++) {
+      var sale = sales[j];
+      if (map.sales[sale.id]) { res.already++; continue; }
+      var twin = theirSales[sale.id];
+      if (twin) { map.sales[sale.id] = { id: twin.id, f: toPlatformArtwork(fromPlatformArtwork(twin)) }; res.linked.sales++; continue; }
+      await mirrorSale(sale);
+      res.imported.sales++;
+    }
+    saveMap();
+    writeJSON(IMPORT_KEY, { at: new Date().toISOString(), imported: res.imported, linked: res.linked });
+    return res;
+  }
+
   /* ---- Connect -------------------------------------------------------------- */
   function onStudioChange(e) {
     if (e.types.indexOf('show') === -1 && e.types.indexOf('artwork') === -1) return;
@@ -501,6 +565,7 @@ window.ASTStudio = (function () {
     onData: function (fn) { dataListeners.push(fn); if (dataVersion) { try { fn(); } catch (_) {} } },
     onChange: function (fn) { listeners.push(fn); return function () { listeners = listeners.filter(function (f) { return f !== fn; }); }; },
     connect: connect, disconnect: disconnect,
+    importPreview: importPreview, importExisting: importExisting,
     sync: function () { return studio ? studio.sync().catch(onSyncError) : Promise.resolve(); },
     /** The raw SDK handle, for sign-in and tests. */
     studio: function () { return studio; },

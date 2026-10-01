@@ -19,6 +19,8 @@ let n = 0;
 export interface TrackerDevice {
   AST: Any;
   ST: Any;
+  /** Close the page and open it again: same localStorage, same IndexedDB, same cookie, fresh scripts. */
+  restart(): Promise<void>;
   net: { online: boolean };
   storage: Map<string, string>;
   /** Wait for mirrors to finish, push, then pull. */
@@ -28,35 +30,51 @@ export interface TrackerDevice {
   events: string[];
 }
 
-export async function trackerDevice(server: Server, opts: { signedIn?: boolean } = {}): Promise<TrackerDevice> {
+export async function trackerDevice(
+  server: Server,
+  opts: { signedIn?: boolean; localStorage?: Record<string, unknown> } = {},
+): Promise<TrackerDevice> {
   const d = device(server);
-  const storage = new Map<string, string>();
+  const storage = new Map<string, string>(
+    Object.entries(opts.localStorage ?? {}).map(([k, v]) => [k, typeof v === "string" ? v : JSON.stringify(v)]),
+  );
   const events: string[] = [];
-  const sandbox: Any = {
-    console, setTimeout, clearTimeout, setInterval, clearInterval,
-    localStorage: {
-      getItem: (k: string) => (storage.has(k) ? storage.get(k)! : null),
-      setItem: (k: string, v: string) => { storage.set(k, String(v)); },
-      removeItem: (k: string) => { storage.delete(k); },
-    },
-    navigator: { onLine: true },
-    crypto: { randomUUID: () => globalThis.crypto.randomUUID() },
-    document: { addEventListener() {}, documentElement: { setAttribute() {}, getAttribute: () => null }, querySelector: () => null },
-    CustomEvent: class { constructor(public type: string) {} },
-    addEventListener() {},
-    dispatchEvent(e: { type: string }) { events.push(e.type); return true; },
-    StudioSDK: SDK,
-  };
-  sandbox.window = sandbox;
-  vm.createContext(sandbox);
-  for (const f of ["core.js", "store-studio.js"]) {
-    vm.runInContext(readFileSync(new URL(f, dir), "utf8"), sandbox, { filename: f });
+  let session: Any = null;
+  const dbName = `tracker-${++n}`;
+
+  function load() {
+    const sandbox: Any = {
+      console, setTimeout, clearTimeout, setInterval, clearInterval,
+      localStorage: {
+        getItem: (k: string) => (storage.has(k) ? storage.get(k)! : null),
+        setItem: (k: string, v: string) => { storage.set(k, String(v)); },
+        removeItem: (k: string) => { storage.delete(k); },
+      },
+      navigator: { onLine: true },
+      crypto: { randomUUID: () => globalThis.crypto.randomUUID() },
+      document: { addEventListener() {}, documentElement: { setAttribute() {}, getAttribute: () => null }, querySelector: () => null },
+      CustomEvent: class { constructor(public type: string) {} },
+      addEventListener() {},
+      dispatchEvent(e: { type: string }) { events.push(e.type); return true; },
+      StudioSDK: SDK,
+    };
+    sandbox.window = sandbox;
+    vm.createContext(sandbox);
+    for (const f of ["core.js", "store-studio.js"]) {
+      vm.runInContext(readFileSync(new URL(f, dir), "utf8"), sandbox, { filename: f });
+    }
+    return { AST: sandbox.AST as Any, ST: sandbox.ASTStudio as Any };
   }
-  const AST = sandbox.AST;
-  const ST = sandbox.ASTStudio;
+
+  const first = load();
 
   const dev: TrackerDevice = {
-    AST, ST, net: d.net, storage, events,
+    AST: first.AST, ST: first.ST, net: d.net, storage, events,
+    async restart() {
+      await dev.ST.disconnect();
+      Object.assign(dev, load());
+      await dev.ST.connect({ session, fetch: d.fetch, dbName, intervalMs: 3_600_000 });
+    },
     async connect() {
       const api = new SDK.ApiClient({ baseUrl: API, fetch: d.fetch });
       const log = vi.spyOn(console, "log").mockImplementation(() => {});
@@ -64,15 +82,13 @@ export async function trackerDevice(server: Server, opts: { signedIn?: boolean }
       const code = /(\d{6})/.exec(String(log.mock.calls.at(-1)?.[0]))![1]!;
       log.mockRestore();
       const me = await api.verify(OWNER, code);
-      await ST.connect({
-        session: { apiUrl: API, studioId: me.activeStudioId, email: OWNER },
-        fetch: d.fetch, dbName: `tracker-${++n}`, intervalMs: 3_600_000,
-      });
+      session = { apiUrl: API, studioId: me.activeStudioId, email: OWNER };
+      await dev.ST.connect({ session, fetch: d.fetch, dbName, intervalMs: 3_600_000 });
     },
     async settle() {
-      await ST._flush();
-      await ST.sync();
-      await ST._flush();
+      await dev.ST._flush();
+      await dev.ST.sync();
+      await dev.ST._flush();
     },
   };
   if (opts.signedIn !== false) await dev.connect();

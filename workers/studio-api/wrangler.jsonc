@@ -30,7 +30,7 @@
   //   ACCESS_TEAM_DOMAIN, ACCESS_AUD   Cloudflare Access owner sign-in (optional).
 
   "env": {
-    // staging D1 + R2 created 2026-10-01. production: needs Isaac's OK (docs/phase-2.md).
+    // D1 for both created 2026-10-01; production files use the existing iaa-files bucket.
     "staging": {
       "name": "studio-api-staging",
       "vars": { "ENVIRONMENT": "staging", "OWNER_EMAILS": "", "STUDIO_NAME": "Isaac Anderson Art", "MAIL_FROM": "" },
@@ -43,7 +43,7 @@
       "name": "studio-api",
       "vars": { "ENVIRONMENT": "production", "OWNER_EMAILS": "", "STUDIO_NAME": "Isaac Anderson Art", "MAIL_FROM": "" },
       "d1_databases": [
-        { "binding": "DB", "database_name": "studio-db-prod", "database_id": "TODO-after-isaac-ok", "migrations_dir": "migrations" }
+        { "binding": "DB", "database_name": "studio-db-prod", "database_id": "4d735f82-6196-4c5c-96c7-8cfcea91f4c8", "migrations_dir": "migrations" }
       ],
       "r2_buckets": [{ "binding": "FILES", "bucket_name": "iaa-files" }]
     }

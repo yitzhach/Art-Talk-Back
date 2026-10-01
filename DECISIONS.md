@@ -173,3 +173,7 @@ outbox: the "review change" card is how the artist re-applies it.
 `artwork.mark_sold` sets `status: sold` and records `meta.sale` (price, currency,
 client, show, time); at a show it also updates `show_artworks`. Phase 4's
 `transactions` table takes over the money side and imports these.
+
+### D-030 · Production database is a new `studio-db-prod` · 2026-10-01 · locked (Isaac)
+Created in eastern North America. The empty legacy `iaa-db` stays untouched.
+Production files use the existing `iaa-files` bucket.

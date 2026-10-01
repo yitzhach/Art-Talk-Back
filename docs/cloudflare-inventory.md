@@ -21,6 +21,7 @@ Workers & Pages → *name* → Metrics.
 | KV | — | None |
 | D1 | `studio-db-staging` · `b9f0970a-71e0-4ead-ab68-556506cce029` | **Platform.** Created 2026-10-01 for studio-api staging (eastern N. America) |
 | R2 | `studio-files-staging` | **Platform.** Created 2026-10-01 for studio-api staging |
+| D1 | `studio-db-prod` · `4d735f82-6196-4c5c-96c7-8cfcea91f4c8` | **Platform.** Created 2026-10-01 for studio-api production (Isaac's choice over reusing `iaa-db`) |
 
 ## The duplicates
 

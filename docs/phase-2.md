@@ -54,9 +54,9 @@ Each step: unit tests + one API test before moving on (backend-builder skill).
 
 | # | What | Why | Cost |
 |---|---|---|---|
-| 1 | **Show Tracker's source.** Cloudflare dashboard → Workers & Pages → `art-show-tracker` → download, or tell me where the files live | The connector can't read static-asset Workers; step 5 needs the real app | — |
+| 1 | **Show Tracker's source** (Isaac is getting the files).  Cloudflare dashboard → Workers & Pages → `art-show-tracker` → download, or tell me where the files live | The connector can't read static-asset Workers; step 5 needs the real app | — |
 | 2 | **Cloudflare API token** as GitHub secrets `CLOUDFLARE_API_TOKEN` (template "Edit Cloudflare Workers", plus D1 Edit) and `CLOUDFLARE_ACCOUNT_ID` | Lets CI apply migrations and deploy. `wrangler deploy` creates the `studio-api-staging` Worker itself; nothing to create by hand | Free |
-| 3 | **Production database:** new `studio-db-prod`, or reuse the empty `iaa-db` | Recommend new: clearer name, `iaa-db` stays untouched | Free tier |
+| ~~3~~ | ~~Production database~~ | **Done:** `studio-db-prod` created 2026-10-01 (Isaac's choice); `iaa-db` untouched | Free tier |
 | 4 | **Resend** API key and a sending address on your domain | Signing in from a phone needs a real email. Alternative: Cloudflare Access for your own logins | Free tier |
 | 5 | **Replace the live `art-show-tracker`** with the SDK version (same Worker name, so its saved data can be imported) | It's your working tool; the swap happens only after the staging run passes | Free |
 | 6 | Your owner email for `OWNER_EMAILS` | Creates your studio on first sign-in (D-022) | — |

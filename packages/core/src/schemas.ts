@@ -219,7 +219,8 @@ export const SyncOpResult = z.object({
   conflicts: z.array(SyncConflict).optional(),
   error: z.object({ code: z.string(), message: z.string(), details: Meta.optional() }).optional(),
 });
-export const SyncPushResponse = z.object({ results: z.array(SyncOpResult), cursor: z.string() });
+// No cursor here on purpose: a device advances its cursor only by pulling, so it can't skip others' changes.
+export const SyncPushResponse = z.object({ results: z.array(SyncOpResult) });
 
 export const SyncChange = z.object({ entityType: z.string(), entityId: z.string(), record: Meta });
 export const SyncPullResponse = z.object({ changes: z.array(SyncChange), cursor: z.string(), hasMore: z.boolean() });

@@ -67,6 +67,27 @@ describe("studio A can't reach studio B", () => {
     expect(await snapshotB()).toEqual(before);
   });
 
+  it("sync push with B's ids is rejected per op, and B is unchanged", async () => {
+    covered.add("post /sync/push");
+    const before = await snapshotB();
+    const ops = [
+      { opId: newId(), action: "artwork.update", entityId: b.artwork.id, baseVersion: 1, input: { patch: { title: "pwned" } } },
+      { opId: newId(), action: "artwork.delete", entityId: b.artwork.id, baseVersion: 1, input: {} },
+      { opId: newId(), action: "artwork.mark_sold", entityId: b.artwork.id, baseVersion: null, input: { artworkId: b.artwork.id, priceCents: 1 } },
+      { opId: newId(), action: "show.add_artwork", entityId: newId(), baseVersion: null, input: { showId: b.show.id, artworkId: b.artwork.id } },
+    ];
+    const res = await call("/v1/sync/push", { method: "POST", cookie: A.cookie, json: { ops } });
+    expect(res.data.results.map((r: any) => [r.status, r.error?.code])).toEqual(ops.map(() => ["rejected", "not_found"]));
+    expect(await snapshotB()).toEqual(before);
+  });
+
+  it("sync pull never returns B's records", async () => {
+    covered.add("get /sync/pull");
+    const res = await call("/v1/sync/pull?since=0&limit=500", { cookie: A.cookie });
+    const bIds = new Set([b.artwork.id, b.client.id, b.show.id, b.file.id, B.studioId]);
+    expect(res.data.changes.filter((c: any) => bIds.has(c.entityId))).toEqual([]);
+  });
+
   it("A's own file can't be attached to B's artwork", async () => {
     const up = (await call("/v1/files/upload-url", { method: "POST", cookie: A.cookie, json: { name: "a.jpg", contentType: "image/jpeg", size: 3 } })).data;
     await call(up.uploadUrl.replace(BASE, ""), { method: "PUT", body: "abc", headers: { "Content-Length": "3" } });

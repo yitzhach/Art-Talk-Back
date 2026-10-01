@@ -8,7 +8,7 @@
   "scripts": {
     "typecheck": "pnpm -r typecheck",
     "test": "vitest run",
-    "lint:openapi": "npx -y @redocly/cli@latest lint docs/openapi.json workers/studio-api/openapi.phase2.draft.yaml",
+    "lint:openapi": "npx -y @redocly/cli@latest lint docs/openapi.json",
     "openapi": "pnpm --filter @studio/api openapi"
   },
   "devDependencies": {

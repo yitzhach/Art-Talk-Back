@@ -12,6 +12,7 @@ import { activityRoutes } from "./routes/activity";
 import { authRoutes } from "./routes/auth";
 import { fileRoutes } from "./routes/files";
 import { recordRoutes } from "./routes/records";
+import { syncRoutes } from "./routes/sync";
 
 const v1 = new OpenAPIHono<AppEnv>();
 
@@ -24,6 +25,7 @@ v1.route("/", authRoutes);
 v1.route("/", recordRoutes);
 v1.route("/", activityRoutes);
 v1.route("/", fileRoutes);
+v1.route("/", syncRoutes);
 
 const docConfig = {
   openapi: "3.1.0",

@@ -11,3 +11,5 @@
 
 ### Phase 1 · Foundation — planned
 - Plan, gate and "Needs Isaac's OK" list in `docs/phase-1.md`.
+- Monorepo skeleton: `@studio/core`, `@studio/sdk`, `@studio/api`, `@studio/assistant`; strict TypeScript; Vitest; `pnpm typecheck` / `pnpm test`.
+- `backend-builder` skill in `.claude/skills/`.

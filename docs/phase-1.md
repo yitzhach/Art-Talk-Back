@@ -14,7 +14,7 @@ Not part of the gate: deploying to staging or production (needs Isaac's OK, belo
 
 ## Checklist (from SPEC → Phase 1)
 
-- [ ] Monorepo skeleton: `packages/core`, `packages/sdk` (empty stub), `workers/studio-api`, `workers/assistant` (stub); TypeScript strict
+- [x] Monorepo skeleton: `packages/core`, `packages/sdk` (empty stub), `workers/studio-api`, `workers/assistant` (stub); TypeScript strict
 - [ ] Wrangler environments `dev`, `staging`, `production`, each with its own D1 and R2 bindings
 - [ ] CI: typecheck + test on every push; migrate staging + deploy only after Isaac's OK
 - [ ] Port `iaa-invoice-api` auth: email code (sha256, 15 min, 6 tries), sessions (hashed token, D-005), Cloudflare Access for the owner, 204 on code request (D-010)

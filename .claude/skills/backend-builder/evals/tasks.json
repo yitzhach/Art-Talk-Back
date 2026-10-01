@@ -1,0 +1,50 @@
+{
+  "skill": "backend-builder",
+  "note": "Checks run against the answer text. split: train / val / test (val + test kept at >= 1/3 of all tasks). reviewed: false until Isaac OKs the checks. The format may need adjusting to whatever SkillOpt-Sleep expects when it's set up.",
+  "tasks": [
+    {
+      "id": "p2-shows-migration",
+      "split": "train",
+      "reviewed": false,
+      "intent": "In the studio-platform repo, add the Phase 2 tables for art shows (shows, show_artworks) so the API can record which artworks went to a show and which sold there.",
+      "checks": [
+        { "type": "regex", "value": "migrations/0002_[a-z_]+\\.sql", "description": "Adds a new numbered migration instead of editing the first one" },
+        { "type": "regex", "value": "studio_id\\s+TEXT NOT NULL", "description": "Every new table belongs to a studio" },
+        { "type": "regex", "value": "(?i)fee_cents|sold_price_cents|price_cents", "description": "Money columns are whole cents" }
+      ]
+    },
+    {
+      "id": "p2-mark-sold",
+      "split": "val",
+      "reviewed": false,
+      "intent": "Add the action that marks an artwork sold at a show to a client, so the artwork, the show record and the client's history all update together and the artist can undo it.",
+      "checks": [
+        { "type": "contains", "value": "defineAction", "description": "Built as a registered action, not a one-off route" },
+        { "type": "regex", "value": "risk:\\s*\"confirm\"", "description": "Marking sold waits for the artist's confirm tap" },
+        { "type": "not_contains", "value": "parseFloat", "description": "Never turns money into a decimal number" }
+      ]
+    },
+    {
+      "id": "p2-sync-push",
+      "split": "test",
+      "reviewed": false,
+      "intent": "Build the endpoint that receives a phone's queued offline changes and applies them, so a retry after a dropped connection never applies the same change twice.",
+      "checks": [
+        { "type": "regex", "value": "op_?[iI]d", "description": "Uses each change's operation id to make retries safe" },
+        { "type": "regex", "value": "(?i)base_?version|version", "description": "Checks the record version the phone edited from" },
+        { "type": "not_contains", "value": "body.studioId", "description": "Never takes the studio from what the phone sent" }
+      ]
+    },
+    {
+      "id": "p2-sync-pull",
+      "split": "train",
+      "reviewed": false,
+      "intent": "Build the endpoint a device calls to fetch everything that changed since it last synced, including records that were deleted.",
+      "checks": [
+        { "type": "contains", "value": "since", "description": "Takes the device's last sync point" },
+        { "type": "regex", "value": "\\bseq\\b", "description": "Uses the activity log's running number as the sync point" },
+        { "type": "regex", "value": "(?i)deleted_?at", "description": "Sends deletions too, so other devices remove them" }
+      ]
+    }
+  ]
+}

@@ -30,12 +30,12 @@
   //   ACCESS_TEAM_DOMAIN, ACCESS_AUD   Cloudflare Access owner sign-in (optional).
 
   "env": {
-    // Needs Isaac's OK (#1–#3): create these resources, then fill in the ids.
+    // staging D1 + R2 created 2026-10-01. production: needs Isaac's OK (docs/phase-2.md).
     "staging": {
       "name": "studio-api-staging",
       "vars": { "ENVIRONMENT": "staging", "OWNER_EMAILS": "", "STUDIO_NAME": "Isaac Anderson Art", "MAIL_FROM": "" },
       "d1_databases": [
-        { "binding": "DB", "database_name": "studio-db-staging", "database_id": "TODO-after-isaac-ok", "migrations_dir": "migrations" }
+        { "binding": "DB", "database_name": "studio-db-staging", "database_id": "b9f0970a-71e0-4ead-ab68-556506cce029", "migrations_dir": "migrations" }
       ],
       "r2_buckets": [{ "binding": "FILES", "bucket_name": "studio-files-staging" }]
     },

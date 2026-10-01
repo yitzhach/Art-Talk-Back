@@ -19,6 +19,8 @@ Workers & Pages → *name* → Metrics.
 | R2 | `iaa-files` | Created 2026-09-02. Becomes the main file store |
 | R2 | `booth-studio-shares` | Created 2026-09-25. Booth Studio share snapshots |
 | KV | — | None |
+| D1 | `studio-db-staging` · `b9f0970a-71e0-4ead-ab68-556506cce029` | **Platform.** Created 2026-10-01 for studio-api staging (eastern N. America) |
+| R2 | `studio-files-staging` | **Platform.** Created 2026-10-01 for studio-api staging |
 
 ## The duplicates
 

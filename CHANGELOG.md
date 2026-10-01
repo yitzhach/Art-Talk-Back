@@ -19,3 +19,9 @@
 - Tests in the Workers runtime against local D1/R2: auth, records, undo, files, idempotency, roles, and a cross-studio suite that covers every route.
 - `docs/openapi.json` generated from code; CI (typecheck, test, OpenAPI up to date).
 - Decisions D-020…D-025; D-013 amended.
+- Gate passed 2026-10-01 (local + CI run #1).
+
+### Phase 2 · Offline sync and first app — planned
+- Plan, gate and "Needs Isaac's OK" list in `docs/phase-2.md`.
+- Staging resources created: D1 `studio-db-staging`, R2 `studio-files-staging`.
+- 4 eval tasks for Phase 2 work in `.claude/skills/backend-builder/evals/tasks.json` (not yet reviewed).

@@ -26,18 +26,17 @@ and a second device shows it. Concretely:
 - [x] SDK (`packages/sdk`): API client, IndexedDB cache (`idb`), outbox, push/pull on open / focus / reconnect / after each write / every 60 s, conflict cards as events
 - [x] Show Tracker into `apps/show-tracker/` on the SDK; installable PWA (manifest + service worker for the app shell) — thin slice: ledger shows + sales (D-031…D-037)
 - [x] "Import my existing data" from localStorage, once, through sync push (D-038; fixtures of the real shapes in `apps/show-tracker/test/fixtures/`)
-- [ ] Offline test: automated two-device Playwright test (gate 1–3)
+- [x] Offline test: automated two-device Playwright test (gate 1–3) — `pnpm e2e` in `apps/show-tracker`, CI job `e2e` (D-039). Gate 3's import runs in Vitest against fixtures (step 6) and by hand in Chromium.
 - [ ] Deploy `studio-api-staging` + Show Tracker staging; real-device run (gate 4)
 - [x] Move the built routes out of `openapi.phase2.draft.yaml`; delete it when empty (D-013)
 
 ## Progress (2026-10-01)
 
-Steps 1–6 done: 119 tests (core 9, SDK 9, Show Tracker 21, studio-api 80). The
+Steps 1–7 done: 119 tests (core 9, SDK 9, Show Tracker 21, studio-api 80) plus 4 browser tests (`pnpm e2e`). The
 SDK and Show Tracker tests run two simulated devices against the real studio-api
 code and a local D1: offline sale reaching the other device, merges, review cards,
 retry after a lost reply, deletes. Step 5 was also run by hand in Chromium (see
-Step 5 notes). Step 7 (Playwright in CI) needs nothing from Isaac;
-step 8 needs the deploy OKs below.
+Step 5 notes). Step 8 needs the deploy OKs below.
 
 ## Step 5 notes (2026-10-01)
 

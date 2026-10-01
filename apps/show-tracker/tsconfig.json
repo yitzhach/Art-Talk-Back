@@ -4,5 +4,5 @@
     "types": ["node", "@cloudflare/workers-types"],
     "lib": ["ES2022", "DOM"]
   },
-  "include": ["test", "vitest.config.ts"]
+  "include": ["test", "e2e", "scripts/dev-server.d.mts", "vitest.config.ts", "vitest.e2e.config.ts"]
 }

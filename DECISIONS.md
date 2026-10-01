@@ -248,3 +248,14 @@ reviews and the catalogue are never read. It runs only when the artist presses
 it: signing in on its own copies nothing. It reads the browser's own saved data,
 so it works for whichever origin the page runs on, which is why the live tracker
 keeps its address (D-034).
+
+### D-039 · Browser tests are their own CI job · 2026-10-01 · default
+`pnpm e2e` (apps/show-tracker) boots a fresh local studio-api (`wrangler dev`, temp
+state), serves the tracker beside it on one origin (D-034) and drives two Chromium
+profiles through the real screens: the Phase 2 gate, same-field and different-field
+conflicts, and an edit made while a pull is in flight (the pull and push are held on
+the network so the unsent edit can be checked in between; removing the SDK's guard
+makes it fail). It is not part of `pnpm test` because it needs a browser and free
+ports; CI runs it as a separate job that installs Chromium with `playwright-core
+install` (the sandbox's preinstalled Chromium is used here via `/opt/pw-browsers`
+or `CHROMIUM_PATH`).

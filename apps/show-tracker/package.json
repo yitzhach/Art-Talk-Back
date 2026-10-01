@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "build": "node scripts/build.mjs",
-    "typecheck": "tsc -p tsconfig.json && node --check scripts/build.mjs"
+    "typecheck": "tsc -p tsconfig.json && node --check scripts/build.mjs && node --check scripts/dev-server.mjs",
+    "e2e": "vitest run -c vitest.e2e.config.ts"
   },
   "dependencies": {
     "@studio/sdk": "workspace:*"

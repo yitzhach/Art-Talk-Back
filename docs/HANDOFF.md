@@ -1,45 +1,26 @@
-# Handoff — 2026-10-01
+# Handoff — 2026-10-01 (updated after steps 5–7)
 
 Read this first in a new session, then `CLAUDE.md`, then `docs/phase-2.md`.
-Everything below is on branch `claude/next-steps-y4vrwv` (the repo's only and
-default branch).
+Work is on branch `claude/laughing-archimedes-y1d3aj`.
 
 ## Where things stand
 
 - **Phase 0 (decide)** and **Phase 1 (foundation)**: done, gates passed.
-- **Phase 2 (offline sync + Show Tracker)**: steps 1–4 of 8 done; CI green (run 7).
-  - Built: shows + `artwork.mark_sold`, sync push/pull with merge rules, the SDK
-    (`packages/sdk`: IndexedDB cache, outbox, sync loop).
-  - Waiting: steps 5–8 (below).
-- 97 tests: core 9, SDK 8 (two simulated devices against the real API), studio-api 80.
-- Nothing is deployed yet. Cloudflare resources created for the platform:
-  D1 `studio-db-staging`, D1 `studio-db-prod`, R2 `studio-files-staging`
-  (ids in `workers/studio-api/wrangler.jsonc`). Production files will use the
-  existing `iaa-files` bucket.
+- **Phase 2 (offline sync + Show Tracker)**: steps 1–7 of 8 done. Only step 8 is left, and it needs Isaac.
+  - 119 unit/API tests (`pnpm test`) + 4 browser tests (`pnpm e2e`, CI job `e2e`).
+  - Show Tracker lives in `apps/show-tracker/` (snapshot of `yitzhach/art-show-tracker` at d32e9f1). It syncs the artist's **ledger shows and sales** only (D-031, Isaac's choice); everything else stays on the device. `store-studio.js` is the adapter, `studio-ui.js` the sign-in chip / review cards / import button, `sw.js` + `manifest.webmanifest` the PWA.
+  - "Import my existing data" is built and tested (step 6, D-038).
+- Nothing is deployed. Cloudflare resources created: D1 `studio-db-staging`, D1 `studio-db-prod`, R2 `studio-files-staging` (ids in `workers/studio-api/wrangler.jsonc`). Production files will use the existing `iaa-files` bucket.
 
-## Next, in order (docs/phase-2.md has the detail)
+## Next: step 8, deploy staging + real-phone run (needs Isaac)
 
-5. **Show Tracker onto the SDK.** Needs its source files (Isaac is getting them).
-   Put them in `apps/show-tracker/`, read how it uses localStorage, swap that for
-   `Studio` from `@studio/sdk`, keep its screens. Make it an installable PWA
-   (manifest + service worker for the app shell).
-6. **"Import my existing data"**: read its old localStorage once, push through
-   `/v1/sync/push`, mark imported. Test with a fixture of the real data shape.
-7. **Playwright two-device offline test** in CI (Chromium is preinstalled; don't
-   run `playwright install`). Also cover: an edit made mid-sync isn't overwritten
-   by the pull (the SDK skips records with unsent edits; untested so far).
-8. **Deploy staging**, then the real-phone run. Needs from Isaac: GitHub secrets
-   `CLOUDFLARE_API_TOKEN` + `CLOUDFLARE_ACCOUNT_ID`, a Resend key (GitHub secret
-   `RESEND_API_KEY`) + sending address, and his owner email. Add a deploy job to
-   `.github/workflows/ci.yml` that runs `wrangler d1 migrations apply DB --remote
-   --env staging`, sets `SIGNING_KEY` / `RESEND_API_KEY` with `wrangler secret
-   put`, then `wrangler deploy --env staging`. `wrangler deploy` creates the
-   Worker; nothing to create by hand.
-   Replacing the live `art-show-tracker` needs Isaac's OK, after staging passes.
+Needs from Isaac: GitHub secrets `CLOUDFLARE_API_TOKEN` + `CLOUDFLARE_ACCOUNT_ID`, a Resend key (`RESEND_API_KEY`) + sending address, his owner email (for `OWNER_EMAILS`). Add a deploy job to `.github/workflows/ci.yml`: `wrangler d1 migrations apply DB --remote --env staging`, set `SIGNING_KEY` / `RESEND_API_KEY` with `wrangler secret put`, `wrangler deploy --env staging`.
 
-Phase 2's gate is in `docs/phase-2.md`. Then run the phase-end routine (3–4
-eval tasks for Phase 3, prune CLAUDE.md + skill with Isaac's OK, write
-`docs/phase-3.md`).
+Decide in this step (D-034): the browser calls `/v1` on its own origin, because the session cookie is SameSite=Lax and the API sends no CORS. So the tracker needs a small Worker script that forwards `/v1/*` to `studio-api` by service binding (locally: `apps/show-tracker/scripts/dev-server.mjs`). The staging tracker is a **new** Worker (`studio-show-tracker-staging` or similar); the live `art-show-tracker` is replaced only after staging passes **and Isaac says yes** (his saved data is in that origin's localStorage, which is why it keeps its name). Also: write the real `apiUrl` into `studio-config.js` at deploy (`apiUrl: location.origin`), run `pnpm --filter @studio/show-tracker build` first (the SDK bundle isn't committed), and swap the placeholder icons (`scripts/icons.mjs`) if Isaac has artwork.
+
+Then Phase 2's gate (`docs/phase-2.md`) item 4: same flow on his phone and laptop against staging. Then the phase-end routine (3–4 eval tasks for Phase 3, prune CLAUDE.md + skill with Isaac's OK, write `docs/phase-3.md`).
+
+Known gaps to tell Isaac (D-033, D-036): editing a synced sale's price, or deleting a sale, doesn't update the show's sold row on the platform (the tracker's own numbers are right; Phase 4 fixes it); two devices editing different tracker-only fields offline get a review card.
 
 ## How to work (short version; the skill has the rest)
 
@@ -51,12 +32,13 @@ eval tasks for Phase 3, prune CLAUDE.md + skill with Isaac's OK, write
   type errors once.
 - Before pushing, run what CI runs: `pnpm install --frozen-lockfile`,
   `pnpm typecheck`, `pnpm test`, `pnpm openapi` then
-  `git diff --exit-code docs/openapi.json`.
+  `git diff --exit-code docs/openapi.json`. CI also builds the tracker's SDK bundle
+  and runs the browser tests: `pnpm --filter @studio/show-tracker build` then `pnpm e2e` (in `apps/show-tracker`).
 - New route → `pnpm openapi`, commit `docs/openapi.json`, add the route to
   `workers/studio-api/test/tenancy.test.ts` (a test fails if any route is missing).
 - New migration → hand-written SQL (D-026), mirror it in
   `packages/core/src/db/schema.ts`, `pnpm --filter @studio/api db:migrate`.
-- Log every default you take in `DECISIONS.md` (now at D-030). Add a
+- Log every default you take in `DECISIONS.md` (now at D-039). Add a
   `CHANGELOG.md` line per item.
 
 ## Things that will trip you up
@@ -74,10 +56,15 @@ eval tasks for Phase 3, prune CLAUDE.md + skill with Isaac's OK, write
 - Eval tasks in `.claude/skills/backend-builder/evals/tasks.json` are unreviewed
   (`reviewed: false`); SkillOpt-Sleep isn't set up yet. Not urgent.
 
+- **Don't `pkill -f <pattern>` in a Bash call whose own command line contains the pattern**: it kills the shell. Free ports with `fuser -k <port>/tcp`, and kill leftover `wrangler`/`workerd` before restarting `wrangler dev` (a stale one leaves it unable to start).
+- Browser tests: Chromium is preinstalled at `/opt/pw-browsers/chromium` (used automatically; `CHROMIUM_PATH` overrides). Don't run `playwright install` here; CI does.
+- The tracker's own nine browser suites (`build/*-tests.cjs` in the `art-show-tracker` repo) all passed on the modified copy; rerun them (copy `apps/show-tracker` over that repo's `tracker/`) if you change a tracker screen.
+- Tracker pages are `<script type="module">` in most files: the one-line `ASTStudio.onData(...)` hook must sit inside the module (that's where `refresh` lives), and inside the IIFE on `contacts.html`.
+
 ## Key decisions to know (all in DECISIONS.md)
 
 D-015 ignore unused Workers · D-016 other-studio ids → 404 · D-017 idempotency
 from activity_log · D-020 file links signed by studio-api · D-022 owner's first
 sign-in creates the studio · D-027 one undo for a multi-record action ·
 D-028 sync merge rules (money/status never auto-merge) · D-029 sale price in
-`artwork.meta.sale` until Phase 4 · D-030 production DB is `studio-db-prod`.
+`artwork.meta.sale` until Phase 4 · D-030 production DB is `studio-db-prod` · D-031 tracker thin slice · D-032…D-033 record mapping, a sale is an artwork · D-034 same-origin `/v1` · D-038 import · D-039 browser tests.

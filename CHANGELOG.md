@@ -35,3 +35,4 @@
 - SDK: background sync failures now raise an `error` event instead of an unhandled rejection.
 - 13 new tests: the tracker's real scripts on two simulated devices against the real API (gate flow, merges, review cards, deletes, demo-season handling, nothing-lost round trips). Decisions D-031…D-037.
 - "Import my existing data" in the tracker's sync panel: uploads saved shows and sales once, links instead of duplicating, refuses offline; tested against fixtures of the real localStorage shapes (current and a pre-versioning bare list). D-038.
+- `pnpm e2e` + CI job `e2e`: two Chromium profiles on the real tracker pages and a real local studio-api. Covers the Phase 2 gate (airplane mode, sale, reconnect, second device; show, artwork and activity log agree), different-field merge, same-field review card + "Use mine", and an edit made while a pull is in flight. D-039.

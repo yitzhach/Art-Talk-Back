@@ -1,7 +1,10 @@
 # Cloudflare inventory — Phase 0
 
-Pulled 2026-10-01 through the Cloudflare connector. **Nothing has been deleted.**
-Deletes wait for Isaac to tick the keeper list below (Phase 1 clean-up).
+Pulled 2026-10-01 through the Cloudflare connector.
+
+**Nothing is deleted (D-015).** Workers the platform doesn't use are left
+exactly as they are and ignored. The platform only touches the Workers marked
+*In the platform* below.
 
 Limits of this pass: the connector gives creation and last-deploy dates and the
 script source. It does not give traffic, and static-asset Workers return no
@@ -24,7 +27,7 @@ Workers & Pages → *name* → Metrics.
 | Worker | Created | Last deploy | What it is |
 |---|---|---|---|
 | `art-show-tracker` | 09-25 23:23 | 09-26 04:32 | Static-asset app (no script). Deployed 3 times later than the other one. **Live.** |
-| `show-tracker` | 09-25 20:28 | 09-25 20:28 | Default `"Hello world"` script, never changed. **Empty stub, safe to delete.** |
+| `show-tracker` | 09-25 20:28 | 09-25 20:28 | Default `"Hello world"` script, never changed. Empty stub; ignored |
 
 ### Invoice → keep `iaa-invoice` + `iaa-invoice-api`, retire `invoice`
 
@@ -34,13 +37,9 @@ Workers & Pages → *name* → Metrics.
 | `iaa-invoice` | 09-02 19:35 | 09-02 19:39 | Static-asset front end, built the same day as the API. Almost certainly its UI (the API's share links point at `portal.html` on the app origin) |
 | `invoice` | 09-01 23:01 | 09-02 00:13 | Static-asset app from the day before. Earlier, localStorage-only version |
 
-**Before deleting `invoice`:** if invoices were ever saved in it on a phone or
-laptop, those live in that browser's localStorage under that Worker's address.
-Deleting the Worker strands them. Open it once on each device first; if it has
-invoices, keep it until Phase 4's "Import my existing data" has run.
-
-The same rule applies to every static tool below: **a tool with data in it is
-not deleted until its import has run.**
+`invoice` stays up untouched, so anything saved in it on a phone or laptop
+stays reachable. If it turns out to hold invoices, Phase 4's "Import my
+existing data" can pull them in from there too.
 
 ## `iaa-invoice-api` — what's actually there
 
@@ -69,56 +68,49 @@ Resend/Twilio senders, the share-link model and the client-portal rules. What
 changes: `/v1` routes, ULIDs, `studio_id`, integer cents, version checks, soft
 delete, the activity log. See `DECISIONS.md`.
 
-## Keeper list — Isaac to confirm
+## Which Workers the platform uses
 
-Tick the box to keep it; anything unticked is deleted in Phase 1.
+Nothing below is deleted or changed. *Ignored* means the platform doesn't
+build on it, it stays deployed as is, and you can keep using it.
 
-### Named tools (16)
+### In the platform
 
-| Keep? | Worker | Created | Last deploy | Note |
-|---|---|---|---|---|
-| [x] | `iaa-invoice-api` | 09-02 | 09-02 | Becomes studio-api |
-| [ ] | `fineartos` | 09-10 | 09-28 | Phase 4 app |
-| [ ] | `art-show-tracker` | 09-25 | 09-26 | First app onto the platform (Phase 2) |
-| [ ] | `dinero-art` | 09-09 | 09-09 | Finance tracker (assumed; Phase 4) |
-| [ ] | `commission` | 09-10 | 09-10 | Phase 4 app |
-| [ ] | `iaa-invoice` | 09-02 | 09-02 | Invoice UI (Phase 4) |
-| [ ] | `ar-wall-placer` | 09-25 | 09-26 | Phase 5 visual tool |
-| [ ] | `booth-studio` | 09-14 | 09-28 | Phase 5 visual tool; owns `booth-studio-shares` |
-| [ ] | `art-lab` | 09-28 | 09-28 | Not in the spec's data model; what is it? |
-| [ ] | `home-layout` | 09-24 | 09-25 | Not in the spec's data model |
-| [ ] | `seewalle` | 09-11 | 09-12 | Not in the spec's data model |
-| [ ] | `geopolymer` | 09-24 | 09-25 | Not in the spec's data model |
-| [ ] | `digi-light-test` | 09-18 | 09-18 | Name suggests a test |
-| [ ] | `email-1` | 08-21 | 08-21 | Name suggests a test |
-| [ ] | `invoice` | 09-01 | 09-02 | Superseded by `iaa-invoice`; check for data first |
-| [ ] | `show-tracker` | 09-25 | 09-25 | Hello-world stub |
+| Worker | Role | Phase |
+|---|---|---|
+| `iaa-invoice-api` | Source for `studio-api` (left running until `studio-api` replaces it) | 1 |
+| `art-show-tracker` | First app onto the platform | 2 |
+| `fineartos` | Core app | 4 |
+| `iaa-invoice` | Invoice UI | 4 |
+| `dinero-art` | Finance tracker (assumed) | 4 |
+| `commission` | Commission tool | 4 |
+| `ar-wall-placer` | Visual tool, reads/writes scenes | 5 |
+| `booth-studio` | Visual tool, owns `booth-studio-shares` | 5 |
 
-### Auto-named and test Workers (19)
+Anything else can be added later the same way: say which tool, and it gets a
+phase.
 
-Default to delete. Two to look at first:
+### Ignored (left as is)
 
-- **`solitary-thunder-8ff9`** was redeployed **2026-09-28**, so something is still using it.
-- **`ig-cropper-123`** and **`dm-measurements-1`** sound like small tools, not scratch.
+Named tools not in the spec's data model: `art-lab`, `home-layout`, `seewalle`,
+`geopolymer`, `digi-light-test`, `email-1`.
 
-| Keep? | Worker | Created | Last deploy |
-|---|---|---|---|
-| [ ] | `solitary-thunder-8ff9` | 07-29 | **09-28** |
-| [ ] | `sweet-cloud-7ad8` | 09-11 | 09-11 |
-| [ ] | `rough-violet-5091` | 08-31 | 08-31 |
-| [ ] | `hidden-glade-be7a` | 08-27 | 08-28 |
-| [ ] | `spring-darkness-380c` | 08-28 | 08-28 |
-| [ ] | `crimson-art-4838` | 08-23 | 08-24 |
-| [ ] | `broad-recipe-48a6` | 08-12 | 08-17 |
-| [ ] | `cold-sky-1` | 08-10 | 08-10 |
-| [ ] | `sweet-scene-0d27` | 08-04 | 08-08 |
-| [ ] | `dark-mode-123` | 07-28 | 08-02 |
-| [ ] | `dm-t1` | 07-28 | 07-28 |
-| [ ] | `dm-2-t2` | 07-28 | 07-28 |
-| [ ] | `123-dark-t1` | 07-28 | 07-28 |
-| [ ] | `blue-scene-b0b1` | 07-28 | 07-28 |
-| [ ] | `ancient-fire-b288` | 07-23 | 07-23 |
-| [ ] | `shiny-dream-3acc` | 07-23 | 07-23 |
-| [ ] | `dm-measurements-1` | 07-21 | 07-21 |
-| [ ] | `shiny-mode-297f` | 07-17 | 07-18 |
-| [ ] | `ig-cropper-123` | 07-17 | 07-17 |
+Superseded duplicates: `show-tracker` (hello-world stub), `invoice` (earlier
+invoice tool).
+
+Auto-named and test Workers (19): `solitary-thunder-8ff9` (still redeployed
+09-28), `sweet-cloud-7ad8`, `rough-violet-5091`, `hidden-glade-be7a`,
+`spring-darkness-380c`, `crimson-art-4838`, `broad-recipe-48a6`, `cold-sky-1`,
+`sweet-scene-0d27`, `dark-mode-123`, `dm-t1`, `dm-2-t2`, `123-dark-t1`,
+`blue-scene-b0b1`, `ancient-fire-b288`, `shiny-dream-3acc`,
+`dm-measurements-1`, `shiny-mode-297f`, `ig-cropper-123`.
+
+### Naming rule
+
+- **Existing apps keep their Worker name** (`art-show-tracker`, `fineartos`, …)
+  when they move onto the platform. A browser only lets a page read
+  localStorage saved under its own address, so "Import my existing data" only
+  works if the new version is served from the same Worker.
+- **New Workers are prefixed `studio-`** (`studio-api`, `studio-assistant`,
+  `studio-inspiration-board`), with `-staging` for staging. That keeps them easy
+  to tell apart from the ignored ones and stops any new deploy from
+  overwriting an existing tool.

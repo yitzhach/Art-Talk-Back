@@ -14,15 +14,15 @@ The spec names the repo `studio-platform/`. Using the existing blank
 `Art-Talk-Back` repo instead; the name can be changed on GitHub later without
 touching code.
 
-### D-002 · Live show tracker is `art-show-tracker` · 2026-10-01 · needs Isaac (Phase 1 clean-up)
+### D-002 · Live show tracker is `art-show-tracker` · 2026-10-01 · default
 `show-tracker` is the default "Hello world" script, never changed.
 `art-show-tracker` is a real static app, deployed three times after it.
 Evidence: [docs/cloudflare-inventory.md](docs/cloudflare-inventory.md).
 
-### D-003 · Live invoice tool is `iaa-invoice` (+ `iaa-invoice-api`) · 2026-10-01 · needs Isaac (Phase 1 clean-up)
+### D-003 · Live invoice tool is `iaa-invoice` (+ `iaa-invoice-api`) · 2026-10-01 · default
 `iaa-invoice` was built the same day as the API and matches its share-link
-paths; `invoice` is the earlier localStorage-only version. Keep `invoice`
-until it's checked for saved data.
+paths; `invoice` is the earlier localStorage-only version. Both stay
+deployed (D-015).
 
 ### D-004 · Identity tables are global, not per studio · 2026-10-01 · default
 The spec says `studio_id` on every row. Exceptions: `studios` (it *is* the
@@ -82,3 +82,13 @@ columns are snake_case.
 Create endpoints accept an optional ULID `id`, so a record made offline keeps
 the same id after sync. The server rejects ids that already exist in another
 studio.
+
+### D-015 · Unused Workers are ignored, never deleted · 2026-10-01 · locked (Isaac)
+Overrides the spec's Phase 1 step "List scratch Workers; delete once Isaac
+confirms" and the Starting-point action "delete the rest". Workers the
+platform doesn't use stay deployed and untouched. The platform only builds on
+the Workers listed under *In the platform* in
+[docs/cloudflare-inventory.md](docs/cloudflare-inventory.md). Apps moving onto
+the platform keep their existing Worker name, because the localStorage import
+only works from the same address. Brand-new Workers are named `studio-*` so
+they can't overwrite an existing tool.

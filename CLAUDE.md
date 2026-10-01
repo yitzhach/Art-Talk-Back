@@ -2,7 +2,8 @@
 
 Shared backend + AI assistant for Isaac Anderson Art's tools (and later other
 artists' and third-party apps). Full spec: [docs/SPEC.md](docs/SPEC.md) —
-a snapshot of the Claude Docs build spec; the live doc wins if they differ.
+a snapshot of the Claude Docs build spec; the live doc wins if they differ,
+except where `DECISIONS.md` records an override from Isaac.
 
 ## How to work here
 
@@ -47,6 +48,9 @@ apps/                     show-tracker first (Phase 2)
 
 ## Cloudflare
 
-Account resources are listed in `docs/cloudflare-inventory.md`. Legacy
+Account resources are listed in `docs/cloudflare-inventory.md`. Never delete
+or redeploy a Worker the platform doesn't use; ignore it (D-015). Apps moving
+onto the platform keep their Worker name (their localStorage import depends on
+it); brand-new Workers are named `studio-*`. Legacy
 backend `iaa-invoice-api` exists only on Cloudflare; read it with the
 Cloudflare connector, don't redeploy over it until `studio-api` replaces it.

@@ -1,7 +1,7 @@
 # Phase 0 · Decide
 
-**Gate:** Isaac reviews the spec, migration 0001 and the OpenAPI draft, and
-confirms the keeper list. Then Phase 1 starts.
+**Gate:** Isaac reviews migration 0001 and the OpenAPI draft. Then Phase 1
+starts.
 
 ## Checklist
 
@@ -13,8 +13,7 @@ confirms the keeper list. Then Phase 1 starts.
       (loads cleanly in SQLite 3.45; constraint checks verified)
 - [x] Draft OpenAPI for Phase 1 + 2 routes → `workers/studio-api/openapi.draft.yaml`
       (passes `redocly lint`)
-- [ ] **Isaac:** confirm D-002 / D-003 (which show tracker and invoice tool are live)
-- [ ] **Isaac:** tick the keeper list in `docs/cloudflare-inventory.md`
+- [x] Unused Workers: ignore, don't delete (D-015, Isaac 2026-10-01)
 - [ ] **Isaac:** review migration 0001 and the OpenAPI draft
 
 ## What to look at when reviewing
@@ -47,7 +46,7 @@ undo, the actions endpoint. Phase 2: shows, sync push/pull, and the actions
 ## Not in Phase 0 (on purpose)
 
 - No code, no `wrangler.toml`, no CI — Phase 1.
-- No Workers deleted — after the keeper list is confirmed.
+- No Workers deleted, ever (D-015). Unused ones are ignored.
 - Static tools' source (art-show-tracker etc.) isn't readable through the
   connector. Phase 2 needs Show Tracker's HTML in `apps/show-tracker/`:
   download it from the Cloudflare dashboard or point to where it lives.

@@ -10,7 +10,6 @@ description: Use for any change to studio-api, packages/core, migrations, or the
 - Re-read the CLAUDE.md rules that item touches (tenancy, action functions, migrations).
 - Check `DECISIONS.md` for a locked answer before choosing anything; log new defaults there.
 - Anything in the phase plan's "Needs Isaac's OK" → stop and ask; do it locally only until then.
-- Never touch Cloudflare resources the platform doesn't use (D-015).
 
 ## Rules That Get Broken
 - `studio_id` comes from the session, never the request body; cross-studio ids → 404 (D-016).

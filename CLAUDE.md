@@ -32,16 +32,15 @@ except where `DECISIONS.md` records an override from Isaac.
 
 ## Definition of done (any task)
 
-Typed, tested (unit + one API test), migration applied in dev, OpenAPI updated,
-entry in `CHANGELOG.md`.
+The backend-builder skill's "Done Means", plus an entry in `CHANGELOG.md`.
 
 ## Layout
 
 ```
 docs/                     SPEC.md, phase-N.md plans, cloudflare-inventory.md, openapi.json (generated)
-packages/core/            Zod schemas, types, defineAction registry      (Phase 1)
+packages/core/            Zod schemas, types, Drizzle schema, ULIDs
 packages/sdk/             API client, IndexedDB, outbox sync, uploads    (Phase 2)
-workers/studio-api/       Hono API; migrations/; openapi.phase2.draft.yaml
+workers/studio-api/       Hono API; actions/ (defineAction registry — moves to core in Phase 3); migrations/
 workers/assistant/        model calls, tools, job Workflows              (Phase 3)
 apps/                     show-tracker first (Phase 2)
 ```
@@ -51,6 +50,5 @@ apps/                     show-tracker first (Phase 2)
 Account resources are listed in `docs/cloudflare-inventory.md`. Never delete
 or redeploy a Worker the platform doesn't use; ignore it (D-015). Apps moving
 onto the platform keep their Worker name (their localStorage import depends on
-it); brand-new Workers are named `studio-*`. Legacy
-backend `iaa-invoice-api` exists only on Cloudflare; read it with the
-Cloudflare connector, don't redeploy over it until `studio-api` replaces it.
+it); brand-new Workers are named `studio-*`. Don't redeploy over
+`iaa-invoice-api` until `studio-api` replaces it in production.

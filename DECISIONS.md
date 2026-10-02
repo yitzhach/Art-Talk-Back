@@ -187,3 +187,6 @@ Production files use the existing `iaa-files` bucket.
 
 ### D-033 · Show Tracker lives in `apps/show-tracker/` as a copy · 2026-10-02 · default
 `tracker/` from `yitzhach/art-show-tracker@d32e9f1` is copied unchanged, with its `build/` (suites and data tools), `CLAUDE.md` and `docs/`, so its own suites run against the copy (`node build/run-suites.cjs`). Not copied: its `worker/` (members intel, undeployed) and the unrelated React portfolio at that repo's root. The tracker keeps its rules: classic scripts, no build step, opens from `file://`. The source repo is untouched; it stays what the live `art-show-tracker` Worker builds from until Isaac OKs the swap (phase-2 OK #5).
+
+### D-034 · The tracker's PWA shell is network-first · 2026-10-02 · default
+`tracker/manifest.webmanifest`, icons and `sw.js`, registered by `pwa.js` on every page except `embed.html`. The worker caches every file the pages use on install (a suite fails if a file in `tracker/` is missing from its list) and answers **network first**, falling back to the cache when offline or after 5 s: the tracker's history is "the site looks stale = a cached script", so a fresh copy always wins online. It never answers non-GETs, other origins, or `/v1/` (the studio API). Cache entries drop the `?v=` token, one copy per file. On `file://` nothing registers and the app behaves exactly as before.

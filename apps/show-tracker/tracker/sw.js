@@ -30,9 +30,10 @@ var SHELL = [
   'import-ui.js', 'import.js', 'intel-ui.js', 'intel.js', 'jury.js', 'map.js',
   'members.js', 'nav.js', 'pipeline.js', 'plan.js', 'pwa.js', 'ranker.js', 'route.js',
   'sales.js', 'salestax.js', 'share-ui.js', 'share.js', 'store-supabase.js', 'studio-sdk.js',
+  'studio-store.js', 'studio-ui.js',
   'version.js', 'weather.js',
   'catalogue.json', 'fit-data.json', 'version.json',
-  'manifest.webmanifest', 'icon.svg', 'icon-192.png', 'icon-512.png',
+  'manifest.webmanifest', 'favicon.svg', 'icon-192.png', 'icon-512.png',
   'icon-maskable-512.png', 'apple-touch-icon.png'
 ];
 
@@ -46,7 +47,7 @@ self.addEventListener('install', function (event) {
     return Promise.all(SHELL.map(function (path) {
       var url = new URL(path, self.registration.scope).href;
       return fetch(url, { cache: 'no-cache' }).then(function (res) {
-        if (res.ok) return cache.put(key(url), res);
+        if (res.ok && !res.redirected) return cache.put(key(url), res);
       }).catch(function () { /* one missing file must not cost the rest */ });
     }));
   }).then(function () { return self.skipWaiting(); }));
@@ -69,7 +70,8 @@ self.addEventListener('fetch', function (event) {
   event.respondWith(caches.open(CACHE).then(function (cache) {
     var cached = cache.match(key(req.url));
     var network = fetch(req).then(function (res) {
-      if (res.ok && res.type === 'basic') cache.put(key(req.url), res.clone());
+      // A redirect is never stored: replayed for a page load, the browser refuses it.
+      if (res.ok && res.type === 'basic' && !res.redirected) cache.put(key(req.url), res.clone());
       return res;
     });
     return new Promise(function (resolve, reject) {

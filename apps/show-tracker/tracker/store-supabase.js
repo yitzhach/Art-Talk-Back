@@ -302,6 +302,10 @@ window.ASTSupabase = (function () {
      than twice in the HTML.                                                */
   function connect(opts) {
     opts = opts || {};
+    /* A device signed in to the studio syncs its shows there instead (D-040):
+       one backend for the ledger, never two racing each other. The page's
+       status and refresh hooks are handed over unchanged. */
+    if (window.ASTStudio && window.ASTStudio.active()) return window.ASTStudio.attach(opts);
     var cfg = A.Settings.getConfig();
     if (!cfg || !cfg.url || !cfg.anonKey) return null;
 

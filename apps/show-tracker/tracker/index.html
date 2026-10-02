@@ -39,7 +39,7 @@
 <!-- Installable app (PWA): manifest, icons, and pwa.js registers sw.js. -->
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#2f5d4f">
-<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 </head>
 <body>
@@ -395,6 +395,7 @@
       <span id="syncStateText"></span>
     </div>
 
+    <div id="supabaseSection">
     <div class="form-row">
       <span class="label">Signed in as</span>
       <p id="acctEmail" style="margin:6px 0 0; font-size:14px;">Not signed in</p>
@@ -437,6 +438,7 @@
     </div>
     <p class="hint">Run <code>docs/supabase-schema.sql</code> in the Supabase SQL
       editor once before signing in.</p>
+    </div>
   </div>
 
   <div class="drawer-foot">
@@ -715,6 +717,9 @@
         referrerpolicy="no-referrer"></script>
 <script src="core.js?v=5cc94564"></script>
 <script src="pwa.js?v=5cc94564"></script>
+<script src="studio-sdk.js?v=5cc94564"></script>
+<script src="studio-store.js?v=5cc94564"></script>
+<script src="studio-ui.js?v=5cc94564"></script>
 <script src="nav.js?v=5cc94564"></script>
 <script src="version.js?v=5cc94564"></script>
 <script src="map.js?v=5cc94564"></script>
@@ -1545,7 +1550,9 @@ const SYNC_COPY = {
 };
 
 function paintSync(state, detail) {
-  const [tone, short, long] = SYNC_COPY[state] || SYNC_COPY.local;
+  let [tone, short, long] = SYNC_COPY[state] || SYNC_COPY.local;
+  /* Signed in to the studio (studio-store.js), the same states describe it. */
+  if (window.ASTStudio && ASTStudio.active()) long = long.replace(/Supabase/g, 'your studio');
   const pill = $('#syncPill');
   pill.dataset.state = tone;
   $('#syncText').textContent = short;
@@ -1563,6 +1570,7 @@ function paintAccount() {
   $('#signInRow').hidden = !!sess;
   $('#signedInActions').hidden = !sess;
   $('#btnForgetProject').hidden = !cfg;
+  if (window.ASTStudio && ASTStudio.active()) return;
   if (!cfg) paintSync('local');
   else if (!sess) paintSync('signed_out');
 }

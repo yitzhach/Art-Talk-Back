@@ -1,6 +1,7 @@
 /* ==========================================================================
    Runs the tracker's own suites (the "eleven suites" in docs/START-HERE.md, plus
-   pwa-tests.cjs for the installable shell)
+   pwa-tests.cjs for the installable shell and studio-tests.cjs for the
+   studio mapping)
    against this copy: starts the static server on 8765, runs each suite, and
    exits non-zero if any of them did. The worker/ suite is not here: the
    members Worker stayed in yitzhach/art-show-tracker.
@@ -13,7 +14,7 @@ const path = require('path');
 
 const ROOT = path.join(__dirname, '..');
 const ALL = ['browser', 'ledger-view', 'calendar', 'pipeline', 'ranker', 'expense',
-             'jury', 'contacts', 'route', 'pwa'];
+             'jury', 'contacts', 'route', 'pwa', 'studio'];
 const only = process.argv.slice(2);
 const suites = only.length ? ALL.filter(s => only.includes(s)) : ALL;
 

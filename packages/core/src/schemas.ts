@@ -198,6 +198,30 @@ export const MarkSoldInput = z.object({
   version: z.number().int().min(1).optional(),
 }).strict();
 
+// ------------------------------------------------------------------- sales
+
+/** One sale (D-035). Null price = not recorded, never 0; null date = not known. */
+export const SaleFields = z.object({
+  showId: Id.nullable(),
+  artworkId: Id.nullable(),
+  title: nullableText(300),
+  priceCents: z.number().int().nonnegative().nullable(),
+  currency: Currency,
+  quantity: z.number().int().min(1),
+  soldOn: IsoDate.nullable(),
+  paymentMethod: z.enum(["cash", "card", "check", "online", "other"]).nullable(),
+  size: nullableText(100),
+  medium: nullableText(300),
+  source: z.enum(["manual", "square", "stripe", "csv"]),
+  externalId: nullableText(200),
+  notes: nullableText(),
+  meta: Meta,
+});
+export const SalePatch = SaleFields.partial().strict()
+  .refine((v) => Object.keys(v).length > 0, "Send at least one field");
+export const SaleInput = SaleFields.partial().extend({ id: Id.optional() }).strict();
+export const Sale = RecordMeta.extend(SaleFields.shape);
+
 // -------------------------------------------------------------------- sync
 
 export const SyncOp = z.object({

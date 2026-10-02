@@ -1,7 +1,8 @@
 // Studio-owned record types and their CRUD actions. Every action reads with
 // studio_id from the session, so another studio's id is simply "not found" (D-016).
 import {
-  ArtworkInput, ArtworkPatch, ClientInput, ClientPatch, Id, SettingsPatch, ShowInput, ShowPatch, db as schema, newId,
+  ArtworkInput, ArtworkPatch, ClientInput, ClientPatch, Id, SaleInput, SalePatch, SettingsPatch, ShowInput, ShowPatch,
+  db as schema, newId,
 } from "@studio/core";
 import { and, eq, isNull } from "drizzle-orm";
 import type { SQLiteColumn, SQLiteTable } from "drizzle-orm/sqlite-core";
@@ -78,6 +79,15 @@ export const showArtworkEntity = define({
   defaults: { ...recordDefaults, outcome: "brought", soldPriceCents: null, currency: "USD", clientId: null, soldAt: null },
 });
 
+export const saleEntity = define({
+  type: "sale", table: schema.sales, key: schema.sales.id, studio: schema.sales.studioId,
+  version: schema.sales.version, deletedAt: schema.sales.deletedAt, perm: "sales",
+  defaults: {
+    ...recordDefaults, showId: null, artworkId: null, title: null, priceCents: null, currency: "USD", quantity: 1,
+    soldOn: null, paymentMethod: null, size: null, medium: null, source: "manual", externalId: null, notes: null,
+  },
+});
+
 /** Read one record in the caller's studio. Missing, other-studio and (unless asked) deleted → null. */
 export async function findRecord(db: Db, e: EntityDef, studioId: string, id: string, opts: { withDeleted?: boolean } = {}) {
   const where = [eq(e.key, id), eq(e.studio, studioId)];
@@ -130,8 +140,11 @@ export function checkVersion(current: Snapshot, expected: number): void {
 
 const VersionedId = { id: Id, version: z.number().int().min(1) };
 
+/** Checks run before a create or update writes, e.g. that linked records are in the caller's studio. */
+type Refs = (ctx: ActionCtx, fields: Snapshot) => Promise<void>;
+
 /** create / update / delete actions for one record type. */
-function crudActions(e: EntityDef, input: z.ZodType<Snapshot>, patch: z.ZodType<Snapshot>) {
+function crudActions(e: EntityDef, input: z.ZodType<Snapshot>, patch: z.ZodType<Snapshot>, refs?: Refs) {
   const one = (_c: ActionCtx, afters: (Snapshot | null)[]) => afters[0] as Snapshot;
   return {
     create: defineAction({
@@ -140,7 +153,10 @@ function crudActions(e: EntityDef, input: z.ZodType<Snapshot>, patch: z.ZodType<
       input,
       permission: `${e.perm}:write` as Permission,
       risk: "auto",
-      plan: async (ctx, data) => ({ writes: [insertWrite(ctx, e, { ...clientFields(data), id: data.id ?? newId() })] }),
+      plan: async (ctx, data) => {
+        await refs?.(ctx, data);
+        return { writes: [insertWrite(ctx, e, { ...clientFields(data), id: data.id ?? newId() })] };
+      },
       respond: one,
     }),
     update: defineAction({
@@ -152,6 +168,7 @@ function crudActions(e: EntityDef, input: z.ZodType<Snapshot>, patch: z.ZodType<
       plan: async (ctx, { id, version, patch: p }) => {
         const before = await getRecord(ctx.db, e, ctx.actor.studioId, id);
         checkVersion(before, version);
+        await refs?.(ctx, p);
         return { writes: [updateWrite(ctx, e, before, clientFields(p))] };
       },
       respond: one,
@@ -175,6 +192,11 @@ function crudActions(e: EntityDef, input: z.ZodType<Snapshot>, patch: z.ZodType<
 export const artworkActions = crudActions(artworkEntity, ArtworkInput, ArtworkPatch);
 export const clientActions = crudActions(clientEntity, ClientInput, ClientPatch);
 export const showActions = crudActions(showEntity, ShowInput, ShowPatch);
+// A sale may name a show and an artwork; both must be live records in this studio (D-016: else 404).
+export const saleActions = crudActions(saleEntity, SaleInput, SalePatch, async (ctx, f) => {
+  if (f.showId) await getRecord(ctx.db, showEntity, ctx.actor.studioId, f.showId as string);
+  if (f.artworkId) await getRecord(ctx.db, artworkEntity, ctx.actor.studioId, f.artworkId as string);
+});
 
 export const settingsUpdate = defineAction({
   name: "settings.update",

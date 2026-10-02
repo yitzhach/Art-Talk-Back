@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+### Handoff — 2026-10-02
+- Show Tracker source located (`yitzhach/art-show-tracker`); Phase 2 step 5 narrowed to shows + sales (D-032). Staging API confirmed live.
+
 ### Phase 0 · Decide — 2026-10-01
 - Repo set up: `CLAUDE.md`, `DECISIONS.md`, spec snapshot in `docs/SPEC.md`.
 - Cloudflare inventory in `docs/cloudflare-inventory.md`; unused Workers are ignored, not deleted (D-015).

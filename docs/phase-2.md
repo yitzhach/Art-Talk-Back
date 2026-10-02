@@ -24,7 +24,7 @@ and a second device shows it. Concretely:
 - [x] `POST /v1/sync/push`: each op runs through its action with `source: "sync"`; `op_id` makes retries safe (D-017); `baseVersion` drives the merge rules
 - [x] `GET /v1/sync/pull?since=<seq>`: current state of every record changed since the cursor, deletions included; cursor = `activity_log.seq`
 - [x] SDK (`packages/sdk`): API client, IndexedDB cache (`idb`), outbox, push/pull on open / focus / reconnect / after each write / every 60 s, conflict cards as events
-- [ ] Show Tracker into `apps/show-tracker/` on the SDK; installable PWA (manifest + service worker for the app shell)
+- [ ] Show Tracker into `apps/show-tracker/`, installable PWA, then **shows + sales only** on the SDK (D-032); everything else stays in localStorage
 - [ ] "Import my existing data" from localStorage, once, through sync push
 - [ ] Offline test: automated two-device Playwright test (gate 1–3)
 - [ ] Deploy `studio-api-staging` + Show Tracker staging; real-device run (gate 4)
@@ -35,7 +35,7 @@ and a second device shows it. Concretely:
 Steps 1–4 done: 97 tests (core 9, SDK 8, studio-api 80). The SDK tests run two
 simulated devices against the real studio-api code and a local D1: offline sale
 reaching the other device, merges, review cards, retry after a lost reply,
-deletes. Steps 5–8 wait on Show Tracker's source (OK #1) and the deploy OKs.
+deletes. Source found 2026-10-02 (`yitzhach/art-show-tracker`); `studio-api-staging` deployed. Step 5 scope narrowed (D-032).
 
 ## Staging deploy: what Isaac adds (repo Settings → Secrets and variables → Actions)
 
@@ -60,7 +60,7 @@ Each step: unit tests + one API test before moving on (backend-builder skill).
 
 | # | What | Why | Cost |
 |---|---|---|---|
-| 1 | **Show Tracker's source** (Isaac is getting the files).  Cloudflare dashboard → Workers & Pages → `art-show-tracker` → download, or tell me where the files live | The connector can't read static-asset Workers; step 5 needs the real app | — |
+| ~~1~~ | ~~Show Tracker's source~~ **Done 2026-10-02:** github.com/yitzhach/art-show-tracker. Was: **Show Tracker's source** (Isaac is getting the files).  Cloudflare dashboard → Workers & Pages → `art-show-tracker` → download, or tell me where the files live | The connector can't read static-asset Workers; step 5 needs the real app | — |
 | 2 | **Cloudflare API token** as GitHub secrets `CLOUDFLARE_API_TOKEN` (template "Edit Cloudflare Workers", plus D1 Edit) and `CLOUDFLARE_ACCOUNT_ID` | Lets CI apply migrations and deploy. `wrangler deploy` creates the `studio-api-staging` Worker itself; nothing to create by hand | Free |
 | ~~3~~ | ~~Production database~~ | **Done:** `studio-db-prod` created 2026-10-01 (Isaac's choice); `iaa-db` untouched | Free tier |
 | 4 | **Resend** API key and a sending address on your domain | Signing in from a phone needs a real email. Alternative: Cloudflare Access for your own logins | Free tier |

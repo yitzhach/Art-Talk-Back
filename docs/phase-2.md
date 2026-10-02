@@ -37,6 +37,12 @@ simulated devices against the real studio-api code and a local D1: offline sale
 reaching the other device, merges, review cards, retry after a lost reply,
 deletes. Steps 5–8 wait on Show Tracker's source (OK #1) and the deploy OKs.
 
+## Staging deploy: what Isaac adds (repo Settings → Secrets and variables → Actions)
+
+Secrets: `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `RESEND_API_KEY`.
+Variables: `OWNER_EMAILS` (owner email, comma-separated), `MAIL_FROM` (e.g. `Isaac Anderson Art <hello@yourdomain>`).
+Then Actions → "Deploy staging" → Run workflow. The workflow is written (D-031) but has not been run.
+
 ## Order of work
 
 1. Migration 0002 + schema + routes for shows, with tests. Nothing else depends on the app.

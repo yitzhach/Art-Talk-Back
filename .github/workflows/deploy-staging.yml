@@ -47,8 +47,11 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+        working-directory: .
       - run: pnpm typecheck
+        working-directory: .
       - run: pnpm test
+        working-directory: .
       - name: Apply migrations to studio-db-staging
         run: pnpm exec wrangler d1 migrations apply DB --remote --env staging
       - name: Deploy studio-api-staging

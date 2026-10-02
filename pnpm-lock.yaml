@@ -35,6 +35,12 @@ importers:
 
   apps/show-tracker:
     devDependencies:
+      '@studio/sdk':
+        specifier: workspace:*
+        version: link:../../packages/sdk
+      esbuild:
+        specifier: 0.28.2
+        version: 0.28.2
       playwright:
         specifier: 1.56.1
         version: 1.56.1

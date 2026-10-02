@@ -24,6 +24,8 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm typecheck
       - run: pnpm test
+      - name: tracker/studio-sdk.js matches the SDK source
+        run: pnpm --filter @studio/show-tracker bundle:check
       - name: docs/openapi.json matches the code
         run: |
           pnpm openapi

@@ -29,7 +29,7 @@ var SHELL = [
   'calendar.js', 'catalogue.js', 'contacts.js', 'core.js', 'expenses.js', 'fit.js',
   'import-ui.js', 'import.js', 'intel-ui.js', 'intel.js', 'jury.js', 'map.js',
   'members.js', 'nav.js', 'pipeline.js', 'plan.js', 'pwa.js', 'ranker.js', 'route.js',
-  'sales.js', 'salestax.js', 'share-ui.js', 'share.js', 'store-supabase.js',
+  'sales.js', 'salestax.js', 'share-ui.js', 'share.js', 'store-supabase.js', 'studio-sdk.js',
   'version.js', 'weather.js',
   'catalogue.json', 'fit-data.json', 'version.json',
   'manifest.webmanifest', 'icon.svg', 'icon-192.png', 'icon-512.png',

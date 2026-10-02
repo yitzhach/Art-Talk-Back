@@ -49,11 +49,11 @@ Source: `yitzhach/art-show-tracker` at `d32e9f1`. Decisions D-033…D-040.
 5c. **Backend** (backend-builder): migration 0003 `sales` + `sale.*` actions and
     `/v1/sales` (D-035); a sync update's `meta` merges per key (D-036).
 5d. **SDK**: `sale` record type, caller-supplied ULIDs, meta partials; a classic-script
-    bundle `tracker/studio-sdk.js` (D-039).
+    bundle `tracker/studio-sdk.js` (D-037).
 5e. **Tracker on the SDK**: `tracker/studio-store.js` implements the `AST.Store`
     surface for shows and sales only; everything else falls through to localStorage,
-    contacts always do. Ids map per D-037. The app Worker serves `tracker/` and
-    forwards `/v1/*` to studio-api on the same origin (D-038). Sign-in panel on the ledger.
+    contacts always do. Ids and fields map per D-038. The app Worker serves `tracker/` and
+    forwards `/v1/*` to studio-api on the same origin (D-039). Sign-in panel on the ledger.
 6.  **Import**: one button reads `artShowTracker.db` (shows + sales, never the
     untouched demo seed), pushes through `/v1/sync/push` with deterministic op ids,
     and records `artShowTracker.studioImport`. The localStorage copy is kept as is.

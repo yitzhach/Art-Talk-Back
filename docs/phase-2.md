@@ -41,7 +41,8 @@ deletes. Steps 5–8 wait on Show Tracker's source (OK #1) and the deploy OKs.
 
 Secrets: `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `RESEND_API_KEY`.
 Variables: `OWNER_EMAILS` (owner email, comma-separated), `MAIL_FROM` (e.g. `Isaac Anderson Art <hello@yourdomain>`).
-Then Actions → "Deploy staging" → Run workflow. The workflow is written (D-031) but has not been run.
+Then Actions → "Deploy staging" → Run workflow (D-031).
+**2026-10-02:** secrets and variables added; first run failed (checks ran in the wrong folder, fixed in PR #2); second run succeeded. `studio-api-staging` is deployed. Not yet verified from outside: sign-in email, the real-phone run (gate 4). The sandbox can't reach `workers.dev`, so that check is Isaac's.
 
 ## Order of work
 

@@ -184,3 +184,6 @@ Production files use the existing `iaa-files` bucket.
 ### D-032 · Show Tracker moves onto the platform as a narrow slice · 2026-10-02 · Isaac
 `yitzhach/art-show-tracker` is ~11k lines of classic-script JS with its own honesty rules and a schema-v11 localStorage blob. Phase 2 syncs only the show ledger and sales through the SDK. Applications, expenses, events, contacts, debriefs, rankers, reviews, catalogue hearts and intel stay in localStorage; contacts never sync. The app is copied to `apps/show-tracker/` and made a PWA first; its screens and `AST` interface stay. Moving the rest is later-phase work.
 
+
+### D-033 · Show Tracker lives in `apps/show-tracker/` as a copy · 2026-10-02 · default
+`tracker/` from `yitzhach/art-show-tracker@d32e9f1` is copied unchanged, with its `build/` (suites and data tools), `CLAUDE.md` and `docs/`, so its own suites run against the copy (`node build/run-suites.cjs`). Not copied: its `worker/` (members intel, undeployed) and the unrelated React portfolio at that repo's root. The tracker keeps its rules: classic scripts, no build step, opens from `file://`. The source repo is untouched; it stays what the live `art-show-tracker` Worker builds from until Isaac OKs the swap (phase-2 OK #5).

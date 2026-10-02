@@ -1,0 +1,1552 @@
+/* ==========================================================================
+   Art Show Tracker — shared core
+   Model, Store adapter, date/format helpers and theme, used by both
+   tracker/index.html (the ledger) and tracker/map.html (full-page map).
+
+   Deliberately a CLASSIC script, not an ES module: `type="module"` is
+   blocked by CORS on file:// URLs, and the whole point of this app is that
+   it opens by double-click with no build step. It publishes one global,
+   `window.AST`.
+   ========================================================================== */
+window.AST = (function () {
+  'use strict';
+
+  /* ---- 1. MODEL + CONSTANTS --------------------------------------------- */
+  var SCHEMA_VERSION = 11;
+  var DB_KEY = 'artShowTracker.db';
+  var THEME_KEY = 'artShowTracker.theme';
+  var CONFIG_KEY = 'artShowTracker.supabase';
+  var SESSION_KEY = 'artShowTracker.session';
+  var GEOCACHE_KEY = 'artShowTracker.geocache';
+  var SHARE_KEY = 'artShowTracker.share';
+  var LAYOUT_KEY = 'artShowTracker.layout';
+  var CATALOGUE_KEY = 'artShowTracker.catalogue';
+  var ROUTECACHE_KEY = 'artShowTracker.routecache';
+
+  var STATUSES = [
+    { value:'interested',   label:'Interested' },
+    { value:'applied',      label:'Applied' },
+    { value:'accepted',     label:'Accepted' },
+    { value:'waitlist',     label:'Waitlist' },
+    { value:'declined',     label:'Declined' },
+    { value:'not_applying', label:'Not applying' }
+  ];
+  var STATUS_LABEL = Object.fromEntries(STATUSES.map(function (s) { return [s.value, s.label]; }));
+
+  /* ---- the application pipeline (idea 11) --------------------------------
+     A show's `status` is where it stands right now. An application is what
+     you DID, and when: one record per show per cycle, so applying to the same
+     show again next season is a second row rather than an overwrite. That is
+     what makes the jury fee tracker (12) able to add anything up.
+
+     These are deliberately NOT the same list as STATUSES. `interested` and
+     `not_applying` describe a show you have not applied to, so they can never
+     be an application; `withdrawn` describes an application but never a show. */
+  var STAGES = [
+    { value:'draft',     label:'Started' },
+    { value:'applied',   label:'Applied' },
+    { value:'accepted',  label:'Accepted' },
+    { value:'waitlist',  label:'Waitlist' },
+    { value:'declined',  label:'Declined' },
+    { value:'withdrawn', label:'Withdrawn' }
+  ];
+  var STAGE_LABEL = Object.fromEntries(STAGES.map(function (s) { return [s.value, s.label]; }));
+  /* Decided one way or the other — the jury is done with it. `withdrawn` is
+     settled too, but it is the artist's doing, so it never counts as a
+     rejection in any rate. */
+  var STAGE_SETTLED = ['accepted','waitlist','declined','withdrawn'];
+
+  function newId() {
+    if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
+    return 'id-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 10);
+  }
+
+  /** Every record that enters the app goes through here, so the shape is one thing. */
+  function makeShow(input) {
+    input = input || {};
+    var now = new Date().toISOString();
+    return {
+      id: input.id || newId(),
+      name: input.name || '',
+      city: input.city || '',
+      state: input.state || '',
+      lat: numOrNull(input.lat),
+      lng: numOrNull(input.lng),
+      startDate: input.startDate || '',
+      endDate: input.endDate || '',
+      applyBy: input.applyBy || '',
+      status: STATUS_LABEL[input.status] ? input.status : 'interested',
+      rating: clampRating(input.rating),
+      juryFee: numOrNull(input.juryFee),
+      boothFee: numOrNull(input.boothFee),
+      /* §7 Stage 1 — what the show actually took, before any commission it
+         charges. The one number that turns the expense log from bookkeeping
+         into an answer to "did that weekend pay for itself".
+
+         It lives on the show and not in a child collection because there is
+         exactly one of it per show per season, which is the shape a scalar
+         already has; sales one at a time are Stage 3 and are a different
+         record. Null is "not recorded", never zero: a show that took nothing
+         and a show nobody has added up yet are different weekends. */
+      grossSales: numOrNull(input.grossSales),
+      routeNumber: input.routeNumber == null ? '' : String(input.routeNumber),
+      isAlternate: !!input.isAlternate,
+      /* Phase 7: temporarily out of the plan. A hidden show greys out in the
+         list and drops out of the map and the route, so a route can be tried
+         without it — but it is still yours: exports, the share card and the
+         season stats all still count it. Hiding is a lens, not a delete. */
+      hidden: !!input.hidden,
+      notes: input.notes || '',
+      url: input.url || '',
+      source: ['manual','zapp_paste','csv','catalogue'].indexOf(input.source) !== -1 ? input.source : 'manual',
+      /* Which catalogue record this came from, so All shows can tell you it
+         is already in the ledger without matching on name. */
+      catalogueId: input.catalogueId || '',
+      // Tombstone. Sync is last-write-wins on updatedAt, so a delete has to
+      // stay as a row or the other device simply pushes the show back.
+      deletedAt: input.deletedAt || null,
+      createdAt: input.createdAt || now,
+      updatedAt: input.updatedAt || now
+    };
+  }
+  function numOrNull(v) {
+    if (v === null || v === undefined || v === '') return null;
+    var n = Number(v);
+    return Number.isFinite(n) ? n : null;
+  }
+  function clampRating(v) {
+    var n = Math.round(Number(v));
+    if (!Number.isFinite(n) || n <= 0) return 0;
+    return Math.min(10, n);
+  }
+
+  /* ---- 1b. CALENDAR EVENTS ----------------------------------------------
+     Anything on the calendar that is NOT a show: a travel day, a studio
+     block, a deadline you set yourself, a plain reminder. Shows are never
+     duplicated in here — the calendar reads them from the ledger and from
+     the catalogue, so a show's dates have exactly one home.
+
+     Same discipline as a show: a stable id, updatedAt, and a tombstone
+     rather than a delete, so this shape can ride the existing
+     last-write-wins sync the moment an `events` table exists.             */
+  var EVENT_KINDS = [
+    { value:'event',    label:'Event' },
+    { value:'travel',   label:'Travel' },
+    { value:'deadline', label:'Deadline' },
+    { value:'reminder', label:'Reminder' },
+    { value:'personal', label:'Personal' }
+  ];
+  var EVENT_KIND_LABEL = Object.fromEntries(EVENT_KINDS.map(function (k) { return [k.value, k.label]; }));
+
+  var TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
+  function timeOrEmpty(v) { return TIME_RE.test(String(v || '')) ? String(v) : ''; }
+
+  /**
+   * Reminders are stored now and delivered by nobody yet. That is deliberate
+   * and it is the same rule as a null fact: the record says what it wants,
+   * the UI says plainly that no channel is connected, and neither pretends a
+   * message went out. When a channel is wired, these rows are already here.
+   */
+  function makeReminder(input) {
+    input = input || {};
+    var mins = Number(input.minutesBefore);
+    return {
+      minutesBefore: Number.isFinite(mins) ? Math.max(0, Math.round(mins)) : 60,
+      channel: ['email','sms','push'].indexOf(input.channel) !== -1 ? input.channel : 'email',
+      // Never delivered, only ever recorded. Set by a delivery channel later.
+      deliveredAt: input.deliveredAt || null
+    };
+  }
+
+  /** 'YYYY-MM-DD' or '' — anything else is not a date we will store. */
+  function dateOrEmpty(v) {
+    return (typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v)) ? v : '';
+  }
+  /** A cycle is a four-digit year string. Anything unparseable is ''. */
+  function cycleOf(v) {
+    if (v == null || v === '') return '';
+    var m = String(v).match(/^(\d{4})/);
+    return m ? m[1] : '';
+  }
+
+  /* ---- mock jury review --------------------------------------------------
+     An artist assembles what they would submit, a juror scores it and writes
+     back. Two things about the shape are deliberate:
+
+     1. THE MONEY RULE IS IN THE STATUSES. Nothing is owed until a juror has
+        claimed the request, so the flow is draft -> requested -> claimed ->
+        returned. There is no billing in this project at all, and when there
+        is, `claimedAt` is the only point at which a charge could be honest.
+
+     2. A JUROR'S SCORE IS NOT A SHOW'S JURY ODDS. One is an opinion about
+        your images; the other is the show's own published data. This app
+        keeps its layers apart everywhere else and does so here: a review
+        score never enters the fit model, and the UI never puts the two
+        numbers side by side. */
+  var REVIEW_STAGES = [
+    { value:'draft',     label:'Putting it together' },
+    { value:'requested', label:'Waiting for a juror' },
+    { value:'claimed',   label:'A juror is looking' },
+    { value:'returned',  label:'Feedback is back' },
+    { value:'withdrawn', label:'Withdrawn' }
+  ];
+  var REVIEW_STAGE_LABEL = Object.fromEntries(
+    REVIEW_STAGES.map(function (r) { return [r.value, r.label]; }));
+
+  /* What a submission is made of. Most shows want five works and a booth
+     shot, which is why the checklist defaults that way — but it is the
+     artist's to change, because shows differ and we have not opened their
+     pages. */
+  var IMAGE_KINDS = [
+    { value:'work',  label:'Work' },
+    { value:'booth', label:'Booth shot' }
+  ];
+  var IMAGE_KIND_LABEL = Object.fromEntries(
+    IMAGE_KINDS.map(function (k) { return [k.value, k.label]; }));
+
+  /**
+   * One image in a submission. There is NO FILE HERE: the Worker that would
+   * hold R2 storage is undeployed, so an image is described but never
+   * uploaded, and `stored` stays false so nothing can claim otherwise.
+   */
+  function makeReviewImage(input) {
+    input = input || {};
+    return {
+      id: input.id || newId(),
+      kind: IMAGE_KIND_LABEL[input.kind] ? input.kind : 'work',
+      title: String(input.title || '').trim(),
+      medium: String(input.medium || '').trim(),
+      notes: input.notes || '',
+      /* False until real storage exists. Nothing sets this to true yet. */
+      stored: false
+    };
+  }
+
+  function makeReview(input) {
+    input = input || {};
+    var now = new Date().toISOString();
+    return {
+      id: input.id || newId(),
+      /* Which show the artist is aiming at. Optional: a portfolio review
+         before choosing a show is a legitimate thing to want. */
+      showId: input.showId || '',
+      stage: REVIEW_STAGE_LABEL[input.stage] ? input.stage : 'draft',
+      images: Array.isArray(input.images) ? input.images.map(makeReviewImage) : [],
+      /* What the artist wants looked at. */
+      askedAbout: input.askedAbout || '',
+
+      /* Timestamps for the money rule. Nothing is owed before claimedAt. */
+      requestedAt: input.requestedAt || null,
+      claimedAt: input.claimedAt || null,
+      returnedAt: input.returnedAt || null,
+
+      /* Filled in by the juror, and null until they do. A review with no
+         score has not been scored — it is never a 5, and never a 0. */
+      jurorName: String(input.jurorName || '').trim(),
+      score: numOrNull(input.score),
+      feedback: input.feedback || '',
+
+      deletedAt: input.deletedAt || null,
+      createdAt: input.createdAt || now,
+      updatedAt: input.updatedAt || now
+    };
+  }
+
+  /* ---- the expense log ---------------------------------------------------
+     Categories are shaped like Schedule C so a year of rows does not have to
+     be re-sorted at tax time — retrofitting categories onto uncategorised
+     rows is miserable. They are NOT line numbers and this is NOT tax advice:
+     the app categorises a row and never tells anybody it is deductible.
+
+     Mileage and fuel are both here on purpose. They are two ways of
+     accounting for the same driving, and which one an artist uses is between
+     them and their accountant, so the log keeps them apart and adds them up
+     separately rather than choosing. */
+  var EXPENSE_CATEGORIES = [
+    { value:'booth_fee',  label:'Booth fee' },
+    { value:'jury_fee',   label:'Jury / application fee' },
+    { value:'mileage',    label:'Mileage' },
+    { value:'fuel',       label:'Fuel' },
+    { value:'lodging',    label:'Lodging' },
+    { value:'meals',      label:'Meals' },
+    { value:'supplies',   label:'Supplies & materials' },
+    { value:'shipping',   label:'Shipping & freight' },
+    { value:'commission', label:'Commission paid' },
+    { value:'other',      label:'Other' }
+  ];
+  var EXPENSE_LABEL = Object.fromEntries(
+    EXPENSE_CATEGORIES.map(function (c) { return [c.value, c.label]; }));
+
+  /* How an artist got their bed. The reason this is recorded at all: where
+     you can park a van for free is worth real money at a show, it is knowledge
+     artists already trade, and nothing publishes it. */
+  var LODGING_KINDS = [
+    { value:'',         label:'Not recorded' },
+    { value:'free',     label:'Free' },
+    { value:'discount', label:'Discounted' },
+    { value:'paid',     label:'Paid full price' }
+  ];
+  var LODGING_KIND_LABEL = Object.fromEntries(
+    LODGING_KINDS.map(function (k) { return [k.value, k.label]; }));
+
+  /**
+   * One expense. A child record like an application, for the same reason:
+   * money must not be lost to last-write-wins, and a season of individual
+   * rows is not a property of a show.
+   */
+  function makeExpense(input) {
+    input = input || {};
+    var now = new Date().toISOString();
+    var cat = EXPENSE_LABEL[input.category] ? input.category : 'other';
+    return {
+      id: input.id || newId(),
+      /* Optional. A tank of fuel on the way home belongs to a show; a roll of
+         canvas in February does not, and must not be forced under one. */
+      showId: input.showId || '',
+      cycle: cycleOf(input.cycle),
+      category: cat,
+      date: dateOrEmpty(input.date),
+      /* Null is "not recorded". Never 0 — an expense nobody costed is not a
+         free one, and a total that silently absorbs it is wrong. */
+      amount: numOrNull(input.amount),
+      /* Mileage is miles x rate. The RATE IS THE ARTIST'S: no federal figure
+         ships with the app, because a hardcoded rate goes stale the moment the
+         year turns and this is a number that costs money when it is wrong. */
+      miles: numOrNull(input.miles),
+      mileageRate: numOrNull(input.mileageRate),
+      vendor: String(input.vendor || '').trim(),
+      notes: input.notes || '',
+
+      /* ---- lodging only. Meaningless on other categories, and the UI only
+         asks for them when the category is lodging. ---- */
+      lodgingKind: LODGING_KIND_LABEL[input.lodgingKind] ? input.lodgingKind : '',
+      nights: numOrNull(input.nights),
+      /* Tri-state on purpose: true, false, and null for "nobody checked".
+         "No overnight parking" and "we do not know" are different answers and
+         one of them gets an artist moved on at 2am. */
+      overnightParking: input.overnightParking === true ? true
+                      : input.overnightParking === false ? false : null,
+      rvFriendly: input.rvFriendly === true ? true
+                : input.rvFriendly === false ? false : null,
+      /* Opt-in, per row, and false is the only default. A lodging find is
+         shareable; the rest of somebody's spending never is. */
+      shareable: !!input.shareable,
+
+      deletedAt: input.deletedAt || null,
+      createdAt: input.createdAt || now,
+      updatedAt: input.updatedAt || now
+    };
+  }
+
+  /* ---- §7 Stage 3 — individual sales (ideas 15 and 19) -------------------
+     How the money was taken. Free text would make sell-through by payment
+     method unanswerable, and a made-up default would make it wrong, so there
+     is an explicit "not recorded" and it is what a blank row gets. */
+  var PAYMENT_METHODS = [
+    { value:'',       label:'Not recorded' },
+    { value:'cash',   label:'Cash' },
+    { value:'card',   label:'Card' },
+    { value:'check',  label:'Check' },
+    { value:'online', label:'Online / invoice' },
+    { value:'other',  label:'Other' }
+  ];
+  var PAYMENT_LABEL = Object.fromEntries(
+    PAYMENT_METHODS.map(function (m) { return [m.value, m.label]; }));
+
+  /* Where a row came from. An imported row stays marked as imported for as
+     long as it exists, the same way an imported ranking does: a figure a
+     card reader produced and a figure the artist typed are different kinds
+     of evidence, and the page has to keep being able to say which is which. */
+  var SALE_SOURCES = ['manual', 'square', 'stripe', 'csv'];
+
+  /**
+   * One sale of one piece, at one show. The fifth use of the child-record
+   * pattern, and the one the pattern was chosen for: two devices each selling
+   * a different piece on the same Saturday must merge as a union, because
+   * last-write-wins here loses somebody a sale.
+   *
+   * The show's `grossSales` (Stage 1) is NOT replaced by these rows and is
+   * never recomputed from them. It is the artist's own stated total; the rows
+   * are the detail. When the two disagree the page says which figure it is
+   * showing — see `ASTSales.reconcile` — because silently preferring either
+   * one would hide a missing row or overwrite a correction.
+   */
+  function makeSale(input) {
+    input = input || {};
+    var now = new Date().toISOString();
+    return {
+      id: input.id || newId(),
+      /* Which ledger show this was sold at. A sale with no show is a studio
+         sale and stays valid — it simply drops out of every per-show figure
+         rather than being forced under a weekend it did not happen at. */
+      showId: input.showId || '',
+      catalogueId: input.catalogueId || '',
+      cycle: cycleOf(input.cycle || input.date),
+      /* What was sold. Free text: only the artist knows their own titles,
+         and an "Untitled #4" is a real answer. */
+      piece: String(input.piece || '').trim(),
+      /* Null is "not recorded", never 0. A piece given away and a piece
+         nobody has typed the price of are different sales, and a zero would
+         quietly drag every average down. */
+      price: numOrNull(input.price),
+      /* As the artist writes it — "24 x 36 in", "small". Parsing this into
+         numbers would invent a precision nobody entered. */
+      size: String(input.size || '').trim(),
+      medium: String(input.medium || '').trim(),
+      /* Empty means unknown, never today. An imported row with no readable
+         date genuinely does not know when it sold. */
+      date: dateOrEmpty(input.date),
+      paymentMethod: PAYMENT_LABEL[input.paymentMethod] ? input.paymentMethod : '',
+      quantity: input.quantity == null || input.quantity === '' ? 1
+              : Math.max(1, Math.round(Number(input.quantity)) || 1),
+      source: SALE_SOURCES.indexOf(input.source) !== -1 ? input.source : 'manual',
+      /* The processor's own id for the transaction, kept so re-importing the
+         same export updates the row it already made instead of doubling the
+         season's takings. */
+      externalId: String(input.externalId || '').trim(),
+      notes: input.notes || '',
+      deletedAt: input.deletedAt || null,
+      createdAt: input.createdAt || now,
+      updatedAt: input.updatedAt || now
+    };
+  }
+
+  /* ---- §7 Stage 4 — contacts and the post-show debrief (ideas 20, 22) ----
+     Where a conversation got to. Blank is "not recorded", never a guess:
+     somebody who walked off without a word and somebody nobody wrote an
+     outcome for are different people. */
+  var CONTACT_OUTCOMES = [
+    { value:'',          label:'Not recorded' },
+    { value:'bought',    label:'Bought' },
+    { value:'interested',label:'Interested, did not buy' },
+    { value:'browsing',  label:'Just looking' },
+    { value:'commission',label:'Asked about a commission' }
+  ];
+  var CONTACT_OUTCOME_LABEL = Object.fromEntries(
+    CONTACT_OUTCOMES.map(function (o) { return [o.value, o.label]; }));
+
+  /* Did they say you may contact them? Three answers, because "did not ask"
+     is the common one and must not read as yes. */
+  var CONSENT = [
+    { value:'',    label:'Did not ask' },
+    { value:'yes', label:'Yes, happy to hear from me' },
+    { value:'no',  label:'No — do not contact' }
+  ];
+  var CONSENT_LABEL = Object.fromEntries(CONSENT.map(function (c) { return [c.value, c.label]; }));
+
+  /**
+   * A person met at a show. Somebody else's details, so the bar is higher
+   * than for anything else in the store: contacts are DEVICE-ONLY. The Store
+   * facade never hands them to a sync backend, even one that implements
+   * them, and they leave the device only through an export the artist runs
+   * by hand. See `Store.listContacts` below.
+   */
+  function makeContact(input) {
+    input = input || {};
+    var now = new Date().toISOString();
+    return {
+      id: input.id || newId(),
+      name: String(input.name || '').trim(),
+      email: String(input.email || '').trim(),
+      phone: String(input.phone || '').trim(),
+      /* Where you met them. Optional: a collector from the studio belongs to
+         no show. */
+      showId: input.showId || '',
+      catalogueId: input.catalogueId || '',
+      cycle: cycleOf(input.cycle || input.metOn),
+      metOn: dateOrEmpty(input.metOn),
+      /* What they looked at, in the artist's words. */
+      interest: String(input.interest || '').trim(),
+      outcome: CONTACT_OUTCOME_LABEL[input.outcome] ? input.outcome : '',
+      /* Sale rows this person bought, by id. Links, never copies: the sale
+         row stays the one record of the money. */
+      saleIds: Array.isArray(input.saleIds) ? input.saleIds.filter(Boolean).map(String) : [],
+      consent: CONSENT_LABEL[input.consent] !== undefined && input.consent ? input.consent : '',
+      /* The date the artist means to follow up. Nothing is sent on it — the
+         app has no delivery channel, and the page says so. */
+      followUpOn: dateOrEmpty(input.followUpOn),
+      /* When the artist marked the follow-up done. Empty = still owed. */
+      followedUpAt: dateOrEmpty(input.followedUpAt),
+      notes: input.notes || '',
+      deletedAt: input.deletedAt || null,
+      createdAt: input.createdAt || now,
+      updatedAt: input.updatedAt || now
+    };
+  }
+
+  /* A 1–10 answer, 10 always good for the artist; null = skipped. */
+  function score10(v) {
+    if (v === null || v === undefined || v === '') return null;
+    var n = Math.round(Number(v));
+    return Number.isFinite(n) && n >= 1 && n <= 10 ? n : null;
+  }
+  var DEBRIEF_RETURN = [
+    { value:'',      label:'Not decided' },
+    { value:'yes',   label:'Yes' },
+    { value:'maybe', label:'Maybe' },
+    { value:'no',    label:'No' }
+  ];
+  var DEBRIEF_RETURN_LABEL = Object.fromEntries(
+    DEBRIEF_RETURN.map(function (r) { return [r.value, r.label]; }));
+
+  /**
+   * The 90-second post-show debrief (idea 22). One per show per season —
+   * the application's shape, for the same reason. Every answer is optional
+   * and a skipped one stays null: a half-answered debrief is still worth
+   * more than an unanswered one, and a default would put words in the
+   * artist's mouth. Private: nothing here is ever sent anywhere; turning it
+   * into a member report is a separate, deliberate act on the report form.
+   */
+  function makeDebrief(input) {
+    input = input || {};
+    var now = new Date().toISOString();
+    return {
+      id: input.id || newId(),
+      showId: input.showId || '',
+      catalogueId: input.catalogueId || '',
+      cycle: cycleOf(input.cycle),
+      /* Each 1–10, 10 good: buyers who could afford the work, crowd that
+         stopped, how easy load-in was, how well the show was run. */
+      buyers: score10(input.buyers),
+      traffic: score10(input.traffic),
+      loadIn: score10(input.loadIn),
+      organisation: score10(input.organisation),
+      again: DEBRIEF_RETURN_LABEL[input.again] !== undefined && input.again ? input.again : '',
+      /* What moved and what did not, in a line each. */
+      sold: String(input.sold || '').trim(),
+      stuck: String(input.stuck || '').trim(),
+      nextTime: String(input.nextTime || '').trim(),
+      deletedAt: input.deletedAt || null,
+      createdAt: input.createdAt || now,
+      updatedAt: input.updatedAt || now
+    };
+  }
+
+  /**
+   * A saved ranking — "Lisa's list". The criteria themselves belong to
+   * ranker.js, which owns the factor list; core.js only guarantees the
+   * envelope every stored record shares, so sync and tombstones work the
+   * same way here as everywhere else.
+   *
+   * `weights` is left exactly as given: a null means "follow the presets",
+   * and ranker.js is the only thing allowed to interpret or clamp it.
+   */
+  function makeRanker(input) {
+    input = input || {};
+    var now = new Date().toISOString();
+    return {
+      id: input.id || newId(),
+      name: String(input.name || '').trim(),
+      /* Whose list this is, for a shared one. Free text the artist typed,
+         never an identity the app asserts. */
+      ownerName: String(input.ownerName || '').trim(),
+      discipline: input.discipline || '',
+      priceBand: input.priceBand || '',
+      strategy: input.strategy || '',
+      weights: Array.isArray(input.weights) ? input.weights.slice() : null,
+      notes: input.notes || '',
+      /* Where it came from. An imported list stays marked as imported for as
+         long as it exists: a ranking someone else built is not your judgment,
+         and the UI has to keep being able to say so. */
+      origin: input.origin === 'imported' ? 'imported' : 'mine',
+      sourceName: String(input.sourceName || '').trim(),
+      /* Sharing is opt-in, per record, and false is the only default. Artists
+         protect their show lists; nothing here leaves the device unless it is
+         deliberately exported. */
+      shared: !!input.shared,
+      deletedAt: input.deletedAt || null,
+      createdAt: input.createdAt || now,
+      updatedAt: input.updatedAt || now
+    };
+  }
+
+  /**
+   * One application, to one show, in one cycle. A child record: it has its own
+   * id and updatedAt so two devices adding different applications merge as a
+   * union instead of one overwriting the other. Money must not be lost to
+   * last-write-wins the way a status change safely can be.
+   */
+  function makeApplication(input) {
+    input = input || {};
+    var now = new Date().toISOString();
+    return {
+      id: input.id || newId(),
+      /* Which ledger show this belongs to. An application with no show is
+         orphaned, not global — the UI drops it rather than inventing a parent. */
+      showId: input.showId || '',
+      catalogueId: input.catalogueId || '',
+      /* The season, as a four-digit year string. Two applications to the same
+         show in different years are two rows; in the SAME year they are one,
+         because that is what re-applying to a single jury means. */
+      cycle: cycleOf(input.cycle),
+      stage: STAGE_LABEL[input.stage] ? input.stage : 'draft',
+      /* Dates you actually did the thing. Empty means unknown, never today —
+         a backfilled row genuinely does not know when it was submitted. */
+      appliedOn: dateOrEmpty(input.appliedOn),
+      notifiedOn: dateOrEmpty(input.notifiedOn),
+      /* What the jury fee ACTUALLY cost, which is not always the show's listed
+         fee — early-bird and late rates differ. Null is "not recorded"; it is
+         never 0, because a fee nobody entered is not a free show. */
+      juryFee: numOrNull(input.juryFee),
+      feePaidOn: dateOrEmpty(input.feePaidOn),
+      /* The artist's own estimate of what they would gross at this show. The
+         only honest input to expected value (14): nothing in the catalogue
+         knows it, so with no estimate EV stays null and renders "not known". */
+      expectedGross: numOrNull(input.expectedGross),
+      notes: input.notes || '',
+      deletedAt: input.deletedAt || null,
+      createdAt: input.createdAt || now,
+      updatedAt: input.updatedAt || now
+    };
+  }
+
+  function makeEvent(input) {
+    input = input || {};
+    var now = new Date().toISOString();
+    var start = input.startDate || '';
+    return {
+      id: input.id || newId(),
+      kind: EVENT_KIND_LABEL[input.kind] ? input.kind : 'event',
+      title: String(input.title || '').trim(),
+      notes: input.notes || '',
+      location: String(input.location || '').trim(),
+      startDate: start,
+      // A one-day event ends the day it starts; an empty end is not "forever".
+      endDate: input.endDate || start,
+      allDay: input.allDay === undefined ? true : !!input.allDay,
+      startTime: timeOrEmpty(input.startTime),
+      endTime: timeOrEmpty(input.endTime),
+      /* Optional tie back to a show, so "drive to Naples" can sit under the
+         Naples show and open its drawer. Never a copy of the show. */
+      showId: input.showId || '',
+      catalogueId: input.catalogueId || '',
+      reminders: Array.isArray(input.reminders) ? input.reminders.map(makeReminder) : [],
+      deletedAt: input.deletedAt || null,
+      createdAt: input.createdAt || now,
+      updatedAt: input.updatedAt || now
+    };
+  }
+
+  /* ---- 2. SEED — Isaac's 2027 Florida season ----------------------------
+     Stops 1-7 as signed off in design/Main.dc.html. Later stops (8-12,
+     through Apr 18) are not in the repo docs yet; add them in the drawer.  */
+  var SEED = [
+    ['1',  "Naples New Year's Art Fair",        'Naples','FL',          26.1420,-81.7948,'2027-01-02','2027-01-03','',           'accepted',   false],
+    ['2a', 'Bonita Springs National — Show 1',  'Bonita Springs','FL',  26.3398,-81.7787,'2027-01-09','2027-01-10','2026-09-15','applied',    false],
+    ['2b', 'Las Olas Art Fair Part I',          'Fort Lauderdale','FL', 26.1224,-80.1373,'2027-01-09','2027-01-10','2026-10-01','not_applying',true],
+    ['3',  'Beaux Arts Festival of Art',        'Coral Gables','FL',    25.7215,-80.2684,'2027-01-16','2027-01-17','2026-09-30','applied',    false],
+    ['4',  'IMAGES: A Festival of the Arts',    'New Smyrna Beach','FL',29.0258,-80.9270,'2027-01-22','2027-01-24','2026-10-12','interested', false],
+    ['5',  'St. Armands Circle Art Festival',   'Sarasota','FL',        27.3206,-82.5760,'2027-01-30','2027-01-31','2026-11-03','interested', false],
+    ['6a', 'Boca Raton Museum Art Festival',    'Boca Raton','FL',      26.3683,-80.1289,'2027-02-06','2027-02-07','2026-09-23','waitlist',   false],
+    ['6b', 'ArtiGras Fine Arts Festival',       'Palm Beach Gardens','FL',26.8234,-80.1387,'2027-02-06','2027-02-07','2026-09-23','interested',true],
+    ['7',  'Coconut Grove Arts Festival',       'Coconut Grove, Miami','FL',25.7282,-80.2434,'2027-02-13','2027-02-15','2026-09-08','applied', false]
+  ].map(function (r) {
+    return makeShow({ routeNumber:r[0], name:r[1], city:r[2], state:r[3], lat:r[4], lng:r[5],
+                      startDate:r[6], endDate:r[7], applyBy:r[8], status:r[9], isAlternate:r[10],
+                      source:'manual' });
+  });
+
+  /* ---- 3. STORE ADAPTER --------------------------------------------------
+     Nothing outside this block touches storage. Phase 3 adds SupabaseStore
+     with the same async surface: list/get/upsert/remove/replaceAll.        */
+  var notify = function (msg) { console.warn(msg); };
+
+  function migrate(db) {
+    var d = db;
+    if (!d || typeof d !== 'object') d = { schemaVersion: SCHEMA_VERSION, shows: [], events: [], applications: [], rankers: [], expenses: [], reviews: [], sales: [], contacts: [], debriefs: [] };
+    if (!Array.isArray(d.shows)) d.shows = [];
+    if (!Array.isArray(d.applications)) d.applications = [];
+    if (!Array.isArray(d.rankers)) d.rankers = [];
+    if (!Array.isArray(d.expenses)) d.expenses = [];
+    if (!Array.isArray(d.reviews)) d.reviews = [];
+    if (!Array.isArray(d.sales)) d.sales = [];
+    if (!Array.isArray(d.contacts)) d.contacts = [];
+    if (!Array.isArray(d.debriefs)) d.debriefs = [];
+    // v0 (pre-versioning: a bare array or no version) -> v1
+    if (!d.schemaVersion) d.schemaVersion = 1;
+    // v1 -> v2: soft deletes, so cross-device sync can carry a deletion.
+    if (d.schemaVersion < 2) {
+      d.shows = d.shows.map(function (row) {
+        if (row && row.deletedAt === undefined) row.deletedAt = null;
+        return row;
+      });
+      d.schemaVersion = 2;
+    }
+    // v2 -> v3: the hide-from-plan flag. Everything existing starts visible.
+    if (d.schemaVersion < 3) {
+      d.shows = d.shows.map(function (row) {
+        if (row && row.hidden === undefined) row.hidden = false;
+        return row;
+      });
+      d.schemaVersion = 3;
+    }
+    // v3 -> v4: the calendar. Existing databases simply gain an empty list;
+    // nothing about a show moves, because the calendar never copies one.
+    if (d.schemaVersion < 4) {
+      if (!Array.isArray(d.events)) d.events = [];
+      d.schemaVersion = 4;
+    }
+    /* v4 -> v5: the application pipeline. Existing databases gain a row for
+       every show already past "interested", because a show marked Accepted is
+       evidence an application happened even though nothing recorded it. The
+       dates stay EMPTY: we know it happened, we do not know when, and a
+       plausible date here would be a fabrication in the one collection that
+       has to survive an audit. The jury fee carries over from the show, which
+       is the figure the artist entered themselves. */
+    if (d.schemaVersion < 5) {
+      if (!Array.isArray(d.applications)) d.applications = [];
+      var STAGE_FROM_STATUS = {
+        applied: 'applied', accepted: 'accepted',
+        waitlist: 'waitlist', declined: 'declined'
+      };
+      d.shows.forEach(function (row) {
+        if (!row || row.deletedAt) return;
+        var stage = STAGE_FROM_STATUS[row.status];
+        if (!stage) return;
+        d.applications.push(makeApplication({
+          showId: row.id,
+          catalogueId: row.catalogueId,
+          cycle: cycleOf(row.startDate),
+          stage: stage,
+          juryFee: row.juryFee,
+          createdAt: row.createdAt,
+          updatedAt: row.updatedAt
+        }));
+      });
+      d.schemaVersion = 5;
+    }
+    /* v5 -> v6: saved rankings. Nothing is seeded — an artist who has not
+       built one is not given somebody else's idea of a good show, and the
+       preset profile keeps working exactly as before until they do. */
+    if (d.schemaVersion < 6) {
+      if (!Array.isArray(d.rankers)) d.rankers = [];
+      d.schemaVersion = 6;
+    }
+    d.shows = d.shows.map(makeShow);
+    d.events = (Array.isArray(d.events) ? d.events : []).map(makeEvent);
+    d.applications = (Array.isArray(d.applications) ? d.applications : []).map(makeApplication);
+    /* v6 -> v7: the expense log. Nothing is backfilled: a show's boothFee and
+       juryFee are what the artist EXPECTS to pay, and an expense row is money
+       that actually left. Turning the first into the second would invent a
+       payment that may never have happened. */
+    if (d.schemaVersion < 7) {
+      if (!Array.isArray(d.expenses)) d.expenses = [];
+      d.schemaVersion = 7;
+    }
+    d.rankers = (Array.isArray(d.rankers) ? d.rankers : []).map(makeRanker);
+    /* v7 -> v8: mock jury reviews. Nothing seeded and nothing backfilled;
+       a review is something a juror did, and none has. */
+    if (d.schemaVersion < 8) {
+      if (!Array.isArray(d.reviews)) d.reviews = [];
+      d.schemaVersion = 8;
+    }
+    /* v8 -> v9: gross sales per show. Nothing is backfilled and nothing is
+       defaulted to 0 — every existing show becomes "not recorded", because
+       the app has never had anywhere to put this number and so cannot know
+       it. makeShow supplies the null. */
+    if (d.schemaVersion < 9) {
+      d.schemaVersion = 9;
+    }
+    /* v9 -> v10: individual sales. NOTHING IS BACKFILLED, and this is the
+       migration the child-record pattern was argued for.
+
+       A show's `grossSales` is one number the artist stated. Splitting it
+       into sale rows would have to invent pieces, prices, sizes and dates
+       that nobody recorded, in the one collection that has to survive an
+       audit — and it would then read back as detail somebody entered. The
+       stated total stays exactly where it is and keeps its own meaning; the
+       rows are a second, independent record, and where both exist the page
+       reports both rather than reconciling them behind the artist's back. */
+    if (d.schemaVersion < 10) {
+      if (!Array.isArray(d.sales)) d.sales = [];
+      d.schemaVersion = 10;
+    }
+    /* v10 -> v11: §7 Stage 4, contacts and debriefs. Nothing is backfilled.
+       A sale row never recorded who bought it, so no contact can be derived
+       from one, and a debrief is the artist's own answers — there is nothing
+       to answer them with but the artist. */
+    if (d.schemaVersion < 11) {
+      d.schemaVersion = 11;
+    }
+    d.contacts = (Array.isArray(d.contacts) ? d.contacts : []).map(makeContact);
+    d.debriefs = (Array.isArray(d.debriefs) ? d.debriefs : []).map(makeDebrief);
+    d.sales = (Array.isArray(d.sales) ? d.sales : []).map(makeSale);
+    d.expenses = (Array.isArray(d.expenses) ? d.expenses : []).map(makeExpense);
+    d.reviews = (Array.isArray(d.reviews) ? d.reviews : []).map(makeReview);
+    d.schemaVersion = SCHEMA_VERSION;
+    return d;
+  }
+
+  var LocalStore = (function () {
+    function read() {
+      var raw = null;
+      try { raw = localStorage.getItem(DB_KEY); }
+      catch (_) { return { schemaVersion: SCHEMA_VERSION, shows: [], events: [], applications: [], rankers: [], expenses: [], reviews: [], sales: [], contacts: [], debriefs: [] }; }
+      if (raw === null) return null;
+      var parsed;
+      try { parsed = JSON.parse(raw); } catch (_) { parsed = null; }
+      if (Array.isArray(parsed)) parsed = { shows: parsed };
+      var was = parsed && parsed.schemaVersion;
+      var db = migrate(parsed);
+      // Persist the upgrade now rather than waiting for the next write, so a
+      // stale version cannot sit on disk being re-migrated on every read.
+      if (was !== SCHEMA_VERSION) { try { write(db); } catch (_) {} }
+      return db;
+    }
+    function write(db) {
+      db.schemaVersion = SCHEMA_VERSION;
+      try { localStorage.setItem(DB_KEY, JSON.stringify(db)); }
+      catch (err) { notify('Could not save — storage is unavailable or full.'); throw err; }
+      return db;
+    }
+    function load() {
+      var db = read();
+      if (db) return db;
+      // A brand-new device gets the demo season. Flag it: the seed is not the
+      // user's data, so on first sign-in it must not be pushed up as if it
+      // were — a second device would duplicate the whole season.
+      return write({ schemaVersion: SCHEMA_VERSION, shows: SEED, events: [], applications: [], rankers: [], expenses: [], reviews: [], sales: [], contacts: [], debriefs: [], pristineSeed: true });
+    }
+    /** Any real write means this device's data is no longer the untouched seed. */
+    function touch(db) { db.pristineSeed = false; return db; }
+    function live(rows) { return rows.filter(function (s) { return !s.deletedAt; }); }
+    /* The child-record upsert and tombstone, once. Older collections spell
+       it out by hand; new ones use this. */
+    function putChild(key, make, input) {
+      var db = load();
+      var rec = make(input);
+      rec.updatedAt = new Date().toISOString();
+      var i = db[key].findIndex(function (r) { return r.id === rec.id; });
+      if (i === -1) db[key].push(rec);
+      else db[key][i] = Object.assign({}, db[key][i], rec);
+      write(touch(db));
+      return Promise.resolve(rec);
+    }
+    function dropChild(key, id) {
+      var db = load();
+      var i = db[key].findIndex(function (r) { return r.id === id; });
+      if (i === -1) return Promise.resolve(null);
+      var before = Object.assign({}, db[key][i]);
+      db[key][i] = Object.assign({}, db[key][i], {
+        deletedAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      });
+      write(touch(db));
+      return Promise.resolve(before);
+    }
+
+    return {
+      /** The app's view of the data: tombstones never reach the UI. */
+      list: function () { return Promise.resolve(live(load().shows)); },
+      /** Everything including tombstones — for sync only. */
+      listAll: function () { return Promise.resolve(load().shows.slice()); },
+      get: function (id) {
+        return Promise.resolve(live(load().shows).filter(function (s) { return s.id === id; })[0] || null);
+      },
+      upsert: function (show) {
+        var db = load();
+        var rec = makeShow(show);
+        rec.updatedAt = new Date().toISOString();
+        var i = db.shows.findIndex(function (s) { return s.id === rec.id; });
+        if (i === -1) db.shows.push(rec); else db.shows[i] = Object.assign({}, db.shows[i], rec);
+        write(touch(db));
+        return Promise.resolve(rec);
+      },
+      /**
+       * Soft delete. Returns the record as it was BEFORE the tombstone, so
+       * an undo can simply upsert it back.
+       */
+      remove: function (id) {
+        var db = load();
+        var i = db.shows.findIndex(function (s) { return s.id === id; });
+        if (i === -1) return Promise.resolve(null);
+        var before = Object.assign({}, db.shows[i]);
+        db.shows[i] = Object.assign({}, db.shows[i], {
+          deletedAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        });
+        write(touch(db));
+        return Promise.resolve(before);
+      },
+      /** Sync writes rows verbatim — no updatedAt stamping, no tombstone filter. */
+      putRaw: function (rows) {
+        var db = load();
+        rows.forEach(function (rec) {
+          var i = db.shows.findIndex(function (s) { return s.id === rec.id; });
+          if (i === -1) db.shows.push(makeShow(rec));
+          else db.shows[i] = makeShow(rec);
+        });
+        write(touch(db));
+        return Promise.resolve(db.shows.slice());
+      },
+      replaceAll: function (shows) {
+        // Replaces the season, NOT the calendar. Your travel days and
+        // reminders are not shows and must survive a re-import.
+        var prev = load();
+        var db = { schemaVersion: SCHEMA_VERSION, shows: shows.map(makeShow),
+                   events: prev.events, applications: prev.applications,
+                   rankers: prev.rankers, expenses: prev.expenses, sales: prev.sales,
+                   contacts: prev.contacts, debriefs: prev.debriefs,
+                   reviews: prev.reviews, pristineSeed: false };
+        write(db);
+        return Promise.resolve(db.shows.slice());
+      },
+      /** True while this device still holds nothing but the untouched seed. */
+      isPristineSeed: function () { return !!load().pristineSeed; },
+      /** Throws away the seed and takes the account's season verbatim. */
+      adoptRemote: function (rows) {
+        var prev = load();
+        var db = { schemaVersion: SCHEMA_VERSION, shows: rows.map(makeShow),
+                   events: prev.events, applications: prev.applications,
+                   rankers: prev.rankers, expenses: prev.expenses, sales: prev.sales,
+                   contacts: prev.contacts, debriefs: prev.debriefs,
+                   reviews: prev.reviews, pristineSeed: false };
+        write(db);
+        return Promise.resolve(db.shows.slice());
+      },
+      /* ---- calendar events -------------------------------------------
+         Deliberately the same surface as the show methods above, tombstones
+         and all, so the sync store can adopt them without a new pattern. */
+      listEvents: function () {
+        return Promise.resolve(live(load().events));
+      },
+      listAllEvents: function () { return Promise.resolve(load().events.slice()); },
+      getEvent: function (id) {
+        return Promise.resolve(live(load().events).filter(function (e) { return e.id === id; })[0] || null);
+      },
+      upsertEvent: function (evt) {
+        var db = load();
+        var rec = makeEvent(evt);
+        rec.updatedAt = new Date().toISOString();
+        var i = db.events.findIndex(function (e) { return e.id === rec.id; });
+        if (i === -1) db.events.push(rec); else db.events[i] = Object.assign({}, db.events[i], rec);
+        write(touch(db));
+        return Promise.resolve(rec);
+      },
+      /** Soft delete, returning the record as it was, so undo is one upsert. */
+      removeEvent: function (id) {
+        var db = load();
+        var i = db.events.findIndex(function (e) { return e.id === id; });
+        if (i === -1) return Promise.resolve(null);
+        var before = Object.assign({}, db.events[i]);
+        db.events[i] = Object.assign({}, db.events[i], {
+          deletedAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        });
+        write(touch(db));
+        return Promise.resolve(before);
+      },
+      /* ---- applications ----------------------------------------------
+         The same surface again, for the same reason: when the pipeline does
+         get a remote table, the sync store adopts it without learning a new
+         shape. Local-only today, exactly like events. */
+      listApplications: function () { return Promise.resolve(live(load().applications)); },
+      listAllApplications: function () { return Promise.resolve(load().applications.slice()); },
+      getApplication: function (id) {
+        return Promise.resolve(live(load().applications).filter(function (a) { return a.id === id; })[0] || null);
+      },
+      upsertApplication: function (app) {
+        var db = load();
+        var rec = makeApplication(app);
+        rec.updatedAt = new Date().toISOString();
+        var i = db.applications.findIndex(function (a) { return a.id === rec.id; });
+        if (i === -1) db.applications.push(rec);
+        else db.applications[i] = Object.assign({}, db.applications[i], rec);
+        write(touch(db));
+        return Promise.resolve(rec);
+      },
+      /** Soft delete, returning the record as it was, so undo is one upsert. */
+      removeApplication: function (id) {
+        var db = load();
+        var i = db.applications.findIndex(function (a) { return a.id === id; });
+        if (i === -1) return Promise.resolve(null);
+        var before = Object.assign({}, db.applications[i]);
+        db.applications[i] = Object.assign({}, db.applications[i], {
+          deletedAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        });
+        write(touch(db));
+        return Promise.resolve(before);
+      },
+      /* ---- saved rankings --------------------------------------------- */
+      listRankers: function () { return Promise.resolve(live(load().rankers)); },
+      listAllRankers: function () { return Promise.resolve(load().rankers.slice()); },
+      getRanker: function (id) {
+        return Promise.resolve(live(load().rankers).filter(function (r) { return r.id === id; })[0] || null);
+      },
+      upsertRanker: function (rk) {
+        var db = load();
+        var rec = makeRanker(rk);
+        rec.updatedAt = new Date().toISOString();
+        var i = db.rankers.findIndex(function (r) { return r.id === rec.id; });
+        if (i === -1) db.rankers.push(rec);
+        else db.rankers[i] = Object.assign({}, db.rankers[i], rec);
+        write(touch(db));
+        return Promise.resolve(rec);
+      },
+      removeRanker: function (id) {
+        var db = load();
+        var i = db.rankers.findIndex(function (r) { return r.id === id; });
+        if (i === -1) return Promise.resolve(null);
+        var before = Object.assign({}, db.rankers[i]);
+        db.rankers[i] = Object.assign({}, db.rankers[i], {
+          deletedAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        });
+        write(touch(db));
+        return Promise.resolve(before);
+      },
+      /* ---- expenses ----------------------------------------------------- */
+      listExpenses: function () { return Promise.resolve(live(load().expenses)); },
+      listAllExpenses: function () { return Promise.resolve(load().expenses.slice()); },
+      getExpense: function (id) {
+        return Promise.resolve(live(load().expenses).filter(function (e) { return e.id === id; })[0] || null);
+      },
+      upsertExpense: function (ex) {
+        var db = load();
+        var rec = makeExpense(ex);
+        rec.updatedAt = new Date().toISOString();
+        var i = db.expenses.findIndex(function (e) { return e.id === rec.id; });
+        if (i === -1) db.expenses.push(rec);
+        else db.expenses[i] = Object.assign({}, db.expenses[i], rec);
+        write(touch(db));
+        return Promise.resolve(rec);
+      },
+      removeExpense: function (id) {
+        var db = load();
+        var i = db.expenses.findIndex(function (e) { return e.id === id; });
+        if (i === -1) return Promise.resolve(null);
+        var before = Object.assign({}, db.expenses[i]);
+        db.expenses[i] = Object.assign({}, db.expenses[i], {
+          deletedAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        });
+        write(touch(db));
+        return Promise.resolve(before);
+      },
+      /* ---- sales ---------------------------------------------------------
+         §7 Stage 3. Same surface again, so a remote `sales` table can be
+         adopted later without anything above learning a new shape. */
+      listSales: function () { return Promise.resolve(live(load().sales)); },
+      listAllSales: function () { return Promise.resolve(load().sales.slice()); },
+      getSale: function (id) {
+        return Promise.resolve(live(load().sales).filter(function (s) { return s.id === id; })[0] || null);
+      },
+      upsertSale: function (sale) {
+        var db = load();
+        var rec = makeSale(sale);
+        rec.updatedAt = new Date().toISOString();
+        var i = db.sales.findIndex(function (s) { return s.id === rec.id; });
+        if (i === -1) db.sales.push(rec);
+        else db.sales[i] = Object.assign({}, db.sales[i], rec);
+        write(touch(db));
+        return Promise.resolve(rec);
+      },
+      removeSale: function (id) {
+        var db = load();
+        var i = db.sales.findIndex(function (s) { return s.id === id; });
+        if (i === -1) return Promise.resolve(null);
+        var before = Object.assign({}, db.sales[i]);
+        db.sales[i] = Object.assign({}, db.sales[i], {
+          deletedAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        });
+        write(touch(db));
+        return Promise.resolve(before);
+      },
+      /* ---- §7 Stage 4: contacts and debriefs ------------------------------ */
+      listContacts: function () { return Promise.resolve(live(load().contacts)); },
+      listAllContacts: function () { return Promise.resolve(load().contacts.slice()); },
+      upsertContact: function (c) { return putChild('contacts', makeContact, c); },
+      removeContact: function (id) { return dropChild('contacts', id); },
+      listDebriefs: function () { return Promise.resolve(live(load().debriefs)); },
+      upsertDebrief: function (d) { return putChild('debriefs', makeDebrief, d); },
+      removeDebrief: function (id) { return dropChild('debriefs', id); },
+      /* ---- jury reviews --------------------------------------------------- */
+      listReviews: function () { return Promise.resolve(live(load().reviews)); },
+      listAllReviews: function () { return Promise.resolve(load().reviews.slice()); },
+      getReview: function (id) {
+        return Promise.resolve(live(load().reviews).filter(function (r) { return r.id === id; })[0] || null);
+      },
+      upsertReview: function (rv) {
+        var db = load();
+        var rec = makeReview(rv);
+        rec.updatedAt = new Date().toISOString();
+        var i = db.reviews.findIndex(function (r) { return r.id === rec.id; });
+        if (i === -1) db.reviews.push(rec);
+        else db.reviews[i] = Object.assign({}, db.reviews[i], rec);
+        write(touch(db));
+        return Promise.resolve(rec);
+      },
+      removeReview: function (id) {
+        var db = load();
+        var i = db.reviews.findIndex(function (r) { return r.id === id; });
+        if (i === -1) return Promise.resolve(null);
+        var before = Object.assign({}, db.reviews[i]);
+        db.reviews[i] = Object.assign({}, db.reviews[i], {
+          deletedAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        });
+        write(touch(db));
+        return Promise.resolve(before);
+      },
+      markUsed: function () { var db = load(); write(touch(db)); }
+    };
+  })();
+
+
+  /* ---- 3b. SETTINGS + STORE FACADE ---------------------------------------
+     `AST.Store` is a stable object the pages hold on to; `useStore` swaps the
+     backend underneath it, so Phase 3 can move from LocalStore to the
+     Supabase-backed sync store without any page re-binding its reference.
+     Settings are small key/value prefs (Supabase URL, anon key, session) and
+     live here for the same reason the show data does: one place touches
+     localStorage.                                                          */
+  function readJSON(key) {
+    try {
+      var raw = localStorage.getItem(key);
+      return raw ? JSON.parse(raw) : null;
+    } catch (_) { return null; }
+  }
+  function writeJSON(key, value) {
+    try {
+      if (value === null) localStorage.removeItem(key);
+      else localStorage.setItem(key, JSON.stringify(value));
+      return true;
+    } catch (_) { return false; }
+  }
+
+  var Settings = {
+    /** { url, anonKey } — the anon key is public by design; a service key is not. */
+    getConfig: function () { return readJSON(CONFIG_KEY); },
+    setConfig: function (cfg) { return writeJSON(CONFIG_KEY, cfg); },
+    clearConfig: function () { return writeJSON(CONFIG_KEY, null); },
+    getSession: function () { return readJSON(SESSION_KEY); },
+    setSession: function (sess) { return writeJSON(SESSION_KEY, sess); },
+    clearSession: function () { return writeJSON(SESSION_KEY, null); },
+    /* Phase 4: geocoded places, keyed 'city|state'. Nominatim asks that
+       results be cached rather than looked up again, and a miss is cached as
+       null so a place with no match is asked about once, not once per import. */
+    getGeoCache: function () { return readJSON(GEOCACHE_KEY) || {}; },
+    setGeoCache: function (cache) { return writeJSON(GEOCACHE_KEY, cache); },
+    /* Phase 5: the share panel's remembered choices (artist name, link, card
+       size, how many shows, which statuses are public). Prefs only — never
+       show data. */
+    getShare: function () { return readJSON(SHARE_KEY) || {}; },
+    setShare: function (prefs) { return writeJSON(SHARE_KEY, prefs); },
+    /* Phase 6: the width you dragged the list/map divider to, per page, plus
+       whether the ledger was left in map view. Layout only — never show data. */
+    getLayout: function () { return readJSON(LAYOUT_KEY) || {}; },
+    setLayout: function (prefs) { return writeJSON(LAYOUT_KEY, prefs); },
+    /* Phase 6: road-following route geometry, keyed by the ordered stop
+       coordinates. The routing service asks that results be reused rather
+       than re-requested, and this lets the drawn route survive a reload with
+       no network at all. A failure is NOT cached — unlike a geocode miss it
+       is usually the network, not the answer. */
+    getRouteCache: function () { return readJSON(ROUTECACHE_KEY) || {}; },
+    setRouteCache: function (cache) { return writeJSON(ROUTECACHE_KEY, cache); },
+    /* Phase 7: what you have done to the shows catalogue — likes, ratings,
+       which ones you have already pulled into the ledger, and any rows you
+       added yourself. Keyed by catalogue id, kept apart from catalogue.json
+       so re-importing a fresher export never costs you your picks. */
+    getCatalogue: function () { return readJSON(CATALOGUE_KEY) || {}; },
+    setCatalogue: function (state) { return writeJSON(CATALOGUE_KEY, state); }
+  };
+
+  var backend = LocalStore;
+  var Store = {
+    list:       function ()      { return backend.list(); },
+    get:        function (id)    { return backend.get(id); },
+    upsert:     function (show)  { return backend.upsert(show); },
+    remove:     function (id)    { return backend.remove(id); },
+    replaceAll: function (shows) { return backend.replaceAll(shows); },
+    /* The calendar. A backend that has not implemented events yet degrades to
+       the local one rather than throwing, which is what keeps the calendar
+       working while the remote `events` table does not exist. */
+    listEvents:  function ()    { return (backend.listEvents  || LocalStore.listEvents).call(backend); },
+    getEvent:    function (id)  { return (backend.getEvent    || LocalStore.getEvent).call(backend, id); },
+    upsertEvent: function (evt) { return (backend.upsertEvent || LocalStore.upsertEvent).call(backend, evt); },
+    removeEvent: function (id)  { return (backend.removeEvent || LocalStore.removeEvent).call(backend, id); },
+    /* The pipeline. Same degrade-to-local fallback as events, which is what
+       lets applications work today against a Supabase backend that has no
+       `applications` table yet. */
+    listApplications:  function ()    { return (backend.listApplications  || LocalStore.listApplications).call(backend); },
+    getApplication:    function (id)  { return (backend.getApplication    || LocalStore.getApplication).call(backend, id); },
+    upsertApplication: function (app) { return (backend.upsertApplication || LocalStore.upsertApplication).call(backend, app); },
+    removeApplication: function (id)  { return (backend.removeApplication || LocalStore.removeApplication).call(backend, id); },
+    /* Saved rankings, same degrade-to-local fallback again. */
+    listRankers:  function ()   { return (backend.listRankers  || LocalStore.listRankers).call(backend); },
+    getRanker:    function (id) { return (backend.getRanker    || LocalStore.getRanker).call(backend, id); },
+    upsertRanker: function (rk) { return (backend.upsertRanker || LocalStore.upsertRanker).call(backend, rk); },
+    removeRanker: function (id) { return (backend.removeRanker || LocalStore.removeRanker).call(backend, id); },
+    /* Expenses, same degrade-to-local fallback. */
+    listExpenses:  function ()   { return (backend.listExpenses  || LocalStore.listExpenses).call(backend); },
+    getExpense:    function (id) { return (backend.getExpense    || LocalStore.getExpense).call(backend, id); },
+    upsertExpense: function (ex) { return (backend.upsertExpense || LocalStore.upsertExpense).call(backend, ex); },
+    removeExpense: function (id) { return (backend.removeExpense || LocalStore.removeExpense).call(backend, id); },
+    /* Jury reviews, same degrade-to-local fallback. */
+    listReviews:  function ()   { return (backend.listReviews  || LocalStore.listReviews).call(backend); },
+    getReview:    function (id) { return (backend.getReview    || LocalStore.getReview).call(backend, id); },
+    upsertReview: function (rv) { return (backend.upsertReview || LocalStore.upsertReview).call(backend, rv); },
+    removeReview: function (id) { return (backend.removeReview || LocalStore.removeReview).call(backend, id); },
+    /* Sales, same degrade-to-local fallback. The Supabase `shows` table has
+       no sales anything, so this is local-only exactly like the rest. */
+    listSales:  function ()     { return (backend.listSales  || LocalStore.listSales).call(backend); },
+    getSale:    function (id)   { return (backend.getSale    || LocalStore.getSale).call(backend, id); },
+    upsertSale: function (sale) { return (backend.upsertSale || LocalStore.upsertSale).call(backend, sale); },
+    removeSale: function (id)   { return (backend.removeSale || LocalStore.removeSale).call(backend, id); },
+    /* Contacts are other people's details, so they are DEVICE-ONLY and do
+       not use the degrade-to-local pattern: they go to LocalStore even when
+       a backend implements them. Changing this is a decision, not a patch. */
+    listContacts:  function ()  { return LocalStore.listContacts(); },
+    upsertContact: function (c) { return LocalStore.upsertContact(c); },
+    removeContact: function (id){ return LocalStore.removeContact(id); },
+    /* Debriefs: the usual degrade-to-local fallback. */
+    listDebriefs:  function ()  { return (backend.listDebriefs  || LocalStore.listDebriefs).call(backend); },
+    upsertDebrief: function (d) { return (backend.upsertDebrief || LocalStore.upsertDebrief).call(backend, d); },
+    removeDebrief: function (id){ return (backend.removeDebrief || LocalStore.removeDebrief).call(backend, id); }
+  };
+  function useStore(next) { backend = next || LocalStore; return Store; }
+  function currentStore() { return backend; }
+
+  /* ---- 4. DATES + FORMATTING -------------------------------------------- */
+  var MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  var ISO_RE = /^\d{4}-\d{2}-\d{2}$/;
+  var FAR = '9999-12-31';
+
+  function parseISO(s) {
+    if (!s || !ISO_RE.test(s)) return null;
+    var p = s.split('-').map(Number), y = p[0], m = p[1], d = p[2];
+    var dt = new Date(y, m - 1, d);
+    return (dt.getFullYear() === y && dt.getMonth() === m - 1 && dt.getDate() === d) ? dt : null;
+  }
+  function today() { var t = new Date(); return new Date(t.getFullYear(), t.getMonth(), t.getDate()); }
+  function daysUntil(iso) {
+    var d = parseISO(iso);
+    if (!d) return null;
+    return Math.round((d - today()) / 86400000);
+  }
+  function fmtDay(iso) { var d = parseISO(iso); return d ? MONTHS[d.getMonth()] + ' ' + d.getDate() : ''; }
+  function fmtRange(startISO, endISO) {
+    var a = parseISO(startISO), b = parseISO(endISO);
+    if (!a) return '—';
+    var year = a.getFullYear();
+    if (!b || +a === +b) return MONTHS[a.getMonth()] + ' ' + a.getDate() + ', ' + year;
+    if (a.getMonth() === b.getMonth()) {
+      return MONTHS[a.getMonth()] + ' ' + a.getDate() + '–' + b.getDate() + ', ' + year;
+    }
+    return MONTHS[a.getMonth()] + ' ' + a.getDate() + ' – ' + MONTHS[b.getMonth()] + ' ' + b.getDate() + ', ' + year;
+  }
+  function fmtCountdown(n) {
+    if (n === null) return '';
+    if (n < 0) return 'closed';
+    if (n === 0) return 'today';
+    if (n === 1) return '1 day';
+    return n + ' days';
+  }
+  function esc(s) {
+    return String(s === null || s === undefined ? '' : s)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
+  function place(show) {
+    var p = [show.city, show.state].filter(Boolean).join(', ');
+    return show.isAlternate ? (p ? p + ' — alternate' : 'alternate') : p;
+  }
+
+  /** Date order, ties broken by stop number — the canonical route order. */
+  function byDate(shows) {
+    return shows.slice().sort(function (a, b) {
+      return (a.startDate || FAR).localeCompare(b.startDate || FAR) ||
+             a.routeNumber.localeCompare(b.routeNumber, undefined, { numeric: true });
+    });
+  }
+  function hasCoords(s) { return typeof s.lat === 'number' && typeof s.lng === 'number'; }
+
+  /* ---- 5. RATING GLYPHS -------------------------------------------------- */
+  var STAR_PATH = 'M10 1.8l2.47 5.01 5.53.8-4 3.9.94 5.5L10 14.42l-4.94 2.6.94-5.5-4-3.9 5.53-.8z';
+  var starUid = 0;
+
+  /** rating is 0-10; each star is worth 2 (so 10 half-star steps). */
+  function starsSVG(rating, size) {
+    var r = clampRating(rating), out = '';
+    for (var i = 0; i < 5; i++) {
+      var frac = Math.max(0, Math.min(2, r - i * 2)) / 2;
+      var id = 'star' + (++starUid);
+      out += '<svg width="' + size + '" height="' + size + '" viewBox="0 0 20 20" aria-hidden="true">' +
+        (frac > 0 ? '<defs><clipPath id="' + id + '"><rect x="0" y="0" width="' + (frac * 20) + '" height="20"/></clipPath></defs>' : '') +
+        '<path d="' + STAR_PATH + '" fill="none" stroke="currentColor" stroke-width="1.1" opacity="' + (frac > 0 ? '.85' : '.4') + '"/>' +
+        (frac > 0 ? '<path d="' + STAR_PATH + '" fill="currentColor" clip-path="url(#' + id + ')"/>' : '') +
+        '</svg>';
+    }
+    return '<span class="stars">' + out + '</span>';
+  }
+  function ratingText(r) { return r ? (r + ' / 10') : 'Unrated'; }
+
+  /* ---- 6. THEME ----------------------------------------------------------
+     Shared so both pages read the same persisted preference. Pages register
+     an onChange listener to swap their own icons.                          */
+  var themeListeners = [];
+  function applyTheme(theme) {
+    document.documentElement.setAttribute('data-theme', theme);
+    themeListeners.forEach(function (fn) { fn(theme); });
+  }
+  var Theme = {
+    current: function () { return document.documentElement.getAttribute('data-theme') || 'light'; },
+    onChange: function (fn) { themeListeners.push(fn); },
+    init: function () {
+      var saved = null;
+      try { saved = localStorage.getItem(THEME_KEY); } catch (_) {}
+      var system = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+      applyTheme(saved === 'dark' || saved === 'light' ? saved : system);
+    },
+    set: function (theme) {
+      applyTheme(theme);
+      try { localStorage.setItem(THEME_KEY, theme); } catch (_) {}
+    },
+    toggle: function () { Theme.set(Theme.current() === 'dark' ? 'light' : 'dark'); }
+  };
+
+  /* ==========================================================================
+     SPLITTER — the draggable divider between the list and the map
+     Lives here for the same reason Theme does: both pages need it, and one
+     file owns the localStorage write. It knows nothing about maps; the host
+     page passes an onResize callback, which is where invalidateSize() goes.
+     ========================================================================== */
+  var Splitter = {
+    MIN_RAIL: 280,      // below this the map is too small to read
+    MIN_LIST: 420,      // and above it the list stops being a list
+    DEFAULT: 392,
+
+    get: function (key) {
+      var l = Settings.getLayout();
+      var w = l && l[key];
+      return (typeof w === 'number' && isFinite(w)) ? w : null;
+    },
+    set: function (key, w) {
+      var l = Settings.getLayout();
+      l[key] = Math.round(w);
+      return Settings.setLayout(l);
+    },
+    /** The width the rail should open at, falling back to a per-key default. */
+    stored: function (key, fallback) {
+      var w = Splitter.get(key);
+      if (typeof w === 'number') return w;
+      return typeof fallback === 'number' ? fallback : Splitter.DEFAULT;
+    },
+    /** Clamps a desired rail width against the space actually available. */
+    clamp: function (w, containerWidth) {
+      var max = Math.max(Splitter.MIN_RAIL, containerWidth - Splitter.MIN_LIST);
+      return Math.max(Splitter.MIN_RAIL, Math.min(w, max));
+    },
+
+    /**
+     * Wires a divider element up to a grid container.
+     * @param el          the .splitter element
+     * @param o.container the grid whose --rail-w is written
+     * @param o.key       Settings.layout key to remember the width under
+     * @param o.onResize  called (throttled) while dragging and once after
+     */
+    attach: function (el, o) {
+      if (!el || !o || !o.container) return null;
+      var box = o.container, key = o.key || 'rail';
+      var onResize = o.onResize || function () {};
+      var raf = 0, pending = null, dragging = false;
+
+      function width() {
+        var v = parseFloat(getComputedStyle(box).getPropertyValue('--rail-w'));
+        return isFinite(v) ? v : Splitter.DEFAULT;
+      }
+      function paint(w) {
+        box.style.setProperty('--rail-w', w + 'px');
+        el.setAttribute('aria-valuenow', String(Math.round(w)));
+      }
+      /* One write per frame. Dragging fires pointermove far faster than the
+         map can redraw, and calling invalidateSize() on every event is what
+         makes a resizable map feel like treacle. */
+      function schedule(w) {
+        pending = w;
+        if (raf) return;
+        raf = requestAnimationFrame(function () {
+          raf = 0;
+          if (pending == null) return;
+          paint(pending); pending = null;
+          onResize();
+        });
+      }
+      function apply(w, persist) {
+        var c = Splitter.clamp(w, box.getBoundingClientRect().width);
+        schedule(c);
+        if (persist) Splitter.set(key, c);
+        return c;
+      }
+
+      el.setAttribute('role', 'separator');
+      el.setAttribute('aria-orientation', 'vertical');
+      el.setAttribute('aria-label', 'Resize the map');
+      el.setAttribute('aria-valuemin', String(Splitter.MIN_RAIL));
+      el.setAttribute('tabindex', '0');
+
+      el.addEventListener('pointerdown', function (e) {
+        if (e.pointerType === 'mouse' && e.button !== 0) return;
+        dragging = true;
+        el.classList.add('is-dragging');
+        document.body.classList.add('is-splitting');
+        try { el.setPointerCapture(e.pointerId); } catch (_) {}
+        e.preventDefault();
+      });
+      el.addEventListener('pointermove', function (e) {
+        if (!dragging) return;
+        // The rail is whatever is left between the pointer and the right edge.
+        apply(box.getBoundingClientRect().right - e.clientX, false);
+        e.preventDefault();
+      });
+      function end(e) {
+        if (!dragging) return;
+        dragging = false;
+        el.classList.remove('is-dragging');
+        document.body.classList.remove('is-splitting');
+        try { el.releasePointerCapture(e.pointerId); } catch (_) {}
+        Splitter.set(key, width());
+        onResize();
+      }
+      el.addEventListener('pointerup', end);
+      el.addEventListener('pointercancel', end);
+
+      // A divider you can only drag is a divider some people cannot move.
+      el.addEventListener('keydown', function (e) {
+        var step = e.shiftKey ? 48 : 16, w = width();
+        if (e.key === 'ArrowLeft')       apply(w + step, true);
+        else if (e.key === 'ArrowRight') apply(w - step, true);
+        else return;
+        e.preventDefault();
+      });
+
+      function openAt(k) {
+        key = k;
+        var fb = o.defaultFor ? o.defaultFor(k, box.getBoundingClientRect().width) : undefined;
+        apply(Splitter.stored(k, fb), false);
+      }
+
+      // Opening width, and keep it legal when the window is resized.
+      openAt(key);
+      window.addEventListener('resize', function () { apply(width(), false); });
+      /* setKey lets one divider serve two layouts — the ledger's list view and
+         its map view remember different proportions under different keys,
+         without a second element or a second set of listeners. */
+      return { apply: apply, width: width, setKey: openAt };
+    }
+  };
+
+  /* Same idea, one axis over: drags the bottom edge of the map to make it
+     taller or shorter. Writes --map-h on the element you give it. */
+  var SplitterV = {
+    MIN: 180,
+    DEFAULT: 320,
+    max: function () { return Math.max(SplitterV.MIN, Math.round(window.innerHeight * 0.78)); },
+    clamp: function (h) { return Math.max(SplitterV.MIN, Math.min(h, SplitterV.max())); },
+
+    attach: function (el, o) {
+      if (!el || !o || !o.target) return null;
+      var box = o.target, key = o.key || 'mapH';
+      var onResize = o.onResize || function () {};
+      var raf = 0, pending = null, dragging = false;
+
+      function height() {
+        var v = parseFloat(getComputedStyle(box).getPropertyValue('--map-h'));
+        return isFinite(v) ? v : SplitterV.DEFAULT;
+      }
+      function paint(h) {
+        box.style.setProperty('--map-h', h + 'px');
+        el.setAttribute('aria-valuenow', String(Math.round(h)));
+      }
+      function schedule(h) {
+        pending = h;
+        if (raf) return;
+        raf = requestAnimationFrame(function () {
+          raf = 0;
+          if (pending == null) return;
+          paint(pending); pending = null;
+          onResize();
+        });
+      }
+      function apply(h, persist) {
+        var c = SplitterV.clamp(h);
+        schedule(c);
+        if (persist) Splitter.set(key, c);
+        return c;
+      }
+
+      el.setAttribute('role', 'separator');
+      el.setAttribute('aria-orientation', 'horizontal');
+      el.setAttribute('aria-label', 'Resize the map height');
+      el.setAttribute('aria-valuemin', String(SplitterV.MIN));
+      el.setAttribute('tabindex', '0');
+
+      el.addEventListener('pointerdown', function (e) {
+        if (e.pointerType === 'mouse' && e.button !== 0) return;
+        dragging = true;
+        el.classList.add('is-dragging');
+        document.body.classList.add('is-splitting-v');
+        try { el.setPointerCapture(e.pointerId); } catch (_) {}
+        e.preventDefault();
+      });
+      el.addEventListener('pointermove', function (e) {
+        if (!dragging) return;
+        // Height is the pointer's distance from the top of the map box.
+        apply(e.clientY - box.getBoundingClientRect().top, false);
+        e.preventDefault();
+      });
+      function end(e) {
+        if (!dragging) return;
+        dragging = false;
+        el.classList.remove('is-dragging');
+        document.body.classList.remove('is-splitting-v');
+        try { el.releasePointerCapture(e.pointerId); } catch (_) {}
+        Splitter.set(key, height());
+        onResize();
+      }
+      el.addEventListener('pointerup', end);
+      el.addEventListener('pointercancel', end);
+      el.addEventListener('keydown', function (e) {
+        var step = e.shiftKey ? 48 : 16, h = height();
+        if (e.key === 'ArrowUp')        apply(h - step, true);
+        else if (e.key === 'ArrowDown') apply(h + step, true);
+        else return;
+        e.preventDefault();
+      });
+
+      apply(Splitter.stored(key, SplitterV.DEFAULT), false);
+      window.addEventListener('resize', function () { apply(height(), false); });
+      return { apply: apply, height: height };
+    }
+  };
+
+  return {
+    SCHEMA_VERSION: SCHEMA_VERSION,
+    STATUSES: STATUSES, STATUS_LABEL: STATUS_LABEL,
+    makeShow: makeShow, makeEvent: makeEvent, makeReminder: makeReminder,
+    makeApplication: makeApplication, makeRanker: makeRanker,
+    makeExpense: makeExpense, makeReview: makeReview, makeReviewImage: makeReviewImage,
+    makeSale: makeSale, makeContact: makeContact, makeDebrief: makeDebrief,
+    CONTACT_OUTCOMES: CONTACT_OUTCOMES, CONTACT_OUTCOME_LABEL: CONTACT_OUTCOME_LABEL,
+    CONSENT: CONSENT, CONSENT_LABEL: CONSENT_LABEL,
+    DEBRIEF_RETURN: DEBRIEF_RETURN, DEBRIEF_RETURN_LABEL: DEBRIEF_RETURN_LABEL,
+    PAYMENT_METHODS: PAYMENT_METHODS, PAYMENT_LABEL: PAYMENT_LABEL,
+    REVIEW_STAGES: REVIEW_STAGES, REVIEW_STAGE_LABEL: REVIEW_STAGE_LABEL,
+    IMAGE_KINDS: IMAGE_KINDS, IMAGE_KIND_LABEL: IMAGE_KIND_LABEL,
+    EXPENSE_CATEGORIES: EXPENSE_CATEGORIES, EXPENSE_LABEL: EXPENSE_LABEL,
+    LODGING_KINDS: LODGING_KINDS, LODGING_KIND_LABEL: LODGING_KIND_LABEL,
+    STAGES: STAGES, STAGE_LABEL: STAGE_LABEL, STAGE_SETTLED: STAGE_SETTLED,
+    EVENT_KINDS: EVENT_KINDS, EVENT_KIND_LABEL: EVENT_KIND_LABEL,
+    numOrNull: numOrNull, clampRating: clampRating, migrate: migrate,
+    SEED: SEED, Store: Store, LocalStore: LocalStore,
+    useStore: useStore, currentStore: currentStore, Settings: Settings,
+    setNotifier: function (fn) { notify = fn; },
+    parseISO: parseISO, today: today, daysUntil: daysUntil,
+    fmtDay: fmtDay, fmtRange: fmtRange, fmtCountdown: fmtCountdown,
+    esc: esc, place: place, byDate: byDate, hasCoords: hasCoords, FAR: FAR,
+    starsSVG: starsSVG, ratingText: ratingText,
+    Theme: Theme, Splitter: Splitter, SplitterV: SplitterV
+  };
+})();

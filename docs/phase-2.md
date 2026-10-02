@@ -37,6 +37,31 @@ simulated devices against the real studio-api code and a local D1: offline sale
 reaching the other device, merges, review cards, retry after a lost reply,
 deletes. Source found 2026-10-02 (`yitzhach/art-show-tracker`); `studio-api-staging` deployed. Step 5 scope narrowed (D-032).
 
+## Steps 5–7 plan: Show Tracker narrow slice (2026-10-02)
+
+Source: `yitzhach/art-show-tracker` at `d32e9f1`. Decisions D-033…D-040.
+
+5a. **Copy unchanged.** `tracker/` → `apps/show-tracker/tracker/`, plus its
+    `build/` (suites + data tools), `CLAUDE.md` and `docs/`. Its own suites run
+    against the copy (`node build/run-suites.cjs`), baseline 79/35/77/26/32/102/33/20/17/11.
+5b. **Installable PWA** (D-034): `manifest.webmanifest`, icons, `sw.js` (app shell
+    offline; registered only over http(s), so `file://` is unchanged). Suites stay green.
+5c. **Backend** (backend-builder): migration 0003 `sales` + `sale.*` actions and
+    `/v1/sales` (D-035); a sync update's `meta` merges per key (D-036).
+5d. **SDK**: `sale` record type, caller-supplied ULIDs, meta partials; a classic-script
+    bundle `tracker/studio-sdk.js` (D-039).
+5e. **Tracker on the SDK**: `tracker/studio-store.js` implements the `AST.Store`
+    surface for shows and sales only; everything else falls through to localStorage,
+    contacts always do. Ids map per D-037. The app Worker serves `tracker/` and
+    forwards `/v1/*` to studio-api on the same origin (D-038). Sign-in panel on the ledger.
+6.  **Import**: one button reads `artShowTracker.db` (shows + sales, never the
+    untouched demo seed), pushes through `/v1/sync/push` with deterministic op ids,
+    and records `artShowTracker.studioImport`. The localStorage copy is kept as is.
+7.  **Playwright two-device test** (`apps/show-tracker/e2e/`): two contexts against
+    `wrangler dev` (studio-api + the app Worker); offline sale reaches device 2;
+    conflict card; different-field merge; an edit made mid-sync survives the pull;
+    import twice creates nothing new. Runs in CI.
+
 ## Staging deploy: what Isaac adds (repo Settings → Secrets and variables → Actions)
 
 Secrets: `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `RESEND_API_KEY`.

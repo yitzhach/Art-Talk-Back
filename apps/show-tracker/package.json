@@ -1,0 +1,13 @@
+{
+  "name": "@studio/show-tracker",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "typecheck": "true",
+    "serve": "python3 -m http.server 8765",
+    "test:suites": "node build/run-suites.cjs"
+  },
+  "devDependencies": {
+    "playwright": "1.56.1"
+  }
+}

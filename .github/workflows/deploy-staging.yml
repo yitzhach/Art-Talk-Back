@@ -1,0 +1,67 @@
+name: Deploy staging
+
+# Manual only: Actions tab -> "Deploy staging" -> Run workflow.
+# Needs (repo Settings -> Secrets and variables -> Actions):
+#   secrets:   CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID, RESEND_API_KEY
+#   variables: OWNER_EMAILS (comma-separated), MAIL_FROM (e.g. "Isaac Anderson Art <hello@yourdomain>")
+# Production is not deployed from here (docs/phase-2.md, step 8).
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-staging
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: workers/studio-api
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+      OWNER_EMAILS: ${{ vars.OWNER_EMAILS }}
+      MAIL_FROM: ${{ vars.MAIL_FROM }}
+    steps:
+      - name: Check required secrets and variables
+        working-directory: .
+        run: |
+          missing=""
+          for v in CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID RESEND_API_KEY OWNER_EMAILS MAIL_FROM; do
+            [ -n "${!v}" ] || missing="$missing $v"
+          done
+          if [ -n "$missing" ]; then
+            echo "::error::Missing:$missing (see the header of this workflow)"
+            exit 1
+          fi
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck
+      - run: pnpm test
+      - name: Apply migrations to studio-db-staging
+        run: pnpm exec wrangler d1 migrations apply DB --remote --env staging
+      - name: Deploy studio-api-staging
+        run: >
+          pnpm exec wrangler deploy --env staging
+          --var "OWNER_EMAILS:$OWNER_EMAILS"
+          --var "MAIL_FROM:$MAIL_FROM"
+      - name: Set SIGNING_KEY once (never overwritten, it signs file links)
+        run: |
+          if pnpm exec wrangler secret list --env staging | grep -q '"SIGNING_KEY"'; then
+            echo "SIGNING_KEY already set"
+          else
+            openssl rand -hex 32 | pnpm exec wrangler secret put SIGNING_KEY --env staging
+          fi
+      - name: Set RESEND_API_KEY
+        run: printf '%s' "$RESEND_API_KEY" | pnpm exec wrangler secret put RESEND_API_KEY --env staging

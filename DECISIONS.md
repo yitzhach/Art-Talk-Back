@@ -177,3 +177,6 @@ client, show, time); at a show it also updates `show_artworks`. Phase 4's
 ### D-030 · Production database is a new `studio-db-prod` · 2026-10-01 · locked (Isaac)
 Created in eastern North America. The empty legacy `iaa-db` stays untouched.
 Production files use the existing `iaa-files` bucket.
+
+### D-031 · Staging deploys by a manual GitHub workflow · 2026-10-02 · default
+`.github/workflows/deploy-staging.yml` (workflow_dispatch only) runs typecheck + tests, applies D1 migrations to `studio-db-staging`, deploys `studio-api-staging`, then sets secrets. Owner email and sending address are GitHub *variables* (`OWNER_EMAILS`, `MAIL_FROM`), passed with `--var` so they aren't committed; `RESEND_API_KEY` is a secret. `SIGNING_KEY` is generated once and never overwritten (rotating it breaks existing file links). Secrets are set after the first deploy, because `wrangler deploy` is what creates the Worker. Production is not deployed from CI yet.

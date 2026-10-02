@@ -1,6 +1,7 @@
 name: CI
 
-# Typecheck and test on every push. Nothing deploys from here until Isaac
+# Typecheck and test on every push. Nothing deploys from here; staging is the
+# manual deploy-staging.yml, and production waits until Isaac
 # approves the staging/production resources (docs/phase-1.md, "Needs Isaac's OK").
 on:
   push:

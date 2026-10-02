@@ -84,3 +84,30 @@ describe("sales", () => {
     expect(r.record).toMatchObject({ priceCents: 45000, title: "Great Heron", notes: "laptop" });
   });
 });
+
+describe("restore (undo a delete from a device)", () => {
+  it("brings a deleted record back through sync; a live one is refused", async () => {
+    const a = await makeStudio();
+    const id = newId();
+    await push(a.cookie, [op("show.create", id, { name: "Grove" })]);
+    await push(a.cookie, [op("show.delete", id, {}, 1)]);
+    const r = (await push(a.cookie, [op("show.restore", id, { id })])).data.results[0];
+    expect(r).toMatchObject({ status: "applied", record: { id, deletedAt: null, version: 3 } });
+    expect((await call(`/v1/shows/${id}`, { cookie: a.cookie })).status).toBe(200);
+    expect((await push(a.cookie, [op("show.restore", id, { id })])).data.results[0]).toMatchObject({ status: "rejected", error: { code: "bad_request" } });
+  });
+
+  it("staff can't restore (it's the other half of delete)", async () => {
+    const s = await makeStudio("S", "staff");
+    const sale = (await call("/v1/sales", { method: "POST", cookie: s.cookie, json: {} })).data;
+    const r = (await push(s.cookie, [op("sale.restore", sale.id, { id: sale.id })])).data.results[0];
+    expect(r.error.code).toBe("forbidden");
+  });
+
+  it("a sale can still name a show that was deleted", async () => {
+    const a = await makeStudio();
+    const show = (await call("/v1/shows", { method: "POST", cookie: a.cookie, json: { name: "Gone" } })).data;
+    await call(`/v1/shows/${show.id}`, { method: "DELETE", cookie: a.cookie, headers: { "If-Match": "1" } });
+    expect((await call("/v1/sales", { method: "POST", cookie: a.cookie, json: { showId: show.id } })).status).toBe(201);
+  });
+});

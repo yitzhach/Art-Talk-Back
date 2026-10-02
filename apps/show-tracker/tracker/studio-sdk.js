@@ -747,6 +747,28 @@ caused by: ${_Layerr.fullStack(cause)}`;
       });
       if (changed) this.afterWrite([type]);
     }
+    /**
+     * Undo a remove(): `record` is the copy get() returned before it. A delete
+     * still waiting to be sent is simply dropped; one the server already has is
+     * reversed with `{type}.restore`; a record that never reached the server is
+     * created again.
+     */
+    async restore(type, record) {
+      const id = record.id;
+      const back = { ...record, deletedAt: null };
+      await this.store.edit(type, id, (current, outbox) => {
+        if (current) throw new Error(`${type} ${id} isn't deleted on this device`);
+        const del = outbox.find((o) => same(o, type, id) && verb(o) === "delete" && !this.inFlight.has(o.opId));
+        if (del) return { record: back, dequeue: [del.opId] };
+        if (!record.version) {
+          const { id: _i, version: _v, deletedAt: _d, ...input } = record;
+          return { record: back, enqueue: [this.op(type, id, `${type}.create`, null, input)] };
+        }
+        return { record: back, enqueue: [this.op(type, id, `${type}.restore`, null, { id })] };
+      });
+      this.afterWrite([type]);
+      return back;
+    }
     /** Mark sold locally and queue the server action (which also updates the show). */
     async markSold(artworkId, sale) {
       await this.store.edit("artwork", artworkId, (art) => {

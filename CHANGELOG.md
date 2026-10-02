@@ -9,6 +9,7 @@
 - Sync merges `meta` one key at a time; `*Cents` keys never auto-merge (D-036).
 - SDK: `sale` records; `create` keeps a ULID the app chose; `meta` patches merge per key; `tracker/studio-sdk.js` classic-script bundle with a CI freshness check (D-037).
 - SDK fix: an edit made while its record's op was being pushed was folded into that op and then dropped with it. Edits now queue behind an op in flight and are rebased onto the server's answer; local write + enqueue, and pull's skip-if-pending, are each one IndexedDB transaction. 7 new SDK tests (15).
+- `{type}.restore` action (needs `:delete`; syncable) and SDK `restore()`: an app's Undo after a delete works whether or not the delete was already sent. A sale may name a deleted show (its history outlives the row).
 
 ### Handoff — 2026-10-02
 - Show Tracker source located (`yitzhach/art-show-tracker`); Phase 2 step 5 narrowed to shows + sales (D-032). Staging API confirmed live.

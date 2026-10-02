@@ -9,7 +9,7 @@ import type { SQLiteColumn, SQLiteTable } from "drizzle-orm/sqlite-core";
 import { z } from "zod";
 import type { Permission } from "../auth/permissions";
 import type { Db } from "../env";
-import { notFound, versionConflict } from "../lib/errors";
+import { HttpError, notFound, versionConflict } from "../lib/errors";
 import { type ActionCtx, type Snapshot, type Write, defineAction } from "./runner";
 
 /** Fields the server owns; a client can never set them through a create or patch. */
@@ -186,16 +186,32 @@ function crudActions(e: EntityDef, input: z.ZodType<Snapshot>, patch: z.ZodType<
       },
       respond: one,
     }),
+    // Undo a delete from a device: an app's "Undo" puts back what it just removed.
+    restore: defineAction({
+      name: `${e.type}.restore`,
+      description: `Bring back a deleted ${e.type}`,
+      input: z.object({ id: Id }),
+      permission: `${e.perm}:delete` as Permission,
+      risk: "auto",
+      plan: async (ctx, { id }) => {
+        const before = await getRecord(ctx.db, e, ctx.actor.studioId, id, { withDeleted: true });
+        if (!before.deletedAt) throw new HttpError("bad_request", `That ${e.type} isn't deleted`);
+        return { writes: [updateWrite(ctx, e, before, { deletedAt: null })] };
+      },
+      respond: one,
+    }),
   };
 }
 
 export const artworkActions = crudActions(artworkEntity, ArtworkInput, ArtworkPatch);
 export const clientActions = crudActions(clientEntity, ClientInput, ClientPatch);
 export const showActions = crudActions(showEntity, ShowInput, ShowPatch);
-// A sale may name a show and an artwork; both must be live records in this studio (D-016: else 404).
+// A sale may name a show and an artwork in this studio (D-016: else 404). A deleted
+// show still counts: the sale happened, and its history outlives the show's row.
 export const saleActions = crudActions(saleEntity, SaleInput, SalePatch, async (ctx, f) => {
-  if (f.showId) await getRecord(ctx.db, showEntity, ctx.actor.studioId, f.showId as string);
-  if (f.artworkId) await getRecord(ctx.db, artworkEntity, ctx.actor.studioId, f.artworkId as string);
+  const opts = { withDeleted: true };
+  if (f.showId) await getRecord(ctx.db, showEntity, ctx.actor.studioId, f.showId as string, opts);
+  if (f.artworkId) await getRecord(ctx.db, artworkEntity, ctx.actor.studioId, f.artworkId as string, opts);
 });
 
 export const settingsUpdate = defineAction({

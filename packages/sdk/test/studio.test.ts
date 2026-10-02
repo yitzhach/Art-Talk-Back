@@ -294,3 +294,48 @@ describe("tracker-shaped records", () => {
     expect(await laptop.studio.get("sale", sale.id!)).toMatchObject({ showId: show.id, title: "Egret", priceCents: null, soldOn: "2026-02-14", version: 1 });
   });
 });
+
+describe("undo a delete", () => {
+  it("before the delete is sent: nothing reaches the server", async () => {
+    const { studio, net } = await signedInDevice();
+    const show = await studio.create("show", { name: "Grove" });
+    await studio.sync();
+    const before = (await studio.get("show", show.id!))!;
+    net.online = false;
+    await studio.remove("show", show.id!);
+    await studio.restore("show", before);
+    expect(await studio.pendingCount()).toBe(0);
+    expect(await studio.get("show", show.id!)).toMatchObject({ name: "Grove", version: 1 });
+  });
+
+  it("after the delete reached the server: restored there too, and the other device sees it", async () => {
+    const phone = await signedInDevice();
+    const laptop = await signedInDevice();
+    const show = await phone.studio.create("show", { name: "Grove" });
+    await phone.studio.sync();
+    const before = (await phone.studio.get("show", show.id!))!;
+    await phone.studio.remove("show", show.id!);
+    await phone.studio.sync();
+    await laptop.studio.sync();
+    expect(await laptop.studio.get("show", show.id!)).toBeNull();
+
+    await phone.studio.restore("show", before);
+    await phone.studio.update("show", show.id!, { city: "Miami" });
+    await phone.studio.sync();
+    await laptop.studio.sync();
+    expect(await laptop.studio.get("show", show.id!)).toMatchObject({ name: "Grove", city: "Miami", deletedAt: null, version: 4 });
+  });
+
+  it("a record that never reached the server is created again", async () => {
+    const { studio, net } = await signedInDevice();
+    net.online = false;
+    const sale = await studio.create("sale", { title: "Heron" });
+    const before = (await studio.get("sale", sale.id!))!;
+    await studio.remove("sale", sale.id!);
+    expect(await studio.pendingCount()).toBe(0);
+    await studio.restore("sale", before);
+    net.online = true;
+    await studio.sync();
+    expect(await server.DB.prepare("SELECT title FROM sales WHERE id = ?").bind(sale.id).first("title")).toBe("Heron");
+  });
+});

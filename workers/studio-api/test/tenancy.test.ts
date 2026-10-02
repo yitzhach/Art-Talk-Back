@@ -55,6 +55,7 @@ attempt("patch", "/sales/{id}", () => call(`/v1/sales/${b.sale.id}`, { method: "
 attempt("delete", "/sales/{id}", () => call(`/v1/sales/${b.sale.id}`, { method: "DELETE", cookie: A.cookie, headers: { "If-Match": "1" } }));
 // Named actions with B's ids (these all go through POST /actions/{name}).
 cases.push(["post", "/actions/show.add_artwork", () => call("/v1/actions/show.add_artwork", { method: "POST", cookie: A.cookie, json: { showId: b.show.id, artworkId: b.artwork.id } })]);
+cases.push(["post", "/actions/sale.restore", () => call("/v1/actions/sale.restore", { method: "POST", cookie: A.cookie, json: { id: b.sale.id } })]);
 cases.push(["post", "/actions/artwork.mark_sold", () => call("/v1/actions/artwork.mark_sold", { method: "POST", cookie: A.cookie, json: { artworkId: b.artwork.id, priceCents: 1 } })]);
 attempt("post", "/activity/{id}/undo", () => call(`/v1/activity/${b.logId}/undo`, { method: "POST", cookie: A.cookie }));
 attempt("post", "/files/{id}/attach", () => call(`/v1/files/${b.file.id}/attach`, { method: "POST", cookie: A.cookie, json: { entityType: "artwork", entityId: b.artwork.id } }));
@@ -81,6 +82,7 @@ describe("studio A can't reach studio B", () => {
       { opId: newId(), action: "show.add_artwork", entityId: newId(), baseVersion: null, input: { showId: b.show.id, artworkId: b.artwork.id } },
       { opId: newId(), action: "sale.update", entityId: b.sale.id, baseVersion: 1, input: { patch: { priceCents: 1 } } },
       { opId: newId(), action: "sale.create", entityId: newId(), baseVersion: null, input: { showId: b.show.id } },
+      { opId: newId(), action: "show.restore", entityId: b.show.id, baseVersion: null, input: { id: b.show.id } },
     ];
     const res = await call("/v1/sync/push", { method: "POST", cookie: A.cookie, json: { ops } });
     expect(res.data.results.map((r: any) => [r.status, r.error?.code])).toEqual(ops.map(() => ["rejected", "not_found"]));

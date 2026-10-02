@@ -16,10 +16,10 @@ type OpResult = z.infer<typeof SyncOpResult>;
 
 /** Actions a device may queue offline. */
 const SYNCABLE = new Set([
-  "artwork.create", "artwork.update", "artwork.delete",
-  "client.create", "client.update", "client.delete",
-  "show.create", "show.update", "show.delete",
-  "sale.create", "sale.update", "sale.delete",
+  "artwork.create", "artwork.update", "artwork.delete", "artwork.restore",
+  "client.create", "client.update", "client.delete", "client.restore",
+  "show.create", "show.update", "show.delete", "show.restore",
+  "sale.create", "sale.update", "sale.delete", "sale.restore",
   "settings.update",
   "show.add_artwork", "show.remove_artwork", "artwork.mark_sold",
 ]);

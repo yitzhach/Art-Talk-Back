@@ -6,7 +6,8 @@
     "typecheck": "true",
     "bundle": "node build/bundle-sdk.mjs",
     "bundle:check": "node build/bundle-sdk.mjs --check",
-    "test:suites": "node build/run-suites.cjs"
+    "test:suites": "node build/run-suites.cjs",
+    "test:e2e": "node e2e/two-devices.cjs"
   },
   "devDependencies": {
     "@studio/sdk": "workspace:*",

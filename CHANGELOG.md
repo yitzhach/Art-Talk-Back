@@ -12,6 +12,8 @@
 - `{type}.restore` action (needs `:delete`; syncable) and SDK `restore()`: an app's Undo after a delete works whether or not the delete was already sent. A sale may name a deleted show (its history outlives the row).
 - Show Tracker on the SDK (shows + sales only): `tracker/studio-store.js` under `AST.Store`, `tracker/studio-ui.js` (studio sign-in in Account & sync, review-change cards, refused-change cards). Every other collection stays in localStorage; contacts never sync. New `build/studio-tests.cjs` (26) (D-038, D-040).
 - App Worker `apps/show-tracker/worker.js`: `tracker/` + `/v1/*` to studio-api on one origin (D-039).
+- "Import my existing data" (Account & sync): moves this device's shows and sales from `artShowTracker.db` into the studio through sync push with derived op ids, so a second run (or another device) adds nothing; never the demo seed, deleted rows or other collections; the local copy is kept.
+- `apps/show-tracker/e2e/two-devices.cjs`: two browser devices against `wrangler dev` (app Worker + studio-api), 34 checks for phase-2 gate items 1–3; schema-v11 fixture in `e2e/fixtures/`. CI job `show-tracker` runs the tracker's suites and this.
 
 ### Handoff — 2026-10-02
 - Show Tracker source located (`yitzhach/art-show-tracker`); Phase 2 step 5 narrowed to shows + sales (D-032). Staging API confirmed live.

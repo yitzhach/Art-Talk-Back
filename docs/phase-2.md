@@ -24,11 +24,25 @@ and a second device shows it. Concretely:
 - [x] `POST /v1/sync/push`: each op runs through its action with `source: "sync"`; `op_id` makes retries safe (D-017); `baseVersion` drives the merge rules
 - [x] `GET /v1/sync/pull?since=<seq>`: current state of every record changed since the cursor, deletions included; cursor = `activity_log.seq`
 - [x] SDK (`packages/sdk`): API client, IndexedDB cache (`idb`), outbox, push/pull on open / focus / reconnect / after each write / every 60 s, conflict cards as events
-- [ ] Show Tracker into `apps/show-tracker/`, installable PWA, then **shows + sales only** on the SDK (D-032); everything else stays in localStorage
-- [ ] "Import my existing data" from localStorage, once, through sync push
-- [ ] Offline test: automated two-device Playwright test (gate 1–3)
+- [x] Show Tracker into `apps/show-tracker/`, installable PWA, then **shows + sales only** on the SDK (D-032); everything else stays in localStorage (D-033…D-040)
+- [x] "Import my existing data" from localStorage, once, through sync push
+- [x] Offline test: automated two-device Playwright test (gate 1–3) — `apps/show-tracker/e2e/two-devices.cjs`, CI job `show-tracker`
 - [ ] Deploy `studio-api-staging` + Show Tracker staging; real-device run (gate 4)
 - [x] Move the built routes out of `openapi.phase2.draft.yaml`; delete it when empty (D-013)
+
+## Progress (2026-10-02)
+
+Steps 5–7 done. Platform: 127 tests (core 9, SDK 18, studio-api 100). Show
+Tracker: its own suites unchanged and green against the copy, plus `pwa-tests`
+(27) and `studio-tests` (26); the two-device run `e2e/two-devices.cjs` (34
+checks) covers gate items 1–3 in Chromium against `wrangler dev`: import of a
+schema-v11 fixture (twice → nothing new; contacts and other local collections
+stay on the device), an offline sale on the Money page reaching the second
+device with sale/show/activity agreeing, same-field and money conflicts as
+review cards with "Use mine", different fields merging, an edit made while a
+pull is on its way surviving it, Undo after delete, and the ledger reopening
+offline. Gate 1 reads "logs a sale at a show" for the tracker (D-035). Next:
+step 8 (staging copy of the app + the phone run), which needs Isaac.
 
 ## Progress (2026-10-01)
 

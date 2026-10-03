@@ -4,6 +4,7 @@
 
 ### Phase 2 · step 8
 - "Deploy staging" also deploys the Show Tracker as `studio-show-tracker-staging`, after `studio-api-staging` (D-041).
+- Show Tracker: signing in or out of the studio in Account & sync now re-wires the sync pill and ledger at once (they stayed on "Saved on this device only… Supabase" until a reload).
 
 ### Phase 2 · step 5–7 (Show Tracker, narrow slice)
 - Show Tracker copied unchanged into `apps/show-tracker/` (from `art-show-tracker@d32e9f1`) with its own suites; `node build/run-suites.cjs` runs all of them (D-033).

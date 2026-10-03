@@ -261,3 +261,88 @@ export const SyncPullResponse = z.object({ changes: z.array(SyncChange), cursor:
 export const NEVER_MERGE = ["status", "outcome", "currency"] as const;
 export const isProtectedField = (field: string) =>
   (NEVER_MERGE as readonly string[]).includes(field) || /Cents$/.test(field);
+
+// --------------------------------------------------------------- assistant
+// Phase 3. The assistant is one more caller of studio-api; what it may do is
+// decided here, per action, never in its prompt (spec → Autonomy levels, D-045).
+
+export const AssistantLevel = z.enum(["auto", "confirm", "always_confirm", "never"]);
+
+export const PolicyEntry = z.object({
+  action: z.string(),
+  description: z.string(),
+  /** The registry's level for this action. */
+  defaultLevel: AssistantLevel,
+  /** What the studio chose, if anything. */
+  studioLevel: AssistantLevel.nullable(),
+  /** What applies: the studio's choice where allowed, else the default. */
+  level: AssistantLevel,
+  /** Levels the studio may pick (always_confirm can't be lowered). */
+  allowed: z.array(AssistantLevel),
+});
+export const PolicyUpdate = z.object({ level: AssistantLevel }).strict();
+
+/** One line of a confirm card, written by studio-api from the input itself (never by the model). */
+export const CardLine = z.object({ label: z.string(), value: z.string() });
+
+export const Proposal = RecordMeta.extend({
+  userId: Id,
+  action: z.string(),
+  input: Meta,
+  summary: z.string(),
+  details: z.array(CardLine),
+  level: z.enum(["confirm", "always_confirm"]),
+  status: z.enum(["pending", "confirmed", "cancelled"]),
+  expiresAt: z.string(),
+  activityId: z.string().nullable(),
+});
+
+export const ActRequest = z.object({
+  action: z.string().regex(/^[a-z_]+\.[a-z_]+$/),
+  input: Meta,
+  /** The assistant's one-line description for the card; shown beside studio-api's own lines. */
+  summary: z.string().trim().min(1).max(300),
+}).strict();
+export const ActResponse = z.discriminatedUnion("status", [
+  z.object({ status: z.literal("done"), result: Meta, activityIds: z.array(Id) }),
+  z.object({ status: z.literal("needs_confirmation"), proposal: Proposal }),
+]);
+
+export const ConfirmResponse = z.object({ proposal: Proposal, result: Meta, activityIds: z.array(Id) });
+
+export const SearchType = z.enum(["show", "sale", "artwork", "client"]);
+export const SearchItem = z.object({
+  type: SearchType,
+  id: Id,
+  version: z.number().int(),
+  label: z.string(),
+  detail: z.string(),
+});
+export const SearchResponse = z.object({ items: z.array(SearchItem) });
+
+export const ToolDef = z.object({
+  /** Tool name for the model (letters, digits, _ and -). */
+  name: z.string(),
+  /** The registry action it runs, or null for a read tool (search). */
+  action: z.string().nullable(),
+  description: z.string(),
+  inputSchema: Meta,
+  level: AssistantLevel,
+});
+export const ToolsResponse = z.object({ app: z.string(), tools: z.array(ToolDef) });
+
+export const AssistantMessage = z.object({
+  id: Id,
+  threadId: Id,
+  role: z.enum(["user", "assistant"]),
+  /** A Messages API `content` value, stored exactly as sent or received (the thread is append-only). */
+  content: z.unknown(),
+  app: z.string().nullable(),
+  createdAt: z.string(),
+});
+export const ThreadResponse = z.object({ threadId: Id, messages: z.array(AssistantMessage) });
+export const AppendMessages = z.object({
+  threadId: Id,
+  app: z.string().max(50).nullable(),
+  messages: z.array(z.object({ role: z.enum(["user", "assistant"]), content: z.unknown() })).min(1).max(20),
+}).strict();

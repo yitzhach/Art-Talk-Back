@@ -13,6 +13,7 @@ export default defineConfig(async () => {
             TEST_MIGRATIONS: migrations,
             SIGNING_KEY: "test-signing-key",
             RESEND_API_KEY: "test-resend-key",
+            ASSISTANT_KEY: "test-assistant-key",
             OWNER_EMAILS: "owner@studio-a.test,owner@studio-b.test,boot@example.test",
           },
         },

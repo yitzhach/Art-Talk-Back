@@ -7,6 +7,8 @@ import app from "../src/index";
 import { sha256, randomToken } from "../src/lib/crypto";
 
 export const BASE = "https://api.test";
+/** Headers studio-assistant sends (D-046); the key matches vitest.config.ts. */
+export const ASSISTANT = { "X-Studio-Assistant": "test-assistant-key" };
 
 export async function call(path: string, init: RequestInit & { cookie?: string; json?: unknown; env?: typeof env } = {}) {
   const headers = new Headers(init.headers);

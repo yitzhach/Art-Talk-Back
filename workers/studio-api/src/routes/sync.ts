@@ -4,7 +4,7 @@ import { z } from "zod";
 import { applyOp, pullChanges } from "../actions/sync";
 import { requirePermission } from "../auth/permissions";
 import { requireActor } from "../auth/session";
-import { body, errors, json, newApp, send } from "./common";
+import { body, errors, json, newApp, requireHuman, send } from "./common";
 
 export const syncRoutes = newApp();
 
@@ -16,7 +16,7 @@ syncRoutes.openapi(
     responses: { 200: json(SyncPushResponse, "One result per answered op, same order"), 400: errors[400], 401: errors[401], 403: errors[403] },
   }),
   async (c) => {
-    const actor = requireActor(c);
+    const actor = requireHuman(c); // the assistant writes through /assistant/act, never a device outbox
     const origin = new URL(c.req.url).origin;
     const results = [];
     for (const op of c.req.valid("json").ops.slice(0, SYNC_PUSH_MAX_OPS)) results.push(await applyOp(c.env, actor, origin, op));

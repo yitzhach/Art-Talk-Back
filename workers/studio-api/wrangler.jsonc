@@ -28,6 +28,8 @@
   //   SIGNING_KEY       HMAC key for file links (D-020). Required.
   //   RESEND_API_KEY    sign-in emails; without it, dev logs the code (D-010).
   //   ACCESS_TEAM_DOMAIN, ACCESS_AUD   Cloudflare Access owner sign-in (optional).
+  //   ASSISTANT_KEY     shared with studio-assistant; its calls carry it (D-046). Without it,
+  //                     every call claiming to be the assistant is refused.
 
   "env": {
     // D1 for both created 2026-10-01; production files use the existing iaa-files bucket.

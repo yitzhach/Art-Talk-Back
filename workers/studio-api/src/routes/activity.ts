@@ -59,7 +59,7 @@ activityRoutes.openapi(
   }),
   async (c) => {
     const { name } = c.req.valid("param");
-    if (!getAction(name)) throw new HttpError("not_found", `No action named ${name}`);
+    if (!getAction(name) || getAction(name)!.internal) throw new HttpError("not_found", `No action named ${name}`);
     const { result, activityIds } = await run(c, name, c.req.valid("json"));
     return send(c, { ok: true, result, activityIds });
   },

@@ -44,12 +44,22 @@ export interface Plan {
   writes: Write[];
 }
 
+export type Risk = "auto" | "confirm" | "always_confirm";
+export type Level = Risk | "never";
+
 export interface ActionDef<I extends z.ZodType = z.ZodType, R = unknown> {
   name: string;
   description: string;
   input: I;
   permission: Permission;
-  risk: "auto" | "confirm" | "always_confirm";
+  /** How much the assistant may do with this on its own (spec → Autonomy levels). People are never asked. */
+  risk: Risk;
+  /** "never": the assistant can't run this at all, whatever the studio sets (e.g. changing its own policy). */
+  assistant?: "never";
+  /** Apps whose assistant gets this as a tool (D-052). Absent: only the general "studio" assistant. */
+  apps?: readonly string[];
+  /** Plumbing run only by studio-api's own routes: never a tool, never run by name. */
+  internal?: true;
   plan: (ctx: ActionCtx, input: z.output<I>) => Promise<Plan>;
   /**
    * Builds the response from the logged `after` snapshots, in write order.
@@ -82,7 +92,47 @@ export interface RunOptions {
   origin: string;
   source?: Source;
   opId?: string | null;
+  /** The person tapped this action's confirm card (pending actions, D-045). */
+  confirmed?: boolean;
 }
+
+const RANK: Record<Level, number> = { auto: 0, confirm: 1, always_confirm: 2, never: 3 };
+
+/** Does this input set a money amount (a `*Cents` field, at the top, in a patch, or in meta)? */
+function touchesMoney(input: unknown): boolean {
+  if (!input || typeof input !== "object") return false;
+  return Object.entries(input as Record<string, unknown>).some(([k, v]) =>
+    /Cents$/.test(k) || ((k === "patch" || k === "meta") && touchesMoney(v)));
+}
+
+/**
+ * The level that applies when the assistant runs `def` with `input` (D-045):
+ * the studio's choice if it set one, else the registry's. A studio may lower
+ * `confirm` to `auto` or raise anything, but `always_confirm` never goes below
+ * itself; `never` is always allowed. Setting a money amount is at least `confirm`.
+ */
+export function assistantLevel(def: ActionDef, studioLevel: Level | null, input?: unknown): Level {
+  if (def.assistant === "never") return "never";
+  let level: Level = studioLevel ?? def.risk;
+  if (def.risk === "always_confirm" && level !== "never") level = "always_confirm";
+  if (level === "auto" && touchesMoney(input)) level = "confirm";
+  return level;
+}
+
+/** Levels a studio may choose for an action. */
+export function allowedLevels(def: ActionDef): Level[] {
+  if (def.assistant === "never") return ["never"];
+  return def.risk === "always_confirm" ? ["always_confirm", "never"] : ["auto", "confirm", "always_confirm", "never"];
+}
+
+export async function studioLevel(env: Env, studioId: string, action: string): Promise<Level | null> {
+  const row = await env.DB.prepare(
+    "SELECT level FROM assistant_policy WHERE studio_id = ? AND action = ? AND deleted_at IS NULL",
+  ).bind(studioId, action).first<{ level: Level }>();
+  return row?.level ?? null;
+}
+
+export const rankOf = (l: Level) => RANK[l];
 
 export async function runAction<R>(def: ActionDef<z.ZodType, R>, rawInput: unknown, opts: RunOptions): Promise<RunResult<R>> {
   const parsed = def.input.safeParse(rawInput);
@@ -90,6 +140,17 @@ export async function runAction<R>(def: ActionDef<z.ZodType, R>, rawInput: unkno
     throw new HttpError("bad_request", "Invalid input", { issues: parsed.error.issues });
   }
   requirePermission(opts.actor.role, def.permission);
+
+  // The assistant's limits live here, on the data side, never in its prompt (D-045).
+  if (opts.source === "assistant") {
+    const level = assistantLevel(def, await studioLevel(opts.env, opts.actor.studioId, def.name), parsed.data);
+    if (level === "never") {
+      throw new HttpError("forbidden", `The assistant isn't allowed to ${def.description.toLowerCase()} in this studio`, { action: def.name });
+    }
+    if (level !== "auto" && !opts.confirmed) {
+      throw new HttpError("needs_confirmation", "This needs a confirm tap first", { action: def.name, level });
+    }
+  }
 
   const ctx: ActionCtx = {
     env: opts.env,

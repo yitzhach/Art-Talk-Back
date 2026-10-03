@@ -217,3 +217,15 @@ Each app keeps its own repo and Cloudflare Worker; `Art-Talk-Back` holds `studio
 
 ### D-043 · Production API deploys by its own manual workflow · 2026-10-03 · default
 "Deploy production API" mirrors "Deploy staging" for `--env production` (`studio-api`, `studio-db-prod`, `iaa-files`) and runs only when `studio-api` is typed into its confirm box. It is a new Worker and touches no existing one (`iaa-invoice-api` stays). It must run before the Show Tracker's `main` gets the studio build, because that build binds to `studio-api`.
+
+### D-044 · Show Tracker: a sale with no show is warned about, not blocked · 2026-10-03 · Isaac
+On the Money page, a sale saved with "No show" (the default while the page shows "All shows") disappeared from view as soon as one show was picked (gate 4 finding). The first Save on such a sale now shows a warning and turns into "Save with no show". Picking a show clears the warning. Pressing it again saves. A sale that already had no show saves without the warning. Blocking was rejected because a studio or online sale is still a sale. App repo only (`tracker/expenses.html`). No API change.
+
+### D-045 · Confirm cards are pending actions held by studio-api · 2026-10-03 · default
+The assistant never runs a `confirm`/`always_confirm` action itself. It *proposes* one: studio-api validates the input, checks permission and `assistant_policy`, and stores a `pending_actions` row (studio, user, action, input, expiry). The card's tap calls `POST /v1/pending/:id/confirm` from the app with the user's session, which runs it through `runAction` like any write. So a model can't skip the tap, and the policy lives on the data side (spec: "checked in studio-api, never in the prompt"). `assistant_policy` can raise an action's risk or set it to `never`, never lower it.
+
+### D-046 · The assistant acts with the user's own session · 2026-10-03 · default
+`studio-assistant` (new Worker, `studio-*` name) reaches studio-api only by service binding. It forwards the caller's session and sets `X-Studio-Actor: assistant`, which studio-api honours only on service-binding calls. Writes then log `actor_type: assistant, source: assistant` with the user's own permissions and never more. There are no assistant credentials of its own to leak or over-grant.
+
+### D-047 · Eval set: replayed in PR CI, live on demand · 2026-10-03 · default
+Each eval case holds a request, the app it came from and the expected tool calls (names + key arguments). PR CI replays recorded model replies, which checks tool generation, filtering, search, policy and the cards without a key or cost. A manual "Assistant eval (live)" workflow runs the same cases against the real models through AI Gateway and records new replies. The live run gates a model or prompt change. The cases are Isaac's own phrasing (Phase 3 OK #3), never real client data.

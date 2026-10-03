@@ -2,6 +2,22 @@
 
 ## Unreleased
 
+### Phase 2 · step 8
+- "Deploy staging" also deploys the Show Tracker as `studio-show-tracker-staging`, after `studio-api-staging` (D-041).
+
+### Phase 2 · step 5–7 (Show Tracker, narrow slice)
+- Show Tracker copied unchanged into `apps/show-tracker/` (from `art-show-tracker@d32e9f1`) with its own suites; `node build/run-suites.cjs` runs all of them (D-033).
+- Show Tracker is an installable PWA: manifest, icons, network-first `sw.js` (offline app shell; `file://` unchanged). New `build/pwa-tests.cjs` (27 checks, incl. Chrome's installability verdict and offline reopen) (D-034).
+- Migration 0003 `sales` + `sale.create/update/delete`, `/v1/sales`, `sales:*` permissions; syncable; covered by the cross-studio suite (D-035).
+- Sync merges `meta` one key at a time; `*Cents` keys never auto-merge (D-036).
+- SDK: `sale` records; `create` keeps a ULID the app chose; `meta` patches merge per key; `tracker/studio-sdk.js` classic-script bundle with a CI freshness check (D-037).
+- SDK fix: an edit made while its record's op was being pushed was folded into that op and then dropped with it. Edits now queue behind an op in flight and are rebased onto the server's answer; local write + enqueue, and pull's skip-if-pending, are each one IndexedDB transaction. 7 new SDK tests (15).
+- `{type}.restore` action (needs `:delete`; syncable) and SDK `restore()`: an app's Undo after a delete works whether or not the delete was already sent. A sale may name a deleted show (its history outlives the row).
+- Show Tracker on the SDK (shows + sales only): `tracker/studio-store.js` under `AST.Store`, `tracker/studio-ui.js` (studio sign-in in Account & sync, review-change cards, refused-change cards). Every other collection stays in localStorage; contacts never sync. New `build/studio-tests.cjs` (26) (D-038, D-040).
+- App Worker `apps/show-tracker/worker.js`: `tracker/` + `/v1/*` to studio-api on one origin (D-039).
+- "Import my existing data" (Account & sync): moves this device's shows and sales from `artShowTracker.db` into the studio through sync push with derived op ids, so a second run (or another device) adds nothing; never the demo seed, deleted rows or other collections; the local copy is kept.
+- `apps/show-tracker/e2e/two-devices.cjs`: two browser devices against `wrangler dev` (app Worker + studio-api), 34 checks for phase-2 gate items 1–3; schema-v11 fixture in `e2e/fixtures/`. CI job `show-tracker` runs the tracker's suites and this.
+
 ### Handoff — 2026-10-02
 - Show Tracker source located (`yitzhach/art-show-tracker`); Phase 2 step 5 narrowed to shows + sales (D-032). Staging API confirmed live.
 

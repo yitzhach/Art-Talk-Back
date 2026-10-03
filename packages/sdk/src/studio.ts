@@ -4,9 +4,22 @@
 // pushes the outbox (in order, retry-safe by opId), then pulls everything that
 // changed since the last cursor. Triggers: start(), focus, reconnect, after
 // each write, and every 60 s while running.
-import { newId } from "@studio/core";
+// From ids only, so a browser bundle of the SDK doesn't pull in zod and drizzle.
+import { isId, newId } from "@studio/core/ids";
 import { ApiClient, type ClientOptions, NetworkError } from "./client";
 import { type LocalRecord, LocalStore, type OutboxOp, type RecordType } from "./store";
+
+const isObject = (v: unknown): v is Record<string, unknown> => !!v && typeof v === "object" && !Array.isArray(v);
+
+/** A patch over a record: fields replace, but `meta` merges per key (D-036). */
+export function applyPatch(base: LocalRecord, patch: LocalRecord): LocalRecord {
+  const next = { ...base, ...patch };
+  if (isObject(patch.meta) && isObject(base.meta)) next.meta = { ...base.meta, ...patch.meta };
+  return next;
+}
+
+const verb = (op: OutboxOp) => op.action.slice(op.entityType.length + 1);
+const same = (o: OutboxOp, type: RecordType, id: string) => o.entityType === type && o.entityId === id;
 
 export interface Conflict {
   field: string;
@@ -41,6 +54,8 @@ export class Studio {
   private store!: LocalStore;
   private listeners: { [K in keyof StudioEvents]?: Set<Listener<K>> } = {};
   private running: Promise<void> | null = null;
+  /** Op ids sent and not yet answered. */
+  private inFlight = new Set<string>();
   private again = false;
   private timer: ReturnType<typeof setInterval> | null = null;
   private detach: (() => void) | null = null;
@@ -69,66 +84,100 @@ export class Studio {
   }
 
   // --------------------------------------------------------------- writes
+  //
+  // An op that is being pushed right now is never changed: an edit made
+  // meanwhile is queued as its own op, held back until the first is answered,
+  // and then rebased onto the version the server gave it (pushAll). Folding
+  // into an op in flight would drop the edit when that op is dequeued.
 
-  /** Create a record locally with a device-made id; it keeps that id on the server. */
+  /**
+   * Create a record locally; it keeps its id on the server. `fields.id` may be
+   * a ULID the app chose (e.g. one derived from an imported record); else a new one.
+   */
   async create(type: RecordType, fields: LocalRecord): Promise<LocalRecord> {
-    const id = newId();
-    const record: LocalRecord = { ...fields, id, version: 0, deletedAt: null };
-    await this.store.put(type, id, record);
-    await this.queue(type, id, `${type}.create`, null, fields);
+    const { id: wanted, ...input } = fields;
+    const id = isId(wanted) ? wanted : newId();
+    const record: LocalRecord = { ...input, id, version: 0, deletedAt: null };
+    await this.store.edit(type, id, (current) => {
+      if (current) throw new Error(`${type} ${id} already exists on this device`);
+      return { record, enqueue: [this.op(type, id, `${type}.create`, null, input)] };
+    });
+    this.afterWrite([type]);
     return record;
   }
 
   /** Change fields locally; the server applies them, or merges them if another device got there first. */
   async update(type: RecordType, id: string, patch: LocalRecord): Promise<LocalRecord> {
-    const current = await this.store.get(type, id);
-    if (!current) throw new Error(`No local ${type} ${id}`);
-    const next = { ...current, ...patch };
-    await this.store.put(type, id, next);
-
-    // Fold into a change that hasn't been sent yet, so one edit session = one op.
-    const pending = (await this.store.outbox()).filter((o) => o.entityType === type && o.entityId === id);
-    const last = pending.at(-1);
-    if (last?.action === `${type}.create`) {
-      await this.store.enqueue({ ...last, input: { ...last.input, ...patch } });
-    } else if (last?.action === `${type}.update`) {
-      await this.store.enqueue({ ...last, input: { patch: { ...(last.input.patch as LocalRecord), ...patch } } });
-    } else {
-      await this.queue(type, id, `${type}.update`, current.version ?? null, { patch });
-    }
+    const next = await this.store.edit(type, id, (current, outbox) => {
+      if (!current) throw new Error(`No local ${type} ${id}`);
+      const record = applyPatch(current, patch);
+      // Fold into a change that hasn't been sent yet, so one edit session = one op.
+      const last = outbox.filter((o) => same(o, type, id)).at(-1);
+      if (last && !this.inFlight.has(last.opId) && verb(last) === "create") {
+        return { record, enqueue: [{ ...last, input: applyPatch(last.input, patch) }] };
+      }
+      if (last && !this.inFlight.has(last.opId) && verb(last) === "update") {
+        return { record, enqueue: [{ ...last, input: { patch: applyPatch(last.input.patch as LocalRecord, patch) } }] };
+      }
+      return { record, enqueue: [this.op(type, id, `${type}.update`, current.version ?? null, { patch })] };
+    });
     this.afterWrite([type]);
-    return next;
+    return next!;
   }
 
   async remove(type: RecordType, id: string): Promise<void> {
-    const current = await this.store.get(type, id);
-    if (!current) return;
-    const pending = (await this.store.outbox()).filter((o) => o.entityType === type && o.entityId === id);
-    if (pending[0]?.action === `${type}.create`) {
-      // Never reached the server: forget it entirely.
-      for (const o of pending) await this.store.dequeue(o.opId);
-      await this.store.remove(type, id);
-      this.afterWrite([type]);
-      return;
-    }
-    await this.store.remove(type, id);
-    await this.queue(type, id, `${type}.delete`, current.version ?? null, {});
+    let changed = false;
+    await this.store.edit(type, id, (current, outbox) => {
+      if (!current) return {};
+      changed = true;
+      const pending = outbox.filter((o) => same(o, type, id));
+      if (pending[0] && verb(pending[0]) === "create" && !this.inFlight.has(pending[0].opId)) {
+        // Never reached the server: forget it entirely.
+        return { record: null, dequeue: pending.map((o) => o.opId) };
+      }
+      return { record: null, enqueue: [this.op(type, id, `${type}.delete`, current.version ?? null, {})] };
+    });
+    if (changed) this.afterWrite([type]);
+  }
+
+  /**
+   * Undo a remove(): `record` is the copy get() returned before it. A delete
+   * still waiting to be sent is simply dropped; one the server already has is
+   * reversed with `{type}.restore`; a record that never reached the server is
+   * created again.
+   */
+  async restore(type: RecordType, record: LocalRecord): Promise<LocalRecord> {
+    const id = record.id as string;
+    const back = { ...record, deletedAt: null };
+    await this.store.edit(type, id, (current, outbox) => {
+      if (current) throw new Error(`${type} ${id} isn't deleted on this device`);
+      const del = outbox.find((o) => same(o, type, id) && verb(o) === "delete" && !this.inFlight.has(o.opId));
+      if (del) return { record: back, dequeue: [del.opId] };
+      if (!record.version) {
+        const { id: _i, version: _v, deletedAt: _d, ...input } = record;
+        return { record: back, enqueue: [this.op(type, id, `${type}.create`, null, input)] };
+      }
+      return { record: back, enqueue: [this.op(type, id, `${type}.restore`, null, { id })] };
+    });
+    this.afterWrite([type]);
+    return back;
   }
 
   /** Mark sold locally and queue the server action (which also updates the show). */
   async markSold(artworkId: string, sale: { priceCents: number; showId?: string; clientId?: string; currency?: string }) {
-    const art = await this.store.get("artwork", artworkId);
-    if (!art) throw new Error(`No local artwork ${artworkId}`);
-    await this.store.put("artwork", artworkId, {
-      ...art, status: "sold",
-      meta: { ...(art.meta as object), sale: { ...sale, clientId: sale.clientId ?? null, showId: sale.showId ?? null } },
+    await this.store.edit("artwork", artworkId, (art) => {
+      if (!art) throw new Error(`No local artwork ${artworkId}`);
+      const record = {
+        ...art, status: "sold",
+        meta: { ...(art.meta as object), sale: { ...sale, clientId: sale.clientId ?? null, showId: sale.showId ?? null } },
+      };
+      return { record, enqueue: [this.op("artwork", artworkId, "artwork.mark_sold", null, { artworkId, ...sale })] };
     });
-    await this.queue("artwork", artworkId, "artwork.mark_sold", null, { artworkId, ...sale });
+    this.afterWrite(["artwork"]);
   }
 
-  private async queue(type: RecordType, entityId: string, action: string, baseVersion: number | null, input: Record<string, unknown>) {
-    await this.store.enqueue({ opId: newId(), entityType: type, action, entityId, baseVersion, input });
-    this.afterWrite([type]);
+  private op(type: RecordType, entityId: string, action: string, baseVersion: number | null, input: Record<string, unknown>): OutboxOp {
+    return { opId: newId(), entityType: type, action, entityId, baseVersion, input };
   }
 
   private afterWrite(types: RecordType[]) {
@@ -167,20 +216,45 @@ export class Studio {
 
   private async pushAll() {
     for (;;) {
-      const ops = (await this.store.outbox()).slice(0, PUSH_BATCH);
+      const ops = this.nextBatch(await this.store.outbox());
       if (!ops.length) return;
-      const { results } = await this.api.push(ops.map(({ entityType: _t, ...op }) => op));
+      for (const op of ops) this.inFlight.add(op.opId);
+      let results;
+      try {
+        ({ results } = await this.api.push(ops.map(({ entityType: _t, ...op }) => op)));
+      } finally {
+        for (const op of ops) this.inFlight.delete(op.opId);
+      }
       const touched = new Set<RecordType>();
       for (const [i, r] of results.entries()) {
         const op = ops[i]!;
-        await this.store.dequeue(op.opId);
         touched.add(op.entityType);
         const record = r.record as LocalRecord | undefined;
-        if (record?.id && op.action !== "artwork.mark_sold") await this.store.put(op.entityType, record.id, record);
+        const ok = r.status === "applied" || r.status === "merged" || r.status === "duplicate";
+        await this.store.edit(op.entityType, op.entityId, (local, outbox) => {
+          const later = outbox.filter((o) => o.opId !== op.opId && same(o, op.entityType, op.entityId));
+          const plan: { record?: LocalRecord | null; enqueue: OutboxOp[]; dequeue: string[] } = { enqueue: [], dequeue: [op.opId] };
+          if (r.status === "rejected" && verb(op) === "create") {
+            // Nothing exists to edit: drop the record and anything queued after it.
+            plan.record = null;
+            plan.dequeue.push(...later.map((o) => o.opId));
+            return plan;
+          }
+          // Edits made while this op was out were queued against the old version;
+          // they build on this answer, so rebase them (only when the server took it).
+          const answered = (op.action === "artwork.mark_sold" ? (record?.artwork as LocalRecord | undefined) : record)?.version;
+          const rebased = later.map((o) => (ok && typeof answered === "number" && o.baseVersion !== null ? { ...o, baseVersion: answered } : o));
+          plan.enqueue = rebased;
+          if (record?.id && op.action !== "artwork.mark_sold" && local !== null) {
+            // The server's copy, with this device's unsent edits still on top.
+            plan.record = rebased.reduce((acc, o) => (verb(o) === "update" ? applyPatch(acc, o.input.patch as LocalRecord) : acc), { ...record } as LocalRecord);
+            if (rebased.some((o) => verb(o) === "delete")) plan.record = null;
+          }
+          return plan;
+        });
         if (r.status === "conflict") {
           this.emit("conflict", { entityType: op.entityType, entityId: op.entityId, conflicts: r.conflicts ?? [], record: record ?? null });
         } else if (r.status === "rejected") {
-          if (op.action.endsWith(".create")) await this.store.remove(op.entityType, op.entityId);
           this.emit("rejected", { entityType: op.entityType, entityId: op.entityId, action: op.action, message: r.error?.message ?? "Rejected" });
         }
       }
@@ -188,19 +262,34 @@ export class Studio {
     }
   }
 
+  /**
+   * The outbox in order, up to PUSH_BATCH, stopping before an edit or delete of
+   * a record already changed earlier in the batch: that one needs the version
+   * the earlier op gets back, so it goes in the next round.
+   */
+  private nextBatch(outbox: OutboxOp[]) {
+    const batch: OutboxOp[] = [];
+    const seen = new Set<string>();
+    for (const o of outbox) {
+      const key = `${o.entityType}:${o.entityId}`;
+      if (batch.length >= PUSH_BATCH || (o.baseVersion !== null && seen.has(key))) break;
+      batch.push(o);
+      seen.add(key);
+    }
+    return batch;
+  }
+
   private async pullAll() {
     let cursor = (await this.store.getMeta<string>("cursor")) ?? "0";
     const touched = new Set<RecordType>();
     for (;;) {
       const page = await this.api.pull(cursor);
-      // A record with unsent local edits keeps the local copy until those edits are pushed.
-      const pending = new Set((await this.store.outbox()).map((o) => `${o.entityType}:${o.entityId}`));
+      // A record with unsent local edits keeps the local copy until those edits are
+      // pushed; checked per record, in the same transaction as the write.
       for (const c of page.changes) {
         const type = c.entityType as RecordType;
-        if (pending.has(`${type}:${c.entityId}`)) continue;
-        if (c.record.deletedAt) await this.store.remove(type, c.entityId);
-        else await this.store.put(type, c.entityId, c.record as LocalRecord);
-        touched.add(type);
+        const data = c.record.deletedAt ? null : (c.record as LocalRecord);
+        if (await this.store.putFromServer(type, c.entityId, data)) touched.add(type);
       }
       cursor = page.cursor;
       await this.store.setMeta("cursor", cursor);

@@ -156,3 +156,186 @@ describe("two devices edit the same record offline", () => {
     expect((await phone.studio.list("artwork")).map((a) => a.id)).not.toContain(id);
   });
 });
+
+/** Holds the next request to `path` until release() is called (the server has not seen it yet). */
+function hold(studio: Studio, path: string) {
+  const api = studio.api as unknown as { fetchFn: typeof fetch };
+  const base = api.fetchFn;
+  let release!: () => void;
+  const gate = new Promise<void>((r) => { release = r; });
+  let started!: () => void;
+  const reached = new Promise<void>((r) => { started = r; });
+  let armed = true;
+  api.fetchFn = async (input, init) => {
+    if (armed && String(input).includes(path)) {
+      armed = false;
+      started();
+      await gate;
+    }
+    return base(input, init);
+  };
+  return { reached, release };
+}
+
+describe("edits made while a sync is running", () => {
+  it("an edit made while its create is being pushed is not lost", async () => {
+    const { studio } = await signedInDevice();
+    const h = hold(studio, "/sync/push");
+    const show = await studio.create("show", { name: "Grove" });
+    const syncing = studio.sync();
+    await h.reached;
+    await studio.update("show", show.id!, { city: "Miami" }); // the create is in flight
+    h.release();
+    await syncing;
+    expect(await studio.pendingCount()).toBe(0);
+    const row = await server.DB.prepare("SELECT name, city, version FROM shows WHERE id = ?").bind(show.id).first();
+    expect(row).toEqual({ name: "Grove", city: "Miami", version: 2 });
+    expect(await studio.get("show", show.id!)).toMatchObject({ city: "Miami", version: 2 });
+  });
+
+  it("two edits to one field, the second while the first is in flight: no review card against itself", async () => {
+    const { studio } = await signedInDevice();
+    const cards = events(studio, "conflict");
+    const show = await studio.create("show", { name: "Grove" });
+    await studio.sync();
+    const h = hold(studio, "/sync/push");
+    await studio.update("show", show.id!, { name: "Grove 2026" });
+    const syncing = studio.sync();
+    await h.reached;
+    await studio.update("show", show.id!, { name: "Coconut Grove 2026" });
+    h.release();
+    await syncing;
+    expect(cards).toEqual([]);
+    expect(await studio.get("show", show.id!)).toMatchObject({ name: "Coconut Grove 2026", version: 3 });
+  });
+
+  it("the network drops mid-push with an edit queued behind it: both land on reconnect", async () => {
+    const { studio, net } = await signedInDevice();
+    const cards = events(studio, "conflict");
+    const h = hold(studio, "/sync/push");
+    const sale = await studio.create("sale", { title: "Heron", priceCents: 45000 });
+    const syncing = studio.sync();
+    await h.reached;
+    await studio.update("sale", sale.id!, { notes: "paid by card" });
+    net.online = false; // the held request now fails
+    h.release();
+    await syncing;
+    expect(await studio.pendingCount()).toBe(2);
+    net.online = true;
+    await studio.sync();
+    expect(cards).toEqual([]);
+    expect(await studio.pendingCount()).toBe(0);
+    expect(await studio.get("sale", sale.id!)).toMatchObject({ title: "Heron", notes: "paid by card", priceCents: 45000 });
+  });
+
+  it("an edit made while a pull is running isn't overwritten by the pull", async () => {
+    const phone = await signedInDevice();
+    const laptop = await signedInDevice();
+    const show = await laptop.studio.create("show", { name: "Grove", notes: "laptop" });
+    await laptop.studio.sync();
+    await phone.studio.sync();
+    await laptop.studio.update("show", show.id!, { city: "Miami" });
+    await laptop.studio.sync();
+
+    const h = hold(phone.studio, "/sync/pull");
+    const syncing = phone.studio.sync();
+    await h.reached; // the pull is on its way with the laptop's copy
+    await phone.studio.update("show", show.id!, { notes: "phone" });
+    h.release();
+    await syncing;
+    // The phone's note survived the pull, and then reached the server.
+    expect(await phone.studio.get("show", show.id!)).toMatchObject({ notes: "phone" });
+    await phone.studio.sync();
+    expect(await phone.studio.get("show", show.id!)).toMatchObject({ notes: "phone", city: "Miami" });
+  });
+});
+
+describe("tracker-shaped records", () => {
+  it("keeps a ULID the app chose, and makes one for anything else", async () => {
+    const { studio } = await signedInDevice();
+    const id = "01J9ZZZZZZZZZZZZZZZZZZZZZZ";
+    expect((await studio.create("show", { id, name: "Chosen" })).id).toBe(id);
+    const other = await studio.create("show", { id: "3f2c-not-a-ulid", name: "Other" });
+    expect(other.id).not.toBe("3f2c-not-a-ulid");
+    await expect(studio.create("show", { id, name: "Again" })).rejects.toThrow(/already exists/);
+    await studio.sync();
+    expect(await server.DB.prepare("SELECT name FROM shows WHERE id = ?").bind(id).first("name")).toBe("Chosen");
+  });
+
+  it("meta changes are per key: two devices change different keys offline and both land", async () => {
+    const phone = await signedInDevice();
+    const laptop = await signedInDevice();
+    const show = await phone.studio.create("show", { name: "Grove", meta: { rating: 7, hidden: false } });
+    await phone.studio.sync();
+    await laptop.studio.sync();
+    phone.net.online = false;
+    laptop.net.online = false;
+    await phone.studio.update("show", show.id!, { meta: { rating: 9 } });
+    await laptop.studio.update("show", show.id!, { meta: { hidden: true } });
+    expect((await phone.studio.get("show", show.id!))?.meta).toEqual({ rating: 9, hidden: false });
+    for (const d of [phone, laptop]) { d.net.online = true; await d.studio.sync(); }
+    await phone.studio.sync();
+    for (const d of [phone, laptop]) {
+      expect((await d.studio.get("show", show.id!))?.meta).toEqual({ rating: 9, hidden: true });
+    }
+  });
+
+  it("a sale logged offline at a show reaches the other device, unpriced stays null", async () => {
+    const phone = await signedInDevice();
+    const laptop = await signedInDevice();
+    const show = await phone.studio.create("show", { name: "Grove" });
+    await phone.studio.sync();
+    phone.net.online = false;
+    const sale = await phone.studio.create("sale", { showId: show.id, title: "Egret", priceCents: null, soldOn: "2026-02-14" });
+    await phone.studio.sync();
+    phone.net.online = true;
+    await phone.studio.sync();
+    await laptop.studio.sync();
+    expect(await laptop.studio.get("sale", sale.id!)).toMatchObject({ showId: show.id, title: "Egret", priceCents: null, soldOn: "2026-02-14", version: 1 });
+  });
+});
+
+describe("undo a delete", () => {
+  it("before the delete is sent: nothing reaches the server", async () => {
+    const { studio, net } = await signedInDevice();
+    const show = await studio.create("show", { name: "Grove" });
+    await studio.sync();
+    const before = (await studio.get("show", show.id!))!;
+    net.online = false;
+    await studio.remove("show", show.id!);
+    await studio.restore("show", before);
+    expect(await studio.pendingCount()).toBe(0);
+    expect(await studio.get("show", show.id!)).toMatchObject({ name: "Grove", version: 1 });
+  });
+
+  it("after the delete reached the server: restored there too, and the other device sees it", async () => {
+    const phone = await signedInDevice();
+    const laptop = await signedInDevice();
+    const show = await phone.studio.create("show", { name: "Grove" });
+    await phone.studio.sync();
+    const before = (await phone.studio.get("show", show.id!))!;
+    await phone.studio.remove("show", show.id!);
+    await phone.studio.sync();
+    await laptop.studio.sync();
+    expect(await laptop.studio.get("show", show.id!)).toBeNull();
+
+    await phone.studio.restore("show", before);
+    await phone.studio.update("show", show.id!, { city: "Miami" });
+    await phone.studio.sync();
+    await laptop.studio.sync();
+    expect(await laptop.studio.get("show", show.id!)).toMatchObject({ name: "Grove", city: "Miami", deletedAt: null, version: 4 });
+  });
+
+  it("a record that never reached the server is created again", async () => {
+    const { studio, net } = await signedInDevice();
+    net.online = false;
+    const sale = await studio.create("sale", { title: "Heron" });
+    const before = (await studio.get("sale", sale.id!))!;
+    await studio.remove("sale", sale.id!);
+    expect(await studio.pendingCount()).toBe(0);
+    await studio.restore("sale", before);
+    net.online = true;
+    await studio.sync();
+    expect(await server.DB.prepare("SELECT title FROM sales WHERE id = ?").bind(sale.id).first("title")).toBe("Heron");
+  });
+});

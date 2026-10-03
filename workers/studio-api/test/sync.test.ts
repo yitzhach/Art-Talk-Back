@@ -90,6 +90,44 @@ describe("sync push", () => {
       expect((await call(`/v1/artworks/${art.id}`, { cookie: a.cookie })).data).toMatchObject({ priceCents: 1000, status: "available" });
     });
 
+    describe("meta merges per key (D-036)", () => {
+      async function showBehind() {
+        const a = await makeStudio();
+        const show = (await call("/v1/shows", { method: "POST", cookie: a.cookie, json: { name: "Grove", meta: { rating: 7, hidden: false } } })).data;
+        // The laptop changes one meta key while the phone is offline at version 1.
+        await push(a.cookie, [op("show.update", show.id, { patch: { meta: { rating: 9 } } }, 1)]);
+        return { a, show };
+      }
+
+      it("a device sends only the keys it changed; the rest of meta is kept", async () => {
+        const { a, show } = await showBehind();
+        const got = (await call(`/v1/shows/${show.id}`, { cookie: a.cookie })).data;
+        expect(got.meta).toEqual({ rating: 9, hidden: false });
+      });
+
+      it("different keys merge", async () => {
+        const { a, show } = await showBehind();
+        const r = (await push(a.cookie, [op("show.update", show.id, { patch: { meta: { hidden: true } } }, 1)])).data.results[0];
+        expect(r).toMatchObject({ status: "merged", record: { meta: { rating: 9, hidden: true } } });
+      });
+
+      it("the same key: server keeps its value, device gets a conflict on meta.<key>", async () => {
+        const { a, show } = await showBehind();
+        const r = (await push(a.cookie, [op("show.update", show.id, { patch: { meta: { rating: 3, hidden: true } } }, 1)])).data.results[0];
+        expect(r.status).toBe("conflict");
+        expect(r.conflicts).toEqual([{ field: "meta.rating", serverValue: 9, deviceValue: 3 }]);
+        expect(r.record.meta).toEqual({ rating: 9, hidden: true });
+      });
+
+      it("money keys in meta (`*Cents`) never auto-merge", async () => {
+        const { a, show } = await showBehind();
+        const r = (await push(a.cookie, [op("show.update", show.id, { patch: { meta: { grossSalesCents: 250000 } } }, 1)])).data.results[0];
+        expect(r.status).toBe("conflict");
+        expect(r.conflicts).toEqual([{ field: "meta.grossSalesCents", serverValue: null, deviceValue: 250000 }]);
+        expect(r.record.meta.grossSalesCents).toBeUndefined();
+      });
+    });
+
     it("a delete from a device that's behind is a conflict", async () => {
       const { a, art } = await behind();
       const res = await push(a.cookie, [op("artwork.delete", art.id, {}, 1)]);

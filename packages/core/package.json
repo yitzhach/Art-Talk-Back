@@ -11,5 +11,9 @@
     "drizzle-orm": "^0.45.3",
     "ulidx": "^2.4.1",
     "zod": "^4.6.5"
+  },
+  "exports": {
+    ".": "./src/index.ts",
+    "./ids": "./src/ids.ts"
   }
 }

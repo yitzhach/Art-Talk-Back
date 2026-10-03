@@ -24,11 +24,25 @@ and a second device shows it. Concretely:
 - [x] `POST /v1/sync/push`: each op runs through its action with `source: "sync"`; `op_id` makes retries safe (D-017); `baseVersion` drives the merge rules
 - [x] `GET /v1/sync/pull?since=<seq>`: current state of every record changed since the cursor, deletions included; cursor = `activity_log.seq`
 - [x] SDK (`packages/sdk`): API client, IndexedDB cache (`idb`), outbox, push/pull on open / focus / reconnect / after each write / every 60 s, conflict cards as events
-- [ ] Show Tracker into `apps/show-tracker/`, installable PWA, then **shows + sales only** on the SDK (D-032); everything else stays in localStorage
-- [ ] "Import my existing data" from localStorage, once, through sync push
-- [ ] Offline test: automated two-device Playwright test (gate 1–3)
+- [x] Show Tracker into `apps/show-tracker/`, installable PWA, then **shows + sales only** on the SDK (D-032); everything else stays in localStorage (D-033…D-040)
+- [x] "Import my existing data" from localStorage, once, through sync push
+- [x] Offline test: automated two-device Playwright test (gate 1–3) — `apps/show-tracker/e2e/two-devices.cjs`, CI job `show-tracker`
 - [ ] Deploy `studio-api-staging` + Show Tracker staging; real-device run (gate 4)
 - [x] Move the built routes out of `openapi.phase2.draft.yaml`; delete it when empty (D-013)
+
+## Progress (2026-10-02)
+
+Steps 5–7 done. Platform: 127 tests (core 9, SDK 18, studio-api 100). Show
+Tracker: its own suites unchanged and green against the copy, plus `pwa-tests`
+(27) and `studio-tests` (26); the two-device run `e2e/two-devices.cjs` (34
+checks) covers gate items 1–3 in Chromium against `wrangler dev`: import of a
+schema-v11 fixture (twice → nothing new; contacts and other local collections
+stay on the device), an offline sale on the Money page reaching the second
+device with sale/show/activity agreeing, same-field and money conflicts as
+review cards with "Use mine", different fields merging, an edit made while a
+pull is on its way surviving it, Undo after delete, and the ledger reopening
+offline. Gate 1 reads "logs a sale at a show" for the tracker (D-035). Next:
+step 8 (staging copy of the app + the phone run), which needs Isaac.
 
 ## Progress (2026-10-01)
 
@@ -36,6 +50,31 @@ Steps 1–4 done: 97 tests (core 9, SDK 8, studio-api 80). The SDK tests run two
 simulated devices against the real studio-api code and a local D1: offline sale
 reaching the other device, merges, review cards, retry after a lost reply,
 deletes. Source found 2026-10-02 (`yitzhach/art-show-tracker`); `studio-api-staging` deployed. Step 5 scope narrowed (D-032).
+
+## Steps 5–7 plan: Show Tracker narrow slice (2026-10-02)
+
+Source: `yitzhach/art-show-tracker` at `d32e9f1`. Decisions D-033…D-040.
+
+5a. **Copy unchanged.** `tracker/` → `apps/show-tracker/tracker/`, plus its
+    `build/` (suites + data tools), `CLAUDE.md` and `docs/`. Its own suites run
+    against the copy (`node build/run-suites.cjs`), baseline 79/35/77/26/32/102/33/20/17/11.
+5b. **Installable PWA** (D-034): `manifest.webmanifest`, icons, `sw.js` (app shell
+    offline; registered only over http(s), so `file://` is unchanged). Suites stay green.
+5c. **Backend** (backend-builder): migration 0003 `sales` + `sale.*` actions and
+    `/v1/sales` (D-035); a sync update's `meta` merges per key (D-036).
+5d. **SDK**: `sale` record type, caller-supplied ULIDs, meta partials; a classic-script
+    bundle `tracker/studio-sdk.js` (D-037).
+5e. **Tracker on the SDK**: `tracker/studio-store.js` implements the `AST.Store`
+    surface for shows and sales only; everything else falls through to localStorage,
+    contacts always do. Ids and fields map per D-038. The app Worker serves `tracker/` and
+    forwards `/v1/*` to studio-api on the same origin (D-039). Sign-in panel on the ledger.
+6.  **Import**: one button reads `artShowTracker.db` (shows + sales, never the
+    untouched demo seed), pushes through `/v1/sync/push` with deterministic op ids,
+    and records `artShowTracker.studioImport`. The localStorage copy is kept as is.
+7.  **Playwright two-device test** (`apps/show-tracker/e2e/`): two contexts against
+    `wrangler dev` (studio-api + the app Worker); offline sale reaches device 2;
+    conflict card; different-field merge; an edit made mid-sync survives the pull;
+    import twice creates nothing new. Runs in CI.
 
 ## Staging deploy: what Isaac adds (repo Settings → Secrets and variables → Actions)
 

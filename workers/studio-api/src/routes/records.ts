@@ -1,12 +1,12 @@
 import {
   Artwork, ArtworkInput, ArtworkPatch, ArtworkStatus, Client, ClientInput, ClientPatch, Settings, SettingsPatch,
-  Show, ShowDetail, ShowInput, ShowPatch, ShowStatus, db as schema,
+  Sale, SaleInput, SalePatch, Show, ShowDetail, ShowInput, ShowPatch, ShowStatus, db as schema,
 } from "@studio/core";
 import { createRoute } from "@hono/zod-openapi";
 import { and, desc, eq, isNull, lt } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { z } from "zod";
-import { type EntityDef, artworkEntity, clientEntity, getRecord, settingsEntity, showEntity } from "../actions/records";
+import { type EntityDef, artworkEntity, clientEntity, getRecord, saleEntity, settingsEntity, showEntity } from "../actions/records";
 import type { Snapshot } from "../actions/runner";
 import type { Db } from "../env";
 import { type Permission, requirePermission } from "../auth/permissions";
@@ -124,6 +124,11 @@ mountRecordRoutes({
       return { ...row, artworks };
     },
   },
+});
+
+mountRecordRoutes({
+  entity: saleEntity, path: "sales", tag: "records", record: Sale.meta({ id: "Sale" }),
+  input: SaleInput, patch: SalePatch,
 });
 
 recordRoutes.openapi(

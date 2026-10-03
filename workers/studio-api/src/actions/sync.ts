@@ -16,20 +16,22 @@ type OpResult = z.infer<typeof SyncOpResult>;
 
 /** Actions a device may queue offline. */
 const SYNCABLE = new Set([
-  "artwork.create", "artwork.update", "artwork.delete",
-  "client.create", "client.update", "client.delete",
-  "show.create", "show.update", "show.delete",
+  "artwork.create", "artwork.update", "artwork.delete", "artwork.restore",
+  "client.create", "client.update", "client.delete", "client.restore",
+  "show.create", "show.update", "show.delete", "show.restore",
+  "sale.create", "sale.update", "sale.delete", "sale.restore",
   "settings.update",
   "show.add_artwork", "show.remove_artwork", "artwork.mark_sold",
 ]);
 
 /** Record types a device keeps a copy of. */
-export const SYNCED_TYPES = ["artwork", "client", "show", "show_artwork", "settings", "file"] as const;
+export const SYNCED_TYPES = ["artwork", "client", "show", "show_artwork", "sale", "settings", "file"] as const;
 
 /** Bookkeeping that changes on every write and says nothing about what the user changed. */
 const BOOKKEEPING = new Set(["version", "updatedAt"]);
 
 const same = (a: unknown, b: unknown) => JSON.stringify(a ?? null) === JSON.stringify(b ?? null);
+const isObject = (v: unknown): v is Snapshot => !!v && typeof v === "object" && !Array.isArray(v);
 const outward = (e: EntityDef, row: Snapshot) => (e.type === "file" ? publicFile(row) : row);
 
 /** Fields the server changed on a record after `version`, read from the activity log. */
@@ -45,6 +47,12 @@ async function fieldsChangedSince(env: Env, studioId: string, e: EntityDef, id: 
     const after = JSON.parse(r.after) as Snapshot;
     for (const k of new Set([...Object.keys(before), ...Object.keys(after)])) {
       if (!BOOKKEEPING.has(k) && !same(before[k], after[k])) changed.add(k);
+    }
+    // meta merges per key (D-036), so record which of its keys moved too.
+    const bm = isObject(before.meta) ? before.meta : {};
+    const am = isObject(after.meta) ? after.meta : {};
+    for (const k of new Set([...Object.keys(bm), ...Object.keys(am)])) {
+      if (!same(bm[k], am[k])) changed.add(`meta.${k}`);
     }
   }
   return changed;
@@ -88,10 +96,12 @@ export async function applyOp(env: Env, actor: Actor, origin: string, op: Op): P
       return { opId: op.opId, status: "applied", record: result };
     }
 
-    // update
-    const patch = (op.input.patch ?? {}) as Snapshot;
+    // update. A device's `meta` is the keys it changed, laid over the stored meta (D-036).
+    const patch = { ...(op.input.patch ?? {}) } as Snapshot;
+    const currentMeta = isObject(current.meta) ? current.meta : {};
     const versionInput = (p: Snapshot) => (type === "settings" ? { version: current.version, patch: p } : { id, version: current.version, patch: p });
     if (current.version === op.baseVersion) {
+      if (isObject(patch.meta)) patch.meta = { ...currentMeta, ...patch.meta };
       const { result } = await run(op.action, versionInput(patch));
       return { opId: op.opId, status: "applied", record: result };
     }
@@ -100,6 +110,20 @@ export async function applyOp(env: Env, actor: Actor, origin: string, op: Op): P
     const merge: Snapshot = {};
     const conflicts: { field: string; serverValue: unknown; deviceValue: unknown }[] = [];
     for (const [field, value] of Object.entries(patch)) {
+      if (field === "meta" && isObject(value)) {
+        // Same rules as fields, one meta key at a time; `*Cents` keys never auto-merge.
+        const metaMerge: Snapshot = {};
+        for (const [k, v] of Object.entries(value)) {
+          if (same(currentMeta[k], v)) continue;
+          if (serverChanged.has(`meta.${k}`) || isProtectedField(k)) {
+            conflicts.push({ field: `meta.${k}`, serverValue: currentMeta[k] ?? null, deviceValue: v });
+          } else {
+            metaMerge[k] = v;
+          }
+        }
+        if (Object.keys(metaMerge).length) merge.meta = { ...currentMeta, ...metaMerge };
+        continue;
+      }
       if (same(current[field], value)) continue; // already what the device wants
       if (serverChanged.has(field) || isProtectedField(field)) {
         conflicts.push({ field, serverValue: current[field] ?? null, deviceValue: value });

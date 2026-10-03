@@ -1,4 +1,4 @@
-// Drizzle schema — mirrors workers/studio-api/migrations/0001_foundation.sql.
+// Drizzle schema — mirrors workers/studio-api/migrations/*.sql.
 // db-drift.test.ts fails if the two disagree (D-012). Property names are
 // camelCase (the API shape); column names are snake_case.
 import { sql } from "drizzle-orm";
@@ -220,6 +220,36 @@ export const showArtworks = sqliteTable(
     index("show_artworks_studio_updated").on(t.studioId, t.updatedAt),
     actorCheck("show_artworks_actor"),
     metaCheck("show_artworks_meta"),
+  ],
+);
+
+// 0003 — the Show Tracker's sale rows (D-035). artwork_id is optional: a
+// tracker sale names a piece in words, not a catalogued artwork.
+export const sales = sqliteTable(
+  "sales",
+  {
+    id: text("id").primaryKey(),
+    studioId: text("studio_id").notNull().references(() => studios.id),
+    showId: text("show_id").references(() => shows.id),
+    artworkId: text("artwork_id").references(() => artworks.id),
+    title: text("title"),
+    priceCents: integer("price_cents"),
+    currency: text("currency").notNull().default("USD"),
+    quantity: integer("quantity").notNull().default(1),
+    soldOn: text("sold_on"),
+    paymentMethod: text("payment_method", { enum: ["cash", "card", "check", "online", "other"] }),
+    size: text("size"),
+    medium: text("medium"),
+    source: text("source", { enum: ["manual", "square", "stripe", "csv"] }).notNull().default("manual"),
+    externalId: text("external_id"),
+    notes: text("notes"),
+    ...recordColumns(),
+  },
+  (t) => [
+    index("sales_studio_updated").on(t.studioId, t.updatedAt),
+    index("sales_studio_show").on(t.studioId, t.showId),
+    actorCheck("sales_actor"),
+    metaCheck("sales_meta"),
   ],
 );
 

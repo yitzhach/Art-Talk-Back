@@ -24,36 +24,39 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm typecheck
       - run: pnpm test
-      - name: tracker/studio-sdk.js matches the SDK source
-        run: pnpm --filter @studio/show-tracker bundle:check
       - name: docs/openapi.json matches the code
         run: |
           pnpm openapi
           git diff --exit-code docs/openapi.json
 
-  # The Show Tracker: its own suites, then the phase-2 two-device gate in a real
-  # browser against wrangler dev (apps/show-tracker/e2e). Its suites were written
-  # for a sandbox with no internet (weather asserts the failure path), so the test
-  # steps point Chromium at a dead proxy; loopback bypasses it. (Actions env names
-  # are case-insensitive, so only the uppercase ones are set.)
+  # The Show Tracker lives in yitzhach/art-show-tracker (D-042). From here, check
+  # that this SDK still matches the copy its main ships, and that this API still
+  # passes its two-device offline run (an API change that breaks the live app
+  # fails here). Its own suites run in its repo. Test steps point Chromium at a
+  # dead proxy (the suites assume no internet); loopback bypasses it.
   show-tracker:
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: yitzhach/art-show-tracker
+          path: .show-tracker
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - name: Chromium for Playwright
-        run: pnpm --filter @studio/show-tracker exec playwright install --with-deps chromium
-      - name: The tracker's own suites
-        working-directory: apps/show-tracker
-        env: { HTTPS_PROXY: "http://127.0.0.1:9", HTTP_PROXY: "http://127.0.0.1:9", NO_PROXY: "127.0.0.1,localhost" }
-        run: node build/run-suites.cjs
-      - name: Two devices, offline (phase-2 gate 1-3)
-        working-directory: apps/show-tracker
-        env: { HTTPS_PROXY: "http://127.0.0.1:9", HTTP_PROXY: "http://127.0.0.1:9", NO_PROXY: "127.0.0.1,localhost" }
+      - name: The app's studio-sdk.js matches this SDK
+        run: pnpm --filter @studio/sdk bundle:classic --check --out "$GITHUB_WORKSPACE/.show-tracker/tracker/studio-sdk.js"
+      - name: Playwright
+        run: |
+          npm install --prefix "$RUNNER_TEMP/pw" --no-save --no-package-lock playwright@1.56.1
+          echo "NODE_PATH=$RUNNER_TEMP/pw/node_modules" >> "$GITHUB_ENV"
+          "$RUNNER_TEMP/pw/node_modules/.bin/playwright" install --with-deps chromium
+      - name: Two devices, offline, against this API
+        working-directory: .show-tracker
+        env: { HTTPS_PROXY: "http://127.0.0.1:9", HTTP_PROXY: "http://127.0.0.1:9", NO_PROXY: "127.0.0.1,localhost", STUDIO_PLATFORM: ".." }
         run: node e2e/two-devices.cjs

@@ -1,7 +1,8 @@
 import { env } from "cloudflare:test";
 import { newId } from "@studio/core";
 import { describe, expect, it } from "vitest";
-import { call, makeStudio, rowCount } from "./helpers";
+import { SYNC_PUSH_MAX_OPS } from "@studio/core";
+import { call, countingEnv, makeStudio, rowCount } from "./helpers";
 
 const push = (cookie: string, ops: unknown[]) => call("/v1/sync/push", { method: "POST", cookie, json: { ops } });
 const op = (action: string, entityId: string, input: Record<string, unknown>, baseVersion: number | null = null) =>
@@ -195,5 +196,57 @@ describe("sync pull", () => {
     const { changes } = await pullAll(a.cookie);
     expect(changes.find((c) => c.entityType === "settings").record.taxRateBps).toBe(700);
     void env;
+  });
+});
+
+// A Worker on the free plan may run 50 D1 queries per request (D-050).
+describe("sync stays inside the D1 query budget", () => {
+  it("push answers the first SYNC_PUSH_MAX_OPS ops; the rest are left to send again", async () => {
+    const a = await makeStudio();
+    const ops = Array.from({ length: SYNC_PUSH_MAX_OPS + 3 }, (_, i) => op("show.create", newId(), { name: `Show ${i}` }));
+    const first = await push(a.cookie, ops);
+    expect(first.data.results).toHaveLength(SYNC_PUSH_MAX_OPS);
+    expect(first.data.results.map((r: any) => r.opId)).toEqual(ops.slice(0, SYNC_PUSH_MAX_OPS).map((o) => o.opId));
+    const rest = await push(a.cookie, ops.slice(SYNC_PUSH_MAX_OPS));
+    expect(rest.data.results.map((r: any) => r.status)).toEqual(["applied", "applied", "applied"]);
+    expect(await rowCount("SELECT COUNT(*) AS n FROM shows WHERE studio_id = ?", a.studioId)).toBe(SYNC_PUSH_MAX_OPS + 3);
+  });
+
+  it("the worst push (edits that conflict, sales that link a show and an artwork) runs at most 50 queries", async () => {
+    const a = await makeStudio();
+    const show = (await call("/v1/shows", { method: "POST", cookie: a.cookie, json: { name: "Grove" } })).data;
+    const art = (await call("/v1/artworks", { method: "POST", cookie: a.cookie, json: { title: "Heron" } })).data;
+    const sales = [];
+    for (let i = 0; i < SYNC_PUSH_MAX_OPS; i++) {
+      sales.push((await call("/v1/sales", { method: "POST", cookie: a.cookie, json: { title: `S${i}`, showId: show.id, artworkId: art.id, priceCents: 100 } })).data);
+    }
+    // Move every sale on, so the device's edits (from version 1) go down the merge path.
+    for (const s of sales) {
+      await call(`/v1/sales/${s.id}`, { method: "PATCH", cookie: a.cookie, headers: { "If-Match": "1" }, json: { notes: "server" } });
+    }
+    const edits = sales.map((s) => op("sale.update", s.id, { patch: { title: "device", showId: show.id, artworkId: art.id } }, 1));
+    const counted = countingEnv();
+    const res = await call("/v1/sync/push", { method: "POST", cookie: a.cookie, json: { ops: edits }, env: counted.env });
+    expect(res.data.results.map((r: any) => r.status)).toEqual(Array(SYNC_PUSH_MAX_OPS).fill("merged"));
+    expect(counted.count.queries).toBeLessThanOrEqual(50);
+
+    const creates = Array.from({ length: SYNC_PUSH_MAX_OPS }, (_, i) =>
+      op("sale.create", newId(), { title: `N${i}`, showId: show.id, artworkId: art.id }));
+    const c2 = countingEnv();
+    const made = await call("/v1/sync/push", { method: "POST", cookie: a.cookie, json: { ops: creates }, env: c2.env });
+    expect(made.data.results.every((r: any) => r.status === "applied")).toBe(true);
+    expect(c2.count.queries).toBeLessThanOrEqual(50);
+  });
+
+  it("a full pull page of 200 changes reads them in a handful of queries", async () => {
+    const a = await makeStudio();
+    for (let i = 0; i < 4; i++) {
+      // 50 shows per push round, written directly through the API's own actions.
+      await Promise.all(Array.from({ length: 50 }, (_, j) => call("/v1/shows", { method: "POST", cookie: a.cookie, json: { name: `S${i}-${j}` } })));
+    }
+    const counted = countingEnv();
+    const res = await call("/v1/sync/pull?since=0&limit=200", { cookie: a.cookie, env: counted.env });
+    expect(res.data.changes.length).toBeGreaterThanOrEqual(200);
+    expect(counted.count.queries).toBeLessThanOrEqual(10);
   });
 });

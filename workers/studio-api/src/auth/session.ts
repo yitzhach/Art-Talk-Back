@@ -8,6 +8,12 @@ import { accessEmail, cookie } from "./access";
 
 export const SESSION_COOKIE = "studio_session";
 export const SESSION_TTL = 30 * 24 * 3600;
+/**
+ * A session in use is renewed once it is past half its life, so an artist who
+ * opens the app at least every two weeks is never signed out mid-season (D-048).
+ * One write per two weeks per device, not one per request.
+ */
+const RENEW_AFTER = SESSION_TTL / 2;
 
 export const sessionCookie = (token: string, maxAge: number) =>
   `${SESSION_COOKIE}=${token}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${maxAge}`;
@@ -33,15 +39,24 @@ export async function loadAuth(req: Request, env: Env): Promise<Auth | null> {
   const token = cookie(req, SESSION_COOKIE);
   if (token) {
     const row = await env.DB.prepare(
-      `SELECT s.id AS session_id, s.studio_id, u.id AS user_id, u.email, u.name
+      `SELECT s.id AS session_id, s.studio_id, s.expires_at, u.id AS user_id, u.email, u.name
          FROM sessions s JOIN users u ON u.id = s.user_id
         WHERE s.token_hash = ? AND s.expires_at > ? AND u.deleted_at IS NULL`,
-    ).bind(await sha256(token), nowIso()).first<{ session_id: string; studio_id: string | null; user_id: string; email: string; name: string | null }>();
+    ).bind(await sha256(token), nowIso()).first<{
+      session_id: string; studio_id: string | null; expires_at: string; user_id: string; email: string; name: string | null;
+    }>();
     if (row) {
       const m = await membership(env, row.user_id, row.studio_id);
+      let renewedCookie: string | undefined;
+      if (row.expires_at < inSeconds(SESSION_TTL - RENEW_AFTER)) {
+        await env.DB.prepare("UPDATE sessions SET expires_at = ?, last_seen_at = ? WHERE id = ?")
+          .bind(inSeconds(SESSION_TTL), nowIso(), row.session_id).run();
+        renewedCookie = sessionCookie(token, SESSION_TTL);
+      }
       return {
         userId: row.user_id, email: row.email, name: row.name, sessionId: row.session_id,
         studioId: m?.studio_id ?? null, role: m?.role ?? null, clientId: m?.client_id ?? null,
+        ...(renewedCookie ? { renewedCookie } : {}),
       };
     }
   }

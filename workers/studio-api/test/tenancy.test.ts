@@ -2,9 +2,9 @@
 // records gets 404 (D-016) and B's data is unchanged. The last test fails if
 // a route exists that this file doesn't cover.
 import { env } from "cloudflare:test";
-import { newId } from "@studio/core";
+import { SYNC_PUSH_MAX_OPS, newId } from "@studio/core";
 import { beforeAll, describe, expect, it } from "vitest";
-import { BASE, call, makeStudio, type Studio } from "./helpers";
+import { ASSISTANT, BASE, call, makeStudio, type Studio } from "./helpers";
 
 let A: Studio;
 let B: Studio;
@@ -13,7 +13,8 @@ const b: Record<string, any> = {};
 /** Everything studio B owns, to prove nothing changed. */
 async function snapshotB() {
   const out: Record<string, unknown> = {};
-  for (const t of ["artworks", "clients", "shows", "sales", "files", "studio_settings", "activity_log", "memberships"]) {
+  for (const t of ["artworks", "clients", "shows", "sales", "files", "studio_settings", "activity_log", "memberships",
+    "assistant_policy", "pending_actions", "assistant_messages"]) {
     out[t] = (await env.DB.prepare(`SELECT * FROM ${t} WHERE studio_id = ? ORDER BY 1`).bind(B.studioId).all()).results;
   }
   return out;
@@ -30,6 +31,13 @@ beforeAll(async () => {
   await call(up.uploadUrl.replace(BASE, ""), { method: "PUT", body: "abc", headers: { "Content-Length": "3" } });
   b.file = (await call(`/v1/files/${up.file.id}/attach`, { method: "POST", cookie: B.cookie, json: { entityType: "artwork", entityId: b.artwork.id } })).data;
   b.logId = (await call("/v1/activity", { cookie: B.cookie })).data.items[0].id;
+  b.card = (await call("/v1/assistant/act", { method: "POST", cookie: B.cookie, headers: ASSISTANT,
+    json: { action: "sale.create", input: { title: "B's card", showId: b.show.id }, summary: "B" } })).data.proposal;
+  await call("/v1/assistant/policy/show.create", { method: "PUT", cookie: B.cookie, json: { level: "confirm" } });
+  const thread = (await call("/v1/assistant/thread", { cookie: B.cookie })).data.threadId;
+  await call("/v1/assistant/thread/messages", { method: "POST", cookie: B.cookie, headers: ASSISTANT,
+    json: { threadId: thread, app: null, messages: [{ role: "user", content: "B's words" }] } });
+  b.thread = thread;
   b.opKey = newId();
   await call("/v1/artworks", { method: "POST", cookie: B.cookie, headers: { "Idempotency-Key": b.opKey }, json: { title: "B keyed" } });
 });
@@ -61,6 +69,12 @@ attempt("post", "/activity/{id}/undo", () => call(`/v1/activity/${b.logId}/undo`
 attempt("post", "/files/{id}/attach", () => call(`/v1/files/${b.file.id}/attach`, { method: "POST", cookie: A.cookie, json: { entityType: "artwork", entityId: b.artwork.id } }));
 attempt("get", "/files/{id}/download-url", () => call(`/v1/files/${b.file.id}/download-url`, { cookie: A.cookie }));
 attempt("post", "/actions/{name}", () => call("/v1/actions/artwork.update", { method: "POST", cookie: A.cookie, json: { id: b.artwork.id, version: 1, patch: { title: "pwned" } } }));
+attempt("post", "/assistant/proposals/{id}/confirm", () => call(`/v1/assistant/proposals/${b.card.id}/confirm`, { method: "POST", cookie: A.cookie }));
+attempt("post", "/assistant/proposals/{id}/cancel", () => call(`/v1/assistant/proposals/${b.card.id}/cancel`, { method: "POST", cookie: A.cookie }));
+attempt("post", "/assistant/act", () => call("/v1/assistant/act", { method: "POST", cookie: A.cookie, headers: ASSISTANT,
+  json: { action: "show.update", input: { id: b.show.id, patch: { name: "pwned" } }, summary: "x" } }));
+cases.push(["post", "/assistant/act (sale naming B's show)", () => call("/v1/assistant/act", { method: "POST", cookie: A.cookie, headers: ASSISTANT,
+  json: { action: "sale.create", input: { title: "x", showId: b.show.id }, summary: "x" } })]);
 attempt("post", "/auth/studio", () => call("/v1/auth/studio", { method: "POST", cookie: A.cookie, json: { studioId: B.studioId } }));
 
 describe("studio A can't reach studio B", () => {
@@ -84,8 +98,12 @@ describe("studio A can't reach studio B", () => {
       { opId: newId(), action: "sale.create", entityId: newId(), baseVersion: null, input: { showId: b.show.id } },
       { opId: newId(), action: "show.restore", entityId: b.show.id, baseVersion: null, input: { id: b.show.id } },
     ];
-    const res = await call("/v1/sync/push", { method: "POST", cookie: A.cookie, json: { ops } });
-    expect(res.data.results.map((r: any) => [r.status, r.error?.code])).toEqual(ops.map(() => ["rejected", "not_found"]));
+    // One push answers SYNC_PUSH_MAX_OPS ops (D-050), so send them the way a device would.
+    const results: any[] = [];
+    for (let i = 0; i < ops.length; i += SYNC_PUSH_MAX_OPS) {
+      results.push(...(await call("/v1/sync/push", { method: "POST", cookie: A.cookie, json: { ops: ops.slice(i, i + SYNC_PUSH_MAX_OPS) } })).data.results);
+    }
+    expect(results.map((r: any) => [r.status, r.error?.code])).toEqual(ops.map(() => ["rejected", "not_found"]));
     expect(await snapshotB()).toEqual(before);
   });
 
@@ -128,6 +146,31 @@ describe("studio A can't reach studio B", () => {
     ["get", "/sales", async () => expect((await call("/v1/sales", { cookie: A.cookie })).data.items).toEqual([])],
     ["post", "/sales", async () => expect((await call("/v1/sales", { method: "POST", cookie: A.cookie, json: { title: "A's" } })).data.studioId).toBe(A.studioId)],
     ["post", "/clients", async () => expect((await call("/v1/clients", { method: "POST", cookie: A.cookie, json: { name: "A's" } })).data.studioId).toBe(A.studioId)],
+    ["get", "/assistant/proposals", async () => expect((await call("/v1/assistant/proposals", { cookie: A.cookie })).data.items).toEqual([])],
+    ["get", "/search", async () => expect((await call("/v1/search?q=B's", { cookie: A.cookie })).data.items).toEqual([])],
+    ["get", "/assistant/tools", async () => {
+      // B set show.create to confirm; A's tools still say auto.
+      const tools = (await call("/v1/assistant/tools?app=show-tracker", { cookie: A.cookie })).data.tools;
+      expect(tools.find((t: any) => t.name === "show_create").level).toBe("auto");
+    }],
+    ["get", "/assistant/policy", async () => {
+      const items = (await call("/v1/assistant/policy", { cookie: A.cookie })).data.items;
+      expect(items.find((p: any) => p.action === "show.create").studioLevel).toBeNull();
+    }],
+    ["put", "/assistant/policy/{action}", async () => {
+      expect((await call("/v1/assistant/policy/show.create", { method: "PUT", cookie: A.cookie, json: { level: "never" } })).status).toBe(200);
+    }],
+    ["get", "/assistant/thread", async () => {
+      const t = (await call("/v1/assistant/thread", { cookie: A.cookie })).data;
+      expect(t.threadId).not.toBe(b.thread);
+      expect(t.messages).toEqual([]);
+    }],
+    ["post", "/assistant/thread/messages", async () => {
+      // Even naming B's thread id, the message lands in A's studio, as A's.
+      expect((await call("/v1/assistant/thread/messages", { method: "POST", cookie: A.cookie, headers: ASSISTANT,
+        json: { threadId: b.thread, app: null, messages: [{ role: "user", content: "A's words" }] } })).status).toBe(200);
+      expect((await call("/v1/assistant/thread", { cookie: B.cookie })).data.messages.map((m: any) => m.content)).toEqual(["B's words"]);
+    }],
     ["post", "/files/upload-url", async () => {
       const res = await call("/v1/files/upload-url", { method: "POST", cookie: A.cookie, json: { name: "x.jpg", contentType: "image/jpeg", size: 1 } });
       expect(res.data.file.studioId).toBe(A.studioId);

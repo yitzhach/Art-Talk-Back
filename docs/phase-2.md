@@ -30,6 +30,10 @@ and a second device shows it. Concretely:
 - [x] Deploy `studio-api-staging` + Show Tracker staging; real-device run (gate 4)
 - [x] Move the built routes out of `openapi.phase2.draft.yaml`; delete it when empty (D-013)
 
+## Closed (2026-10-03)
+
+Phase 2 is shipped. The no-show sale finding is settled as a warning (D-044, app repo). Phase-end routine done: Phase 3 evals, pruning, `docs/phase-3.md`.
+
 ## Progress (2026-10-03) · gate 4 passed
 
 Isaac ran "Deploy staging" (now also deploys `studio-show-tracker-staging`, D-041)

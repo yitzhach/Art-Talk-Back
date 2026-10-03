@@ -4,6 +4,9 @@ name: Deploy staging
 # Needs (repo Settings -> Secrets and variables -> Actions):
 #   secrets:   CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID, RESEND_API_KEY
 #   variables: OWNER_EMAILS (comma-separated), MAIL_FROM (e.g. "Isaac Anderson Art <hello@yourdomain>")
+# Optional, for the assistant (Phase 3; skipped until ANTHROPIC_API_KEY is set):
+#   secrets:   ANTHROPIC_API_KEY, AI_GATEWAY_TOKEN (only if the gateway requires auth)
+#   variables: AI_GATEWAY_URL (https://gateway.ai.cloudflare.com/v1/<account id>/<gateway>/anthropic)
 # Deploys studio-api-staging, then the Show Tracker (yitzhach/art-show-tracker, branch
 # `app_ref`) as studio-show-tracker-staging.
 # Production is not deployed from here (docs/phase-2.md, step 8).
@@ -34,6 +37,9 @@ jobs:
       RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
       OWNER_EMAILS: ${{ vars.OWNER_EMAILS }}
       MAIL_FROM: ${{ vars.MAIL_FROM }}
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      AI_GATEWAY_TOKEN: ${{ secrets.AI_GATEWAY_TOKEN }}
+      AI_GATEWAY_URL: ${{ vars.AI_GATEWAY_URL }}
     steps:
       - name: Check required secrets and variables
         working-directory: .
@@ -74,6 +80,25 @@ jobs:
           fi
       - name: Set RESEND_API_KEY
         run: printf '%s' "$RESEND_API_KEY" | pnpm exec wrangler secret put RESEND_API_KEY --env staging
+      # studio-assistant-staging (Phase 3), once there is a model key. Both Workers get
+      # the same ASSISTANT_KEY, made here once and never shown (D-046).
+      - name: Deploy studio-assistant-staging
+        if: env.ANTHROPIC_API_KEY != ''
+        working-directory: workers/assistant
+        run: |
+          pnpm exec wrangler deploy --env staging --var "AI_GATEWAY_URL:$AI_GATEWAY_URL"
+          printf '%s' "$ANTHROPIC_API_KEY" | pnpm exec wrangler secret put ANTHROPIC_API_KEY --env staging
+          if [ -n "$AI_GATEWAY_TOKEN" ]; then printf '%s' "$AI_GATEWAY_TOKEN" | pnpm exec wrangler secret put AI_GATEWAY_TOKEN --env staging; fi
+      - name: Share ASSISTANT_KEY between studio-api-staging and studio-assistant-staging (once)
+        if: env.ANTHROPIC_API_KEY != ''
+        working-directory: .
+        run: |
+          api=$(pnpm --dir workers/studio-api exec wrangler secret list --env staging | grep -c '"ASSISTANT_KEY"' || true)
+          bot=$(pnpm --dir workers/assistant exec wrangler secret list --env staging | grep -c '"ASSISTANT_KEY"' || true)
+          if [ "$api" = "1" ] && [ "$bot" = "1" ]; then echo "ASSISTANT_KEY already set on both"; exit 0; fi
+          key=$(openssl rand -hex 32)
+          printf '%s' "$key" | pnpm --dir workers/studio-api exec wrangler secret put ASSISTANT_KEY --env staging
+          printf '%s' "$key" | pnpm --dir workers/assistant exec wrangler secret put ASSISTANT_KEY --env staging
       # The Show Tracker lives in its own repo (D-042). Its `staging` env is a new
       # Worker bound to studio-api-staging (D-041); its top level is the live
       # art-show-tracker, which only its own Git integration deploys.

@@ -65,9 +65,21 @@ export function opId(c: Context): string | null {
 export async function run<R = unknown>(c: Context<AppEnv>, name: string, input: unknown, extra: Partial<RunOptions> = {}) {
   const def = getAction(name);
   if (!def) throw new HttpError("not_found", `No action named ${name}`);
+  if (def.internal) throw new HttpError("not_found", `No action named ${name}`);
+  const actor = requireActor(c);
   return runAction<R>(def as never, input, {
-    env: c.env, actor: requireActor(c), origin: new URL(c.req.url).origin, opId: opId(c), ...extra,
+    env: c.env, actor, origin: new URL(c.req.url).origin, opId: opId(c),
+    // Whatever route the assistant uses, its writes carry its limits (D-045, D-046).
+    source: actor.viaAssistant ? "assistant" : "app",
+    ...extra,
   });
+}
+
+/** Routes only a person may call: confirming a card, changing what the assistant may do. */
+export function requireHuman(c: Context<AppEnv>) {
+  const actor = requireActor(c);
+  if (actor.viaAssistant) throw new HttpError("forbidden", "Only a person can do this, not the assistant");
+  return actor;
 }
 
 /**

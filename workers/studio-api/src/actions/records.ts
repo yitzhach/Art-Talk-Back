@@ -29,6 +29,7 @@ export interface EntityDef {
 
 const entities = new Map<string, EntityDef>();
 const define = (e: EntityDef) => (entities.set(e.type, e), e);
+export const defineEntity = define;
 export const getEntity = (type: string) => entities.get(type);
 
 const recordDefaults = { createdBy: null, deletedAt: null, meta: {}, version: 1, actorType: "user" };
@@ -122,7 +123,7 @@ export function updateWrite(ctx: ActionCtx, e: EntityDef, before: Snapshot, chan
 export function insertWrite(ctx: ActionCtx, e: EntityDef, fields: Snapshot): Write {
   const row: Snapshot = {
     ...e.defaults, ...fields, studioId: ctx.actor.studioId, createdAt: ctx.now, updatedAt: ctx.now,
-    createdBy: ctx.actor.userId, actorType: "user", version: 1, deletedAt: null,
+    createdBy: ctx.actor.userId, actorType: ctx.source === "assistant" ? "assistant" : "user", version: 1, deletedAt: null,
   };
   return {
     query: ctx.db.insert(e.table).values(row),
@@ -143,16 +144,27 @@ const VersionedId = { id: Id, version: z.number().int().min(1) };
 /** Checks run before a create or update writes, e.g. that linked records are in the caller's studio. */
 type Refs = (ctx: ActionCtx, fields: Snapshot) => Promise<void>;
 
+interface CrudOptions {
+  refs?: Refs;
+  /** Extra words for the assistant's tool descriptions: what the fields mean. */
+  about?: string;
+  /** The assistant's level for create and update (delete is always_confirm). */
+  risk?: "auto" | "confirm";
+  apps?: readonly string[];
+}
+
 /** create / update / delete actions for one record type. */
-function crudActions(e: EntityDef, input: z.ZodType<Snapshot>, patch: z.ZodType<Snapshot>, refs?: Refs) {
+function crudActions(e: EntityDef, input: z.ZodType<Snapshot>, patch: z.ZodType<Snapshot>, { refs, risk = "auto", apps, about }: CrudOptions = {}) {
+  const more = about ? ` ${about}` : "";
   const one = (_c: ActionCtx, afters: (Snapshot | null)[]) => afters[0] as Snapshot;
   return {
     create: defineAction({
       name: `${e.type}.create`,
-      description: `Create a ${e.type}`,
+      description: `Create a ${e.type}.${more}`,
       input,
       permission: `${e.perm}:write` as Permission,
-      risk: "auto",
+      risk,
+      ...(apps ? { apps } : {}),
       plan: async (ctx, data) => {
         await refs?.(ctx, data);
         return { writes: [insertWrite(ctx, e, { ...clientFields(data), id: data.id ?? newId() })] };
@@ -161,10 +173,11 @@ function crudActions(e: EntityDef, input: z.ZodType<Snapshot>, patch: z.ZodType<
     }),
     update: defineAction({
       name: `${e.type}.update`,
-      description: `Change fields on a ${e.type}`,
+      description: `Change fields on a ${e.type}; send only the fields that change.${more}`,
       input: z.object({ ...VersionedId, patch }),
       permission: `${e.perm}:write` as Permission,
-      risk: "auto",
+      risk,
+      ...(apps ? { apps } : {}),
       plan: async (ctx, { id, version, patch: p }) => {
         const before = await getRecord(ctx.db, e, ctx.actor.studioId, id);
         checkVersion(before, version);
@@ -179,6 +192,7 @@ function crudActions(e: EntityDef, input: z.ZodType<Snapshot>, patch: z.ZodType<
       input: z.object(VersionedId),
       permission: `${e.perm}:delete` as Permission,
       risk: "always_confirm",
+      ...(apps ? { apps } : {}),
       plan: async (ctx, { id, version }) => {
         const before = await getRecord(ctx.db, e, ctx.actor.studioId, id);
         checkVersion(before, version);
@@ -192,7 +206,8 @@ function crudActions(e: EntityDef, input: z.ZodType<Snapshot>, patch: z.ZodType<
       description: `Bring back a deleted ${e.type}`,
       input: z.object({ id: Id }),
       permission: `${e.perm}:delete` as Permission,
-      risk: "auto",
+      risk: "confirm",
+      ...(apps ? { apps } : {}),
       plan: async (ctx, { id }) => {
         const before = await getRecord(ctx.db, e, ctx.actor.studioId, id, { withDeleted: true });
         if (!before.deletedAt) throw new HttpError("bad_request", `That ${e.type} isn't deleted`);
@@ -205,13 +220,22 @@ function crudActions(e: EntityDef, input: z.ZodType<Snapshot>, patch: z.ZodType<
 
 export const artworkActions = crudActions(artworkEntity, ArtworkInput, ArtworkPatch);
 export const clientActions = crudActions(clientEntity, ClientInput, ClientPatch);
-export const showActions = crudActions(showEntity, ShowInput, ShowPatch);
+export const showActions = crudActions(showEntity, ShowInput, ShowPatch, {
+  apps: ["show-tracker"],
+  about: "An art show or fair the artist applies to or exhibits at. Dates are YYYY-MM-DD; feeCents is the booth fee in whole cents ($650 = 65000); leave unknown values out rather than guessing.",
+});
 // A sale may name a show and an artwork in this studio (D-016: else 404). A deleted
 // show still counts: the sale happened, and its history outlives the show's row.
-export const saleActions = crudActions(saleEntity, SaleInput, SalePatch, async (ctx, f) => {
-  const opts = { withDeleted: true };
-  if (f.showId) await getRecord(ctx.db, showEntity, ctx.actor.studioId, f.showId as string, opts);
-  if (f.artworkId) await getRecord(ctx.db, artworkEntity, ctx.actor.studioId, f.artworkId as string, opts);
+// Logging a sale is like marking sold: the assistant asks first (spec → Confirm).
+export const saleActions = crudActions(saleEntity, SaleInput, SalePatch, {
+  risk: "confirm",
+  apps: ["show-tracker"],
+  about: "One sale of a piece, or several prints of it (quantity). priceCents is the price of ONE piece in whole cents ($90 = 9000); title is the piece as the artist names it; showId is the show it sold at (find it with search); soldOn is YYYY-MM-DD; paymentMethod is cash, card, check, online or other. Leave unknown values out: never invent a price or a date.",
+  refs: async (ctx, f) => {
+    const opts = { withDeleted: true };
+    if (f.showId) await getRecord(ctx.db, showEntity, ctx.actor.studioId, f.showId as string, opts);
+    if (f.artworkId) await getRecord(ctx.db, artworkEntity, ctx.actor.studioId, f.artworkId as string, opts);
+  },
 });
 
 export const settingsUpdate = defineAction({

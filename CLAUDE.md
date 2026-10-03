@@ -39,9 +39,9 @@ The backend-builder skill's "Done Means", plus an entry in `CHANGELOG.md`.
 ```
 docs/                     SPEC.md, phase-N.md plans, cloudflare-inventory.md, openapi.json (generated)
 packages/core/            Zod schemas, types, Drizzle schema, ULIDs
-packages/sdk/             API client, IndexedDB, outbox sync, uploads    (Phase 2)
-workers/studio-api/       Hono API; actions/ (defineAction registry — moves to core in Phase 3); migrations/
-workers/assistant/        model calls, tools, job Workflows              (Phase 3)
+packages/sdk/             API client, IndexedDB, outbox sync, uploads; classic-script bundle for apps
+workers/studio-api/       Hono API; actions/ (defineAction registry); migrations/
+workers/assistant/        `studio-assistant`: model calls, tools, later job Workflows  (Phase 3, now)
 apps/                     none long-term: apps live in their own repos (D-042)
 ```
 

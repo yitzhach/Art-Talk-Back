@@ -11,6 +11,8 @@ export interface Env {
   RESEND_API_KEY?: string;
   ACCESS_TEAM_DOMAIN?: string;
   ACCESS_AUD?: string;
+  /** Shared with studio-assistant; a request carrying it acts as the assistant (D-046). */
+  ASSISTANT_KEY?: string;
 }
 
 export type Role = "owner" | "staff" | "client";
@@ -25,6 +27,10 @@ export interface Auth {
   studioId: string | null;
   role: Role | null;
   clientId: string | null;
+  /** The request came from studio-assistant on this person's behalf: its writes are the assistant's (D-046). */
+  viaAssistant?: boolean;
+  /** Set when this request renewed the session: the cookie to send back with a fresh Max-Age. */
+  renewedCookie?: string;
 }
 
 /** A caller who has an active studio. */

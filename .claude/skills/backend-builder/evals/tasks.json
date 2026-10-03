@@ -45,6 +45,52 @@
         { "type": "regex", "value": "\\bseq\\b", "description": "Uses the activity log's running number as the sync point" },
         { "type": "regex", "value": "(?i)deleted_?at", "description": "Sends deletions too, so other devices remove them" }
       ]
+    },
+    {
+      "id": "p3-assistant-policy",
+      "split": "train",
+      "reviewed": false,
+      "intent": "Let each studio decide, per action, how much the AI assistant may do on its own: run it, ask first, always ask, or never. The assistant must not be able to get around this.",
+      "checks": [
+        { "type": "regex", "value": "migrations/0004_[a-z_]+\\.sql", "description": "A new numbered migration, not an edit to an applied one" },
+        { "type": "regex", "value": "(?i)assistant_policy", "description": "The policy is stored per studio in the database" },
+        { "type": "regex", "value": "(?i)runAction|runner\\.ts", "description": "Enforced in studio-api's action runner, not in the prompt" },
+        { "type": "regex", "value": "(?i)never (be )?lower|only raise|cannot be set to auto|can't be set to auto", "description": "A studio can tighten an action's risk but never loosen always_confirm" }
+      ]
+    },
+    {
+      "id": "p3-confirm-card",
+      "split": "val",
+      "reviewed": false,
+      "intent": "When the assistant wants to log a sale, show the artist one card to tap before anything is saved, with Undo afterwards.",
+      "checks": [
+        { "type": "regex", "value": "(?i)pending", "description": "The proposal is held server-side until the tap" },
+        { "type": "regex", "value": "(?i)/v1/pending/[^\\s]*confirm", "description": "The tap confirms through studio-api with the user's session" },
+        { "type": "not_contains", "value": "risk: \"auto\"", "description": "Doesn't make a money action run without a tap" },
+        { "type": "regex", "value": "(?i)undo", "description": "The result card can be undone" }
+      ]
+    },
+    {
+      "id": "p3-search",
+      "split": "test",
+      "reviewed": false,
+      "intent": "Let the assistant turn a name like \"Winter Park\" or \"the heron print\" into the right show or sale, and ask which one when two match.",
+      "checks": [
+        { "type": "contains", "value": "/v1/search", "description": "Name resolution is an API route" },
+        { "type": "regex", "value": "studio_id", "description": "Search only looks inside the signed-in studio" },
+        { "type": "regex", "value": "(?i)tenancy", "description": "The new route is added to the cross-studio test suite" }
+      ]
+    },
+    {
+      "id": "p3-tools-per-app",
+      "split": "test",
+      "reviewed": false,
+      "intent": "Only send the model the tools that make sense for the app the artist is in, so the Show Tracker assistant can't reach invoice or client tools.",
+      "checks": [
+        { "type": "regex", "value": "(?i)registry|defineAction", "description": "Tools are generated from the action registry, not hand-written" },
+        { "type": "regex", "value": "(?i)filter", "description": "The tool list is filtered per app" },
+        { "type": "regex", "value": "(?i)test", "description": "A test checks which tools are sent" }
+      ]
     }
   ]
 }

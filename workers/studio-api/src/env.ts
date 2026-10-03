@@ -25,6 +25,8 @@ export interface Auth {
   studioId: string | null;
   role: Role | null;
   clientId: string | null;
+  /** Set when this request renewed the session: the cookie to send back with a fresh Max-Age. */
+  renewedCookie?: string;
 }
 
 /** A caller who has an active studio. */

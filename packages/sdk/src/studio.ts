@@ -47,7 +47,8 @@ export interface StudioOptions extends ClientOptions {
   intervalMs?: number;
 }
 
-const PUSH_BATCH = 200;
+/** Ops per push: what one push answers (core's SYNC_PUSH_MAX_OPS, D-050; a test keeps them equal). */
+export const PUSH_BATCH = 6;
 
 export class Studio {
   readonly api: ApiClient;

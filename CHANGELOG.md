@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+### Review fixes (2026-10-03)
+- Sessions renew while in use, so a phone used every two weeks never signs out mid-season (D-048).
+- Sign-in codes: at most 5 an hour per address; migration 0004 (D-049).
+- Sync inside D1's query budget: pull reads records per type (203 → 7 queries per page); push answers 6 ops per call and the SDK sends 6 at a time (D-050).
+- File downloads: only safe types inline; nosniff + sandbox CSP on every file (D-051).
+- Show Tracker (app branch): an ended sign-in no longer wipes unsent changes; the import resends what a push didn't answer, with progress.
+
 ### Phase 2 · close-out
 - Merged yitzhach/Art-Talk-Back#5: `apps/show-tracker/` removed; CI tests the app from its own repo (D-042).
 - Show Tracker (app repo, branch `claude/optimistic-cray-4mcj1e`): the Money page warns before saving a sale with no show, and doesn't block it (D-044).

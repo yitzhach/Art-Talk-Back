@@ -119,7 +119,8 @@ export const loginCodes = sqliteTable("login_codes", {
   codeHash: text("code_hash").notNull(),
   attempts: integer("attempts").notNull().default(0),
   expiresAt: text("expires_at").notNull(),
-  createdAt: text("created_at").notNull(),
+  createdAt: text("created_at").notNull(), // start of the hour that `sends` counts (D-049)
+  sends: integer("sends").notNull().default(1),
 });
 
 export const studioSettings = sqliteTable(

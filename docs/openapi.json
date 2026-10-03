@@ -910,10 +910,20 @@
         },
         "responses": {
           "204": {
-            "description": "Code sent (always 204, so addresses can't be probed)"
+            "description": "Code sent (204 for any address, so addresses can't be probed)"
           },
           "400": {
             "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many codes for this address: 5 an hour (D-049)",
             "content": {
               "application/json": {
                 "schema": {
@@ -4707,7 +4717,7 @@
           "sync"
         ],
         "summary": "Apply a device's outbox, in order",
-        "description": "Each op runs through the same action as a normal API call. A repeated opId returns `duplicate` without writing again. One op failing doesn't stop the rest.",
+        "description": "Each op runs through the same action as a normal API call. A repeated opId returns `duplicate` without writing again. One op failing doesn't stop the rest. Answers the first 6 ops; send the others again (D-050).",
         "requestBody": {
           "required": true,
           "content": {
@@ -4765,7 +4775,7 @@
         },
         "responses": {
           "200": {
-            "description": "One result per op, same order",
+            "description": "One result per answered op, same order",
             "content": {
               "application/json": {
                 "schema": {
@@ -4834,7 +4844,8 @@
                           "opId",
                           "status"
                         ]
-                      }
+                      },
+                      "description": "One result per op, in order, for the first 6 ops. Ops after those get no result and were not applied: send them again."
                     }
                   },
                   "required": [

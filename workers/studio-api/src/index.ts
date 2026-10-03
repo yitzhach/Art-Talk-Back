@@ -17,8 +17,11 @@ import { syncRoutes } from "./routes/sync";
 const v1 = new OpenAPIHono<AppEnv>();
 
 v1.use("*", async (c, next) => {
-  c.set("auth", await loadAuth(c.req.raw, c.env));
+  const auth = await loadAuth(c.req.raw, c.env);
+  c.set("auth", auth);
   await next();
+  // A renewed session gets its cookie back, unless this response already sets one (sign-in, sign-out).
+  if (auth?.renewedCookie && !c.res.headers.has("Set-Cookie")) c.res.headers.append("Set-Cookie", auth.renewedCookie);
 });
 
 v1.route("/", authRoutes);

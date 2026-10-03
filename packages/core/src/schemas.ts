@@ -233,6 +233,12 @@ export const SyncOp = z.object({
   input: z.record(z.string(), z.unknown()),
 });
 export const SyncPushRequest = z.object({ ops: z.array(SyncOp).min(1).max(200) });
+/**
+ * How many ops one push answers (D-050). The rest get no result and are sent
+ * again. Each op costs about 6 D1 queries, and a Worker on the free plan may
+ * run 50 per request. The SDK sends batches of this size.
+ */
+export const SYNC_PUSH_MAX_OPS = 6;
 
 export const SyncStatus = z.enum(["applied", "merged", "conflict", "rejected", "duplicate"]);
 export const SyncConflict = z.object({ field: z.string(), serverValue: z.unknown(), deviceValue: z.unknown() });
@@ -244,7 +250,9 @@ export const SyncOpResult = z.object({
   error: z.object({ code: z.string(), message: z.string(), details: Meta.optional() }).optional(),
 });
 // No cursor here on purpose: a device advances its cursor only by pulling, so it can't skip others' changes.
-export const SyncPushResponse = z.object({ results: z.array(SyncOpResult) });
+export const SyncPushResponse = z.object({
+  results: z.array(SyncOpResult).meta({ description: `One result per op, in order, for the first ${SYNC_PUSH_MAX_OPS} ops. Ops after those get no result and were not applied: send them again.` }),
+});
 
 export const SyncChange = z.object({ entityType: z.string(), entityId: z.string(), record: Meta });
 export const SyncPullResponse = z.object({ changes: z.array(SyncChange), cursor: z.string(), hasMore: z.boolean() });

@@ -2,7 +2,7 @@
 // records gets 404 (D-016) and B's data is unchanged. The last test fails if
 // a route exists that this file doesn't cover.
 import { env } from "cloudflare:test";
-import { newId } from "@studio/core";
+import { SYNC_PUSH_MAX_OPS, newId } from "@studio/core";
 import { beforeAll, describe, expect, it } from "vitest";
 import { BASE, call, makeStudio, type Studio } from "./helpers";
 
@@ -84,8 +84,12 @@ describe("studio A can't reach studio B", () => {
       { opId: newId(), action: "sale.create", entityId: newId(), baseVersion: null, input: { showId: b.show.id } },
       { opId: newId(), action: "show.restore", entityId: b.show.id, baseVersion: null, input: { id: b.show.id } },
     ];
-    const res = await call("/v1/sync/push", { method: "POST", cookie: A.cookie, json: { ops } });
-    expect(res.data.results.map((r: any) => [r.status, r.error?.code])).toEqual(ops.map(() => ["rejected", "not_found"]));
+    // One push answers SYNC_PUSH_MAX_OPS ops (D-050), so send them the way a device would.
+    const results: any[] = [];
+    for (let i = 0; i < ops.length; i += SYNC_PUSH_MAX_OPS) {
+      results.push(...(await call("/v1/sync/push", { method: "POST", cookie: A.cookie, json: { ops: ops.slice(i, i + SYNC_PUSH_MAX_OPS) } })).data.results);
+    }
+    expect(results.map((r: any) => [r.status, r.error?.code])).toEqual(ops.map(() => ["rejected", "not_found"]));
     expect(await snapshotB()).toEqual(before);
   });
 

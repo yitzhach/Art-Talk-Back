@@ -11,10 +11,14 @@ import type { AppEnv, Env } from "../env";
 import { safeEqual, sha256, sixDigitCode } from "../lib/crypto";
 import { HttpError } from "../lib/errors";
 import { inSeconds, nowIso } from "../lib/time";
-import { body, errors, json, newApp, send } from "./common";
+import { ErrorBody, body, errors, json, newApp, send } from "./common";
+
+const err429 = (description: string) => ({ description, content: { "application/json": { schema: ErrorBody } } });
 
 const CODE_TTL = 15 * 60;
 const MAX_TRIES = 6; // per code (D-019)
+// D-049: per address, at most this many codes an hour.
+const SENDS_PER_HOUR = 5;
 const Email = z.email().transform((e) => e.toLowerCase());
 
 export const authRoutes = newApp();
@@ -23,16 +27,30 @@ authRoutes.openapi(
   createRoute({
     method: "post", path: "/auth/code", tags: ["auth"], security: [], summary: "Email a 6-digit sign-in code",
     request: { body: body(z.object({ email: Email })) },
-    responses: { 204: { description: "Code sent (always 204, so addresses can't be probed)" }, 400: errors[400] },
+    responses: {
+      204: { description: "Code sent (204 for any address, so addresses can't be probed)" },
+      400: errors[400],
+      429: err429("Too many codes for this address: 5 an hour (D-049)"),
+    },
   }),
   async (c) => {
     const { email } = c.req.valid("json");
+    // The same limits for every address, known or not, so a 429 says nothing about who has an account.
+    const prev = await c.env.DB.prepare("SELECT sends, created_at FROM login_codes WHERE email = ?")
+      .bind(email).first<{ sends: number; created_at: string }>();
+    const now = Date.now();
+    const hourOpen = prev && Date.parse(prev.created_at) > now - 3600_000;
+    if (prev && hourOpen && prev.sends >= SENDS_PER_HOUR) {
+      const mins = Math.max(1, Math.ceil((Date.parse(prev.created_at) + 3600_000 - now) / 60_000));
+      throw new HttpError("rate_limited", `That's ${SENDS_PER_HOUR} codes this hour. Use the newest one, or ask again in ${mins} minute${mins === 1 ? "" : "s"}.`);
+    }
     const code = sixDigitCode();
     await c.env.DB.prepare(
-      `INSERT INTO login_codes (email, code_hash, attempts, expires_at, created_at) VALUES (?, ?, 0, ?, ?)
-       ON CONFLICT(email) DO UPDATE SET code_hash = excluded.code_hash, attempts = 0,
-         expires_at = excluded.expires_at, created_at = excluded.created_at`,
-    ).bind(email, await sha256(code + email), inSeconds(CODE_TTL), nowIso()).run();
+      `INSERT INTO login_codes (email, code_hash, attempts, expires_at, created_at, sends) VALUES (?, ?, 0, ?, ?, 1)
+       ON CONFLICT(email) DO UPDATE SET code_hash = excluded.code_hash, attempts = 0, expires_at = excluded.expires_at,
+         created_at = CASE WHEN ? THEN login_codes.created_at ELSE excluded.created_at END,
+         sends = CASE WHEN ? THEN login_codes.sends + 1 ELSE 1 END`,
+    ).bind(email, await sha256(code + email), inSeconds(CODE_TTL), nowIso(), hourOpen ? 1 : 0, hourOpen ? 1 : 0).run();
     await sendLoginCode(c.env, email, code);
     return c.body(null, 204);
   },

@@ -8,16 +8,16 @@ import { sha256, randomToken } from "../src/lib/crypto";
 
 export const BASE = "https://api.test";
 
-export async function call(path: string, init: RequestInit & { cookie?: string; json?: unknown } = {}) {
+export async function call(path: string, init: RequestInit & { cookie?: string; json?: unknown; env?: typeof env } = {}) {
   const headers = new Headers(init.headers);
   if (init.cookie) headers.set("Cookie", init.cookie);
-  const { cookie: _c, json, body: rawBody, ...rest } = init;
+  const { cookie: _c, json, body: rawBody, env: callEnv = env, ...rest } = init;
   let body: BodyInit | null = rawBody ?? null;
   if (json !== undefined) {
     headers.set("content-type", "application/json");
     body = JSON.stringify(json);
   }
-  const res = await app.request(`${BASE}${path}`, { ...rest, headers, body }, env);
+  const res = await app.request(`${BASE}${path}`, { ...rest, headers, body }, callEnv);
   const text = await res.text();
   let data: any = null;
   try { data = text ? JSON.parse(text) : null; } catch { data = text; }
@@ -67,3 +67,40 @@ export function captureCodes() {
 
 export const rowCount = async (sql: string, ...params: unknown[]) =>
   (await env.DB.prepare(sql).bind(...params).first<{ n: number }>("n")) ?? 0;
+
+/**
+ * env with a DB that counts the queries a request runs (each statement run,
+ * and each batch, counts once), for the D1 per-request budget (D-050).
+ */
+export function countingEnv() {
+  const count = { queries: 0 };
+  const wrapStmt = (stmt: D1PreparedStatement): D1PreparedStatement =>
+    new Proxy(stmt, {
+      get(target, prop) {
+        if (prop === ORIGINAL) return target;
+        const v = Reflect.get(target, prop, target);
+        if (typeof v !== "function") return v;
+        if (prop === "bind") return (...args: unknown[]) => wrapStmt(v.apply(target, args));
+        if (["first", "all", "run", "raw"].includes(String(prop))) {
+          return (...args: unknown[]) => { count.queries++; return v.apply(target, args); };
+        }
+        return v.bind(target);
+      },
+    });
+  const DB = new Proxy(env.DB, {
+    get(target, prop) {
+      const v = Reflect.get(target, prop, target);
+      if (prop === "prepare") return (sql: string) => wrapStmt(v.call(target, sql));
+      if (prop === "batch") {
+        // Statements inside a batch are proxies; D1 needs the originals.
+        return (stmts: D1PreparedStatement[]) => { count.queries++; return v.call(target, stmts.map(unwrap)); };
+      }
+      return typeof v === "function" ? v.bind(target) : v;
+    },
+  });
+  return { env: { ...env, DB }, count };
+}
+const ORIGINAL = Symbol("original");
+function unwrap(s: D1PreparedStatement): D1PreparedStatement {
+  return (s as unknown as Record<symbol, D1PreparedStatement>)[ORIGINAL] ?? s;
+}

@@ -1,0 +1,76 @@
+name: Deploy production API
+
+# Manual only: Actions tab -> "Deploy production API" -> Run workflow, type
+# studio-api to confirm. Deploys the studio API as the Worker `studio-api` on
+# studio-db-prod + iaa-files (D-030, D-043). It is a new Worker: it touches no
+# existing app, and iaa-invoice-api stays as it is. The live Show Tracker binds to
+# it, so this must run before art-show-tracker's main gets the studio build.
+# Same secrets and variables as "Deploy staging".
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type studio-api to deploy production'
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    if: ${{ inputs.confirm == 'studio-api' }}
+    defaults:
+      run:
+        working-directory: workers/studio-api
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+      OWNER_EMAILS: ${{ vars.OWNER_EMAILS }}
+      MAIL_FROM: ${{ vars.MAIL_FROM }}
+    steps:
+      - name: Check required secrets and variables
+        working-directory: .
+        run: |
+          missing=""
+          for v in CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID RESEND_API_KEY OWNER_EMAILS MAIL_FROM; do
+            [ -n "${!v}" ] || missing="$missing $v"
+          done
+          if [ -n "$missing" ]; then
+            echo "::error::Missing:$missing (see the header of this workflow)"
+            exit 1
+          fi
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+        working-directory: .
+      - run: pnpm typecheck
+        working-directory: .
+      - run: pnpm test
+        working-directory: .
+      - name: Apply migrations to studio-db-prod
+        run: pnpm exec wrangler d1 migrations apply DB --remote --env production
+      - name: Deploy studio-api
+        run: >
+          pnpm exec wrangler deploy --env production
+          --var "OWNER_EMAILS:$OWNER_EMAILS"
+          --var "MAIL_FROM:$MAIL_FROM"
+      - name: Set SIGNING_KEY once (never overwritten, it signs file links)
+        run: |
+          if pnpm exec wrangler secret list --env production | grep -q '"SIGNING_KEY"'; then
+            echo "SIGNING_KEY already set"
+          else
+            openssl rand -hex 32 | pnpm exec wrangler secret put SIGNING_KEY --env production
+          fi
+      - name: Set RESEND_API_KEY
+        run: printf '%s' "$RESEND_API_KEY" | pnpm exec wrangler secret put RESEND_API_KEY --env production

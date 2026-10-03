@@ -42,7 +42,7 @@ packages/core/            Zod schemas, types, Drizzle schema, ULIDs
 packages/sdk/             API client, IndexedDB, outbox sync, uploads    (Phase 2)
 workers/studio-api/       Hono API; actions/ (defineAction registry — moves to core in Phase 3); migrations/
 workers/assistant/        model calls, tools, job Workflows              (Phase 3)
-apps/                     show-tracker first (Phase 2)
+apps/                     none long-term: apps live in their own repos (D-042)
 ```
 
 ## Cloudflare

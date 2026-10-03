@@ -10,22 +10,15 @@ Read this first, then `CLAUDE.md`, then `docs/phase-3.md`.
   `workers/assistant`. `yitzhach/art-show-tracker` is the app: Worker `art-show-tracker`, and a push
   to its `main` deploys it. A change across both repos uses the same branch name in each; CI tests
   them together (D-056).
-- **Review fixes, open pull requests:** [art-show-tracker#2](https://github.com/yitzhach/art-show-tracker/pull/2)
-  (app) and [Art-Talk-Back#6](https://github.com/yitzhach/Art-Talk-Back/pull/6) (platform), both from
-  `claude/optimistic-cray-4mcj1e`: sliding sessions (D-048), sign-in code limits (D-049), sync inside
-  D1's query budget (D-050), safe file downloads (D-051); in the app, an ended sign-in keeps unsent
-  changes, the import resends what a push didn't answer, the "no show" warning (D-044). #6 was green.
-  #2's `tracker` CI passed; its "Workers Builds" preview shows Terminated
-  (stopped in 0 s, before the PR opened; log not read: needs the Cloudflare connector). Read that
-  log before merging #2.
-  **Order: merge #2 first (deploys the app), then #6, then the shipping PR ([#7](https://github.com/yitzhach/Art-Talk-Back/pull/7)), whose green CI on the
-  default branch deploys `studio-api` with migrations 0004 + 0005.** The other way round, a
-  re-import from an old app copy would report a partial import as finished (D-050).
-- **Shipping without clicks (D-057), branch `claude/dazzling-faraday-0dwvkf`:** Isaac put the Shipping
-  rule in CLAUDE.md himself. Production deploys after green CI on the default branch, with a
-  restore point saved first; "Roll back production" undoes it; recipe in `docs/SHIPPING.md`.
-  Neither workflow has run yet: check the first automatic deploy's summary shows a bookmark.
-  This branch contains #6's commits, so its PR diff shrinks once #6 merges.
+- **Review fixes and shipping are live (2026-10-03).** Merged in order: [art-show-tracker#2](https://github.com/yitzhach/art-show-tracker/pull/2)
+  (app; its production Workers build passed, version `7142ba5a`), then [Art-Talk-Back#6](https://github.com/yitzhach/Art-Talk-Back/pull/6)
+  (D-048…D-051), then [#7](https://github.com/yitzhach/Art-Talk-Back/pull/7) (D-057). #7's green CI on
+  the default branch ran "Deploy production API" by itself, the first automatic deploy: restore-point
+  step passed, migrations 0004 + 0005 applied to `studio-db-prod`, `studio-api` version `bb6f2446`.
+  The run summary isn't readable through the API, so the restore points are now printed in the job
+  log too, and a missing bookmark stops the deploy before it migrates.
+  #2's earlier Terminated preview build was never read (no Cloudflare connector); the production
+  build after the merge passed, so it didn't matter.
   **Isaac's clicks still to do (each repo):** Allow auto-merge; the `ci` ruleset requiring CI;
   and the Cloudflare connector on claude.ai. Until the ruleset exists, don't turn on auto-merge.
 - **Phase 3 (assistant v0): steps 1–7 built and tested without a model key.** `docs/phase-3.md` has

@@ -74,14 +74,14 @@ jobs:
         working-directory: .
       - name: Save restore points (database bookmark + live Worker version)
         run: |
-          bookmark=$(pnpm exec wrangler d1 time-travel info DB --env production --json | node -pe 'JSON.parse(require("fs").readFileSync(0)).bookmark')
+          bookmark=$(pnpm exec wrangler d1 time-travel info DB --env production --json | node -e 'const b=JSON.parse(require("fs").readFileSync(0)).bookmark; if (!b) throw new Error("no bookmark: not migrating"); console.log(b)')
           version=$(pnpm exec wrangler deployments list --env production --json | node -pe 'const d=JSON.parse(require("fs").readFileSync(0)); (d.at(-1)?.versions?.[0]?.version_id) ?? "none"')
           {
             echo "### Restore points (before this deploy)"
             echo "- Database bookmark: \`$bookmark\`"
             echo "- Worker version: \`$version\`"
             echo "To undo: Actions -> Roll back production, paste these (docs/SHIPPING.md)."
-          } >> "$GITHUB_STEP_SUMMARY"
+          } | tee -a "$GITHUB_STEP_SUMMARY"
       - name: Apply migrations to studio-db-prod
         run: pnpm exec wrangler d1 migrations apply DB --remote --env production
       - name: Deploy studio-api

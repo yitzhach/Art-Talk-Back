@@ -1,6 +1,6 @@
 # Phase 3 · Assistant v0 (text)
 
-**Status (2026-10-03):** steps 1–7 built and tested, with no model key (a scripted
+**Status (2026-10-03):** steps 1–7 built, tested and merged (the API half is in production), with no model key (a scripted
 model in tests, recorded replies in the eval). Left: step 8 (staging and Isaac's run),
 the live eval, and Isaac's own requests: "Needs Isaac's OK" below. Defaults:
 D-045…D-047, D-052…D-056.
@@ -45,7 +45,7 @@ Built without a model key. Gate status:
 2. **Passes** (`workers/studio-api/test/assistant.test.ts`): `never` → 403, confirm-level without a card → 428 on REST routes and `/actions`, another studio's ids → 404 (tenancy suite), outside the role → 403, `always_confirm` can't be lowered, the assistant can't change its own policy or push an outbox, and a wrong key is refused.
 3. **Passes**: Show Tracker gets exactly `search` + the show and sale tools.
 4. **Half.** The runner and 6 placeholder cases replay in `pnpm test`, and a deliberately wrong replay fails. Isaac's real requests (OK #3) and a live run (OK #1) are still needed.
-5. **Passes locally**: 182 tests. In CI, `check` is green. `show-tracker` goes green once it tests the app branch of the same name (D-056).
+5. **Passes**: 182 tests; `check` and `show-tracker` green in CI, and production runs migration 0005 (deployed 2026-10-03 with #6/#7).
 
 Deploy: "Deploy staging" now also deploys `studio-assistant-staging` and shares `ASSISTANT_KEY`, but only once the `ANTHROPIC_API_KEY` secret exists. Then run it with `app_ref: claude/assistant-panel`.
 

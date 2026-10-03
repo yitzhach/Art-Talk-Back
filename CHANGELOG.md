@@ -6,6 +6,7 @@
 - "Deploy production API" runs by itself after CI passes on the default branch, and saves a database bookmark + Worker version to its run summary first.
 - "Roll back production" workflow: previous Worker version, or the database back to a bookmark.
 - `docs/SHIPPING.md`: the flow, undo, one-time repo setup, how a new app joins.
+- The deploy prints its restore points in the job log as well as the summary, and stops before migrating if the bookmark is missing.
 
 ### Phase 3 · assistant v0, built without a model key
 - Migration 0005: `assistant_policy`, `pending_actions`, `assistant_messages`.

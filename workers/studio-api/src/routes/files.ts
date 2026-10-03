@@ -13,6 +13,13 @@ import { IdempotencyHeader, PathId, body, errors, json, newApp, run, send } from
 
 export const fileRoutes = newApp();
 
+/**
+ * Types a browser may show in place: pictures, sound, video, PDFs and plain text.
+ * Anything else (HTML, SVG, XML, scripts) downloads instead, because it could run
+ * script on the app's origin (D-051).
+ */
+const INLINE_SAFE = /^(image\/(jpeg|png|gif|webp|avif|heic|heif)|audio\/[\w.+-]+|video\/[\w.+-]+|application\/pdf|text\/plain)(;|$)/;
+
 const Link = z.object({ url: z.string(), expiresAt: z.string() });
 const SignedQuery = z.object({ exp: z.string().optional(), sig: z.string().optional() });
 
@@ -106,11 +113,16 @@ fileRoutes.openapi(
       .bind(id).first<{ r2_key: string; name: string; content_type: string | null }>();
     const obj = file && (await c.env.FILES.get(file.r2_key));
     if (!file || !obj) throw notFound("File");
+    const type = (file.content_type ?? "application/octet-stream").toLowerCase();
+    const inline = INLINE_SAFE.test(type);
     return new Response(obj.body, {
       headers: {
-        "content-type": file.content_type ?? "application/octet-stream",
-        "content-disposition": `inline; filename="${file.name.replace(/[^\x20-\x7e]|"/g, "_")}"`,
+        "content-type": type,
+        "content-disposition": `${inline ? "inline" : "attachment"}; filename="${file.name.replace(/[^\x20-\x7e]|"/g, "_")}"`,
         "cache-control": "private, max-age=600",
+        // Files are served from the apps' own origin (D-039): nothing in one may run as the page (D-051).
+        "x-content-type-options": "nosniff",
+        "content-security-policy": "default-src 'none'; img-src 'self' data:; media-src 'self'; style-src 'unsafe-inline'; sandbox",
       },
     });
   },

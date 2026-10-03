@@ -12,11 +12,8 @@ description: Use for any change to studio-api, packages/core, migrations, or the
 - Anything in the phase plan's "Needs Isaac's OK" → stop and ask; do it locally only until then.
 
 ## Rules That Get Broken
-- `studio_id` comes from the session, never the request body; cross-studio ids → 404 (D-016).
-- Every write: validate → permission → write + `activity_log` in one D1 batch.
-- Schema changes only as a new numbered migration; never edit an applied one.
-- Money in integer cents, percentages in basis points, ids are ULIDs.
 - Writes go through `defineAction` + `runAction`; never `env.DB` writes from a route.
+- The assistant proposes; studio-api decides. Risk and `assistant_policy` are checked in studio-api, never in a prompt or in the assistant Worker (D-045).
 - "Passes" means the exit code is 0 (`cmd; echo $?`). Grepping filtered output for errors isn't a check: `pnpm -s typecheck | grep error` hid real errors in Phase 2.
 
 ## Done Means

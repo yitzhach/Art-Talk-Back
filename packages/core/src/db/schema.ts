@@ -119,7 +119,8 @@ export const loginCodes = sqliteTable("login_codes", {
   codeHash: text("code_hash").notNull(),
   attempts: integer("attempts").notNull().default(0),
   expiresAt: text("expires_at").notNull(),
-  createdAt: text("created_at").notNull(),
+  createdAt: text("created_at").notNull(), // start of the hour that `sends` counts (D-049)
+  sends: integer("sends").notNull().default(1),
 });
 
 export const studioSettings = sqliteTable(
@@ -305,6 +306,67 @@ export const activityLog = sqliteTable(
     index("activity_studio_entity").on(t.studioId, t.entityType, t.entityId),
     index("activity_job").on(t.jobId).where(sql`job_id IS NOT NULL`),
     uniqueIndex("activity_studio_op").on(t.studioId, t.opId, t.entityId).where(sql`op_id IS NOT NULL`),
+  ],
+);
+
+// Phase 3: the assistant's side (migration 0005).
+const levels = ["auto", "confirm", "always_confirm", "never"] as const;
+
+export const assistantPolicy = sqliteTable(
+  "assistant_policy",
+  {
+    id: text("id").primaryKey(),
+    studioId: text("studio_id").notNull().references(() => studios.id),
+    action: text("action").notNull(),
+    level: text("level", { enum: levels }).notNull(),
+    ...recordColumns(),
+  },
+  (t) => [
+    uniqueIndex("assistant_policy_action").on(t.studioId, t.action),
+    actorCheck("assistant_policy_actor"),
+    metaCheck("assistant_policy_meta"),
+  ],
+);
+
+export const pendingActions = sqliteTable(
+  "pending_actions",
+  {
+    id: text("id").primaryKey(),
+    studioId: text("studio_id").notNull().references(() => studios.id),
+    userId: text("user_id").notNull().references(() => users.id),
+    action: text("action").notNull(),
+    input: text("input", { mode: "json" }).$type<Record<string, unknown>>().notNull(),
+    summary: text("summary").notNull(),
+    details: text("details", { mode: "json" }).$type<{ label: string; value: string }[]>().notNull().default(sql`'[]'`),
+    level: text("level", { enum: ["confirm", "always_confirm"] }).notNull(),
+    status: text("status", { enum: ["pending", "confirmed", "cancelled"] }).notNull().default("pending"),
+    expiresAt: text("expires_at").notNull(),
+    activityId: text("activity_id"),
+    ...recordColumns("assistant"),
+  },
+  (t) => [
+    index("pending_actions_studio_status").on(t.studioId, t.status),
+    actorCheck("pending_actions_actor"),
+    metaCheck("pending_actions_meta"),
+  ],
+);
+
+export const assistantMessages = sqliteTable(
+  "assistant_messages",
+  {
+    id: text("id").primaryKey(),
+    studioId: text("studio_id").notNull().references(() => studios.id),
+    userId: text("user_id").notNull().references(() => users.id),
+    threadId: text("thread_id").notNull(),
+    role: text("role", { enum: ["user", "assistant"] }).notNull(),
+    content: text("content", { mode: "json" }).$type<unknown>().notNull(),
+    app: text("app"),
+    ...recordColumns("assistant"),
+  },
+  (t) => [
+    index("assistant_messages_thread").on(t.studioId, t.userId, t.threadId, t.id),
+    actorCheck("assistant_messages_actor"),
+    metaCheck("assistant_messages_meta"),
   ],
 );
 

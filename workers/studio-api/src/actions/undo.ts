@@ -21,7 +21,8 @@ export const undoAction = defineAction({
   description: "Undo one logged change, or every change of the action it belongs to",
   input: z.object({ id: Id }),
   permission: "activity:undo",
-  risk: "auto",
+  // A person's Undo tap runs at once; the assistant undoing on its own asks first.
+  risk: "confirm",
   plan: async (ctx, { id }) => {
     const cols = "id, entity_type, entity_id, before, after, undone_at, job_id";
     const first = await ctx.env.DB.prepare(`SELECT ${cols} FROM activity_log WHERE id = ? AND studio_id = ?`)

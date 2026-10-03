@@ -3,7 +3,11 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { call, captureCodes, rowCount } from "./helpers";
 
 let mail: ReturnType<typeof captureCodes>;
-beforeEach(() => { mail = captureCodes(); });
+beforeEach(async () => {
+  mail = captureCodes();
+  // Tests share one database; each starts with no codes asked for (D-049 counts them).
+  await env.DB.prepare("DELETE FROM login_codes").run();
+});
 afterEach(() => mail.restore());
 
 const cookieFrom = (h: Headers) => /studio_session=([^;]*)/.exec(h.get("Set-Cookie") ?? "")?.[0] ?? "";
@@ -58,6 +62,30 @@ describe("sign in by email code", () => {
     expect(locked.data.error.code).toBe("rate_limited");
   });
 
+  it("sends at most 5 codes an hour per address, with the same answer for any address (D-049)", async () => {
+    const ask = (email: string) => call("/v1/auth/code", { method: "POST", json: { email } });
+    for (let i = 1; i <= 5; i++) {
+      expect((await ask("boot@example.test")).status).toBe(204);
+      expect((await ask("nobody@else.test")).status).toBe(204);
+    }
+    const sixth = await ask("boot@example.test");
+    expect(sixth.status).toBe(429);
+    expect(sixth.data.error.message).toMatch(/5 codes this hour/);
+    // A stranger gets exactly the same answer, so a 429 says nothing about who has an account.
+    expect((await ask("nobody@else.test")).status).toBe(429);
+    expect(await rowCount("SELECT sends AS n FROM login_codes WHERE email = 'boot@example.test'")).toBe(5);
+
+    // The newest code still works.
+    const ok = await call("/v1/auth/verify", { method: "POST", json: { email: "boot@example.test", code: mail.codes["boot@example.test"] } });
+    expect(ok.status).toBe(200);
+
+    // An hour on, the count starts again.
+    await env.DB.prepare("UPDATE login_codes SET created_at = ? WHERE email = 'nobody@else.test'")
+      .bind(new Date(Date.now() - 3601_000).toISOString()).run();
+    expect((await ask("nobody@else.test")).status).toBe(204);
+    expect(await rowCount("SELECT sends AS n FROM login_codes WHERE email = 'nobody@else.test'")).toBe(1);
+  });
+
   it("rejects an expired code", async () => {
     await call("/v1/auth/code", { method: "POST", json: { email: "boot@example.test" } });
     await env.DB.prepare("UPDATE login_codes SET expires_at = '2000-01-01T00:00:00.000Z'").run();
@@ -71,6 +99,29 @@ describe("sign in by email code", () => {
     const cookie = cookieFrom(res.headers);
     expect((await call("/v1/auth/logout", { method: "POST", cookie })).status).toBe(204);
     expect((await call("/v1/me", { cookie })).status).toBe(401);
+  });
+
+  it("renews a session in use once it is past half its life, and not before (D-048)", async () => {
+    await call("/v1/auth/code", { method: "POST", json: { email: "boot@example.test" } });
+    const res = await call("/v1/auth/verify", { method: "POST", json: { email: "boot@example.test", code: mail.codes["boot@example.test"] } });
+    const cookie = cookieFrom(res.headers);
+    const fresh = await call("/v1/me", { cookie });
+    expect(fresh.headers.get("Set-Cookie")).toBeNull();
+
+    // Ten days left: the next request pushes it back out to 30 and re-sends the cookie.
+    const tenDays = new Date(Date.now() + 10 * 86400_000).toISOString();
+    await env.DB.prepare("UPDATE sessions SET expires_at = ?").bind(tenDays).run();
+    const renewed = await call("/v1/me", { cookie });
+    expect(renewed.status).toBe(200);
+    expect(renewed.headers.get("Set-Cookie")).toBe(`${cookie}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${30 * 24 * 3600}`);
+    const expires = await env.DB.prepare("SELECT MAX(expires_at) AS e FROM sessions").first<string>("e");
+    expect(Date.parse(expires!) - Date.now()).toBeGreaterThan(29 * 86400_000);
+
+    // An expired session is not renewed: it is gone.
+    await env.DB.prepare("UPDATE sessions SET expires_at = '2000-01-01T00:00:00.000Z'").run();
+    const ended = await call("/v1/me", { cookie });
+    expect(ended.status).toBe(401);
+    expect(ended.headers.get("Set-Cookie")).toBeNull();
   });
 
   it("errors use the spec's shape", async () => {

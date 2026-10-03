@@ -2,6 +2,30 @@
 
 ## Unreleased
 
+### Phase 3 · assistant v0, built without a model key
+- Migration 0005: `assistant_policy`, `pending_actions`, `assistant_messages`.
+- `runAction` enforces the assistant's level on every route; `ASSISTANT_KEY` marks its calls; a wrong key is refused (D-045, D-046, D-055).
+- `POST /assistant/act` runs or leaves a confirm card; confirm/cancel are the person's only; card lines come from studio-api; a double tap replays.
+- `GET /search`, `GET /assistant/tools` (from the registry, per app, D-052), `GET/PUT /assistant/policy`, the append-only thread (D-053).
+- `studio-assistant` Worker: `POST /assistant/chat` streams text, search results, cards, done (with Undo ids), end; Claude Sonnet 5.5 at low effort through AI Gateway with the refusal fallback (D-054).
+- Eval set (6 placeholder cases) replayed in `pnpm test`; `eval:live` and the manual "Assistant eval (live)" workflow run the real model (D-047).
+- "Deploy staging" deploys `studio-assistant-staging` once `ANTHROPIC_API_KEY` is set.
+- CI tests a cross-repo change against the app branch of the same name (D-056).
+- Show Tracker (app branch `claude/assistant-panel`): `<studio-assistant>` panel on the ledger and Money pages.
+
+### Review fixes (2026-10-03)
+- Sessions renew while in use, so a phone used every two weeks never signs out mid-season (D-048).
+- Sign-in codes: at most 5 an hour per address; migration 0004 (D-049).
+- Sync inside D1's query budget: pull reads records per type (203 → 7 queries per page); push answers 6 ops per call and the SDK sends 6 at a time (D-050).
+- File downloads: only safe types inline; nosniff + sandbox CSP on every file (D-051).
+- Show Tracker (app branch): an ended sign-in no longer wipes unsent changes; the import resends what a push didn't answer, with progress.
+
+### Phase 2 · close-out
+- Merged yitzhach/Art-Talk-Back#5: `apps/show-tracker/` removed; CI tests the app from its own repo (D-042).
+- Show Tracker (app repo, branch `claude/optimistic-cray-4mcj1e`): the Money page warns before saving a sale with no show, and doesn't block it (D-044).
+- Phase-end routine: 4 Phase 3 eval tasks in `backend-builder/evals/tasks.json` (unreviewed). `docs/phase-3.md` written from SPEC (D-045…D-047).
+- Pruned with Isaac's OK: CLAUDE.md layout notes; backend-builder's rules that repeated CLAUDE.md (plus one Phase 3 rule, D-045); `HANDOFF.md` cut to the current state.
+
 ### Phase 2 · step 8
 - Show Tracker (app repo `1e2f0d4`): "Account & sync" and "Sync now" in the menu on every page, Sync now on the Money page, sync pill keeps its words on phones.
 - Show Tracker live on the studio: yitzhach/art-show-tracker#1 merged, `studio-api` deployed to production. `apps/show-tracker/` removed here; CI checks the app repo's SDK copy and runs its two-device test against this API (D-042).

@@ -30,7 +30,8 @@ jobs:
           git diff --exit-code docs/openapi.json
 
   # The Show Tracker lives in yitzhach/art-show-tracker (D-042). From here, check
-  # that this SDK still matches the copy its main ships, and that this API still
+  # that this SDK still matches the copy the app ships (its main, or its branch of
+  # the same name, D-056), and that this API still
   # passes its two-device offline run (an API change that breaks the live app
   # fails here). Its own suites run in its repo. Test steps point Chromium at a
   # dead proxy (the suites assume no internet); loopback bypasses it.
@@ -39,9 +40,22 @@ jobs:
     timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
+      # A change that spans both repos sits on a branch of the same name in each (D-056):
+      # test this branch against that app branch, else against the app's main.
+      - name: Pick the app branch
+        id: app
+        run: |
+          ref="${GITHUB_HEAD_REF:-$GITHUB_REF_NAME}"
+          if git ls-remote --exit-code --heads https://github.com/yitzhach/art-show-tracker "$ref" >/dev/null 2>&1; then
+            echo "ref=$ref" >> "$GITHUB_OUTPUT"
+          else
+            echo "ref=main" >> "$GITHUB_OUTPUT"
+          fi
+          echo "Testing against art-show-tracker@$(grep -o 'ref=.*' "$GITHUB_OUTPUT" | tail -1 | cut -d= -f2)"
       - uses: actions/checkout@v4
         with:
           repository: yitzhach/art-show-tracker
+          ref: ${{ steps.app.outputs.ref }}
           path: .show-tracker
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4

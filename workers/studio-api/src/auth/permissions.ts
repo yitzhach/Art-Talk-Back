@@ -8,7 +8,8 @@ export type Permission =
   | "sales:read" | "sales:write" | "sales:delete"
   | "files:read" | "files:write"
   | "settings:read" | "settings:write"
-  | "activity:read" | "activity:undo";
+  | "activity:read" | "activity:undo"
+  | "assistant:use";
 
 // D-023: staff can do day-to-day work but not delete or change settings.
 // Client-role users get nothing here until the client portal (Phase 4).
@@ -16,6 +17,7 @@ const STAFF: readonly Permission[] = [
   "artworks:read", "artworks:write", "clients:read", "clients:write", "shows:read", "shows:write",
   "sales:read", "sales:write",
   "files:read", "files:write", "settings:read", "activity:read", "activity:undo",
+  "assistant:use",
 ];
 
 export function can(role: Role, permission: Permission): boolean {

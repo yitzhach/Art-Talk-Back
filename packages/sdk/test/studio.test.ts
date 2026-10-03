@@ -13,6 +13,8 @@ afterAll(async () => { await server?.dispose(); });
 async function signedInDevice() {
   const d = device(server);
   const studio = await Studio.open({ baseUrl: "https://api.test", fetch: d.fetch, dbName: `device-${++n}` });
+  // Every device here signs in as the same owner; start each from a clean code count (D-049).
+  await server.DB.prepare("DELETE FROM login_codes").run();
   const log = vi.spyOn(console, "log").mockImplementation(() => {});
   await studio.api.requestCode("owner@sdk.test");
   const code = /(\d{6})/.exec(String(log.mock.calls.at(-1)?.[0]))![1]!;
@@ -337,5 +339,24 @@ describe("undo a delete", () => {
     net.online = true;
     await studio.sync();
     expect(await server.DB.prepare("SELECT title FROM sales WHERE id = ?").bind(sale.id).first("title")).toBe("Heron");
+  });
+});
+
+describe("push batches", () => {
+  it("are the size one push answers (D-050)", async () => {
+    const { SYNC_PUSH_MAX_OPS } = await import("@studio/core");
+    const { PUSH_BATCH } = await import("../src/studio");
+    expect(PUSH_BATCH).toBe(SYNC_PUSH_MAX_OPS);
+  });
+
+  it("an outbox longer than one push all reaches the server", async () => {
+    const phone = await signedInDevice();
+    phone.net.online = false;
+    for (let i = 0; i < 20; i++) await phone.studio.create("show", { name: `Show ${i}` });
+    phone.net.online = true;
+    await phone.studio.sync();
+    expect(await phone.studio.pendingCount()).toBe(0);
+    const laptop = await signedInDevice();
+    expect((await laptop.studio.list("show")).filter((s) => /^Show \d+$/.test(String(s.name)))).toHaveLength(20);
   });
 });

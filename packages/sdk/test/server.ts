@@ -1,11 +1,11 @@
-// A real studio-api for SDK tests: the Worker's app code running in Node
+// A real studio-api for SDK (and assistant) tests: the Worker's app code running in Node
 // against local D1/R2 from Wrangler's platform proxy (fresh, not persisted).
 import { readFileSync, readdirSync } from "node:fs";
 import { getPlatformProxy } from "wrangler";
 
 const apiDir = new URL("../../../workers/studio-api/", import.meta.url);
 
-export async function startServer() {
+export async function startServer(overrides: Record<string, unknown> = {}) {
   const proxy = await getPlatformProxy<Record<string, unknown>>({
     configPath: new URL("wrangler.jsonc", apiDir).pathname,
     persist: false,
@@ -19,7 +19,7 @@ export async function startServer() {
     await DB.batch(statements.map((s) => DB.prepare(s)));
   }
   const { app } = await import("../../../workers/studio-api/src/index");
-  const env = { ...proxy.env, SIGNING_KEY: "test", RESEND_API_KEY: undefined, ENVIRONMENT: "dev", OWNER_EMAILS: "owner@sdk.test" };
+  const env = { ...proxy.env, SIGNING_KEY: "test", RESEND_API_KEY: undefined, ENVIRONMENT: "dev", OWNER_EMAILS: "owner@sdk.test", ...overrides };
   return { DB, env, app, dispose: () => proxy.dispose() };
 }
 

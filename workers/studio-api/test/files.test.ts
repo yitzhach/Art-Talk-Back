@@ -34,6 +34,8 @@ describe("files: signed upload → attach → signed download (D-018, D-020)", (
     const got = await call(rel(link.data.url));
     expect(got.status).toBe(200);
     expect(got.headers.get("content-type")).toBe("image/jpeg");
+    expect(got.headers.get("content-disposition")).toMatch(/^inline;/);
+    expect(got.headers.get("x-content-type-options")).toBe("nosniff");
     expect(got.raw).toBe("fake jpeg bytes for the heron");
 
     const log = (await call(`/v1/activity?entityId=${up.file.id}`, { cookie: a.cookie })).data.items.map((e: any) => e.action);
@@ -58,6 +60,23 @@ describe("files: signed upload → attach → signed download (D-018, D-020)", (
     const early = await call(`/v1/files/${up.file.id}/attach`, { method: "POST", cookie: a.cookie, json: { entityType: "artwork", entityId: art.id } });
     expect(early.status).toBe(409);
     expect((await call(`/v1/files/${up.file.id}/download-url`, { cookie: a.cookie })).status).toBe(409);
+  });
+
+  it("never serves a file that could run script as a page on the app's origin (D-051)", async () => {
+    const a = await makeStudio();
+    const { data: art } = await call("/v1/artworks", { method: "POST", cookie: a.cookie, json: { title: "Heron" } });
+    for (const contentType of ["text/html", "image/svg+xml", "application/xhtml+xml", "text/html; charset=utf-8"]) {
+      const body = "<script>fetch('/v1/settings')</script>";
+      const up = (await call("/v1/files/upload-url", { method: "POST", cookie: a.cookie, json: { name: "x.html", contentType, size: body.length } })).data;
+      await call(rel(up.uploadUrl), { method: "PUT", body, headers: { "Content-Length": String(body.length) } });
+      await call(`/v1/files/${up.file.id}/attach`, { method: "POST", cookie: a.cookie, json: { entityType: "artwork", entityId: art.id } });
+      const link = await call(`/v1/files/${up.file.id}/download-url`, { cookie: a.cookie });
+      const got = await call(rel(link.data.url));
+      expect(got.status).toBe(200);
+      expect(got.headers.get("content-disposition"), contentType).toMatch(/^attachment;/);
+      expect(got.headers.get("content-security-policy")).toMatch(/sandbox/);
+      expect(got.headers.get("x-content-type-options")).toBe("nosniff");
+    }
   });
 
   it("caps uploads at 100 MB", async () => {

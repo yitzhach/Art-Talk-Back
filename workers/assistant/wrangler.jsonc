@@ -1,0 +1,36 @@
+// studio-assistant — Wrangler config (Phase 3).
+// Top level = local dev. It reaches studio-api only through the STUDIO_API
+// service binding, as the signed-in person, carrying ASSISTANT_KEY (D-046).
+// Run both locally: wrangler dev -c workers/assistant/wrangler.jsonc -c workers/studio-api/wrangler.jsonc
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "studio-assistant-dev",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-08-15",
+  "compatibility_flags": ["nodejs_compat"],
+  "services": [{ "binding": "STUDIO_API", "service": "studio-api-dev" }],
+  "vars": {
+    // One model for v0 (D-054); Haiku routing comes when the eval shows it holds up.
+    "ASSISTANT_MODEL": "claude-sonnet-5-5",
+    "ASSISTANT_EFFORT": "low",
+    // https://gateway.ai.cloudflare.com/v1/<account id>/<gateway>/anthropic — empty = straight to the API.
+    "AI_GATEWAY_URL": ""
+  },
+  // Secrets (wrangler secret put, or .dev.vars locally — never committed):
+  //   ANTHROPIC_API_KEY   the model (Phase 3 OK #1)
+  //   ASSISTANT_KEY       the same value as studio-api's ASSISTANT_KEY
+  //   AI_GATEWAY_TOKEN    only if the gateway requires authentication
+
+  "env": {
+    "staging": {
+      "name": "studio-assistant-staging",
+      "services": [{ "binding": "STUDIO_API", "service": "studio-api-staging" }],
+      "vars": { "ASSISTANT_MODEL": "claude-sonnet-5-5", "ASSISTANT_EFFORT": "low", "AI_GATEWAY_URL": "" }
+    },
+    "production": {
+      "name": "studio-assistant",
+      "services": [{ "binding": "STUDIO_API", "service": "studio-api" }],
+      "vars": { "ASSISTANT_MODEL": "claude-sonnet-5-5", "ASSISTANT_EFFORT": "low", "AI_GATEWAY_URL": "" }
+    }
+  }
+}

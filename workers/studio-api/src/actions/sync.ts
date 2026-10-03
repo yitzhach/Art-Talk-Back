@@ -2,13 +2,14 @@
 // push: a device's outbox, applied in order through the same actions as the API.
 // pull: the current state of everything changed since the device's cursor.
 import { isProtectedField } from "@studio/core";
+import { and, eq, inArray } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import type { z } from "zod";
 import type { SyncOp, SyncOpResult } from "@studio/core";
 import type { Actor, Env } from "../env";
 import { HttpError } from "../lib/errors";
 import { publicFile } from "./files";
-import { type EntityDef, findRecord, getEntity, getRecord } from "./records";
+import { type EntityDef, getEntity, getRecord, keyProp } from "./records";
 import { type ActionDef, type Snapshot, getAction, runAction } from "./runner";
 
 type Op = z.infer<typeof SyncOp>;
@@ -26,6 +27,9 @@ const SYNCABLE = new Set([
 
 /** Record types a device keeps a copy of. */
 export const SYNCED_TYPES = ["artwork", "client", "show", "show_artwork", "sale", "settings", "file"] as const;
+
+/** Ids per query when pull reads records back (D1 allows 100 bound parameters). */
+const PULL_CHUNK = 50;
 
 /** Bookkeeping that changes on every write and says nothing about what the user changed. */
 const BOOKKEEPING = new Set(["version", "updatedAt"]);
@@ -67,18 +71,19 @@ export async function applyOp(env: Env, actor: Actor, origin: string, op: Op): P
     if (!SYNCABLE.has(op.action) || !getAction(op.action)) {
       throw new HttpError("bad_request", `${op.action} can't be queued offline`);
     }
-    const replay = await env.DB.prepare("SELECT 1 FROM activity_log WHERE studio_id = ? AND op_id = ? LIMIT 1")
-      .bind(actor.studioId, op.opId).first();
     const [type, verb] = op.action.split(".") as [string, string];
     const entity = getEntity(type);
     const isRecordVerb = entity && ["create", "update", "delete"].includes(verb);
 
     if (!isRecordVerb || verb === "create") {
       const input = verb === "create" ? { ...op.input, id: op.entityId } : op.input;
-      const { result } = await run(op.action, input);
-      return { opId: op.opId, status: replay ? "duplicate" : "applied", record: result };
+      const { result, replayed } = await run(op.action, input);
+      return { opId: op.opId, status: replayed ? "duplicate" : "applied", record: result };
     }
 
+    // Edits and deletes check for a repeat first: the merge below must not run twice.
+    const replay = await env.DB.prepare("SELECT 1 FROM activity_log WHERE studio_id = ? AND op_id = ? LIMIT 1")
+      .bind(actor.studioId, op.opId).first();
     const id = type === "settings" ? actor.studioId : op.entityId;
     if (replay) {
       const current = await getRecord(drizzle(env.DB), entity, actor.studioId, id, { withDeleted: true });
@@ -150,12 +155,24 @@ export async function pullChanges(env: Env, actor: Actor, since: number, limit: 
       GROUP BY entity_type, entity_id ORDER BY seq LIMIT ?`,
   ).bind(actor.studioId, since, ...SYNCED_TYPES, limit + 1).all<{ entity_type: string; entity_id: string; seq: number }>();
   const page = rows.results.slice(0, limit);
+  // One query per record type (in chunks), not one per record: a Worker on the
+  // free plan may run 50 D1 queries per request (D-050).
   const db = drizzle(env.DB);
+  const found = new Map<string, Snapshot>();
+  const idsByType = new Map<string, string[]>();
+  for (const r of page) idsByType.set(r.entity_type, [...(idsByType.get(r.entity_type) ?? []), r.entity_id]);
+  for (const [type, ids] of idsByType) {
+    const e = getEntity(type)!;
+    for (let i = 0; i < ids.length; i += PULL_CHUNK) {
+      const rows = await db.select().from(e.table)
+        .where(and(eq(e.studio, actor.studioId), inArray(e.key, ids.slice(i, i + PULL_CHUNK))));
+      for (const row of rows as Snapshot[]) found.set(`${type}:${row[keyProp(e)] as string}`, row);
+    }
+  }
   const changes = [];
   for (const r of page) {
-    const e = getEntity(r.entity_type)!;
-    const row = await findRecord(db, e, actor.studioId, r.entity_id, { withDeleted: true });
-    if (row) changes.push({ entityType: r.entity_type, entityId: r.entity_id, record: outward(e, row) });
+    const row = found.get(`${r.entity_type}:${r.entity_id}`);
+    if (row) changes.push({ entityType: r.entity_type, entityId: r.entity_id, record: outward(getEntity(r.entity_type)!, row) });
   }
   return { changes, cursor: String(page.at(-1)?.seq ?? since), hasMore: rows.results.length > limit };
 }

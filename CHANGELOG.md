@@ -3,6 +3,7 @@
 ## Unreleased
 
 ### Phase 2 · step 8
+- Show Tracker (app repo `1e2f0d4`): "Account & sync" and "Sync now" in the menu on every page, Sync now on the Money page, sync pill keeps its words on phones.
 - Show Tracker live on the studio: yitzhach/art-show-tracker#1 merged, `studio-api` deployed to production. `apps/show-tracker/` removed here; CI checks the app repo's SDK copy and runs its two-device test against this API (D-042).
 - Apps move to their own repos (D-042): `@studio/sdk` `bundle:classic` builds the vendored SDK for them; "Deploy staging" deploys the Show Tracker from `yitzhach/art-show-tracker` (input `app_ref`).
 - "Deploy production API" workflow for `studio-api` (D-043).

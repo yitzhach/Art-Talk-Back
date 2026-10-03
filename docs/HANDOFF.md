@@ -6,7 +6,7 @@ Read this first, then `CLAUDE.md`, then `docs/phase-3.md`.
 
 - **Phases 0–2 shipped.** Production `studio-api` is live (`studio-db-prod`, `iaa-files`). The Show
   Tracker syncs shows + sales through it, and Isaac's data is imported (iPhone + iMac verified).
-- **Two repos (D-042).** This one holds `studio-api`, `packages/core`, `packages/sdk` and
+- **Two repos (D-042), reconfirmed by Isaac 2026-10-03: don't propose merging them.** This one holds `studio-api`, `packages/core`, `packages/sdk` and
   `workers/assistant`. `yitzhach/art-show-tracker` is the app: Worker `art-show-tracker`, and a push
   to its `main` deploys it. A change across both repos uses the same branch name in each; CI tests
   them together (D-056).

@@ -241,3 +241,25 @@ A Worker may run 50 D1 queries per request on the free plan (1,000 on paid). Pul
 
 ### D-051 · File downloads can't run script on the app's origin · 2026-10-03 · default
 Apps and the API share one origin (D-039), and `/v1/files/{id}/content` served a file inline with whatever type the uploader declared. An uploaded HTML or SVG file opened from a link would run as a page on the app's origin, with the viewer's session. Staff could use that to act as the owner. Now only pictures, sound, video, PDF and plain text are shown inline. Everything else downloads as an attachment, and every file response carries `X-Content-Type-Options: nosniff` and a sandboxing `Content-Security-Policy`.
+
+### D-052 · The assistant's tools are served by studio-api, from the registry · 2026-10-03 · default
+`GET /v1/assistant/tools?app=` builds the tool list from the action registry: each action's Zod input becomes its JSON schema (`z.toJSONSchema`, input side), its name loses the dot (`sale.create` → `sale_create`), and its description says when the artist confirms with a tap. The list keeps only actions tagged for the app (`apps` on the action; `app=studio` gets all of them), that the caller's role allows, and that the studio hasn't set to `never`. It is sorted, so the prompt prefix stays cacheable, and `search` comes first. The registry stays in studio-api. This replaces the plan's "move the registry to packages/core": studio-assistant asks studio-api, so the rules never leave the data side. Internal actions (`internal: true`: proposing, resolving, appending to the thread) are never tools and can't be run by name.
+
+### D-053 · The conversation is stored exactly, append-only · 2026-10-03 · default
+`assistant_messages` keeps each turn's Messages API `role` + `content` as sent and received, thinking blocks included, and the next turn replays them unchanged. Newer Claude models check that earlier turns were not edited (an edited history is refused for accounts created after 2026-08-31), and the same thread follows the artist across devices. A thread stays open for 12 quiet hours or 60 messages, then a new one starts: nothing is trimmed from an old one. A turn that fails part-way stores nothing, so a thread never ends on an unanswered tool call. A person can read the thread; only studio-assistant can add to it.
+
+### D-054 · v0 runs on one model: Sonnet 5.5 at low effort · 2026-10-03 · default
+The spec's default is Haiku 4.5 for routing and simple requests, Sonnet 5.5 for planning. Phase 3 has no jobs to plan, so v0 sends everything to `claude-sonnet-5-5` at `effort: low` (fast chat; text between tool calls stays hidden). It goes through AI Gateway when `AI_GATEWAY_URL` is set, using the official `@anthropic-ai/sdk`. If the model declines on safety grounds, the server-side refusal fallback (`fallbacks: "default"`, beta `server-side-fallback-2026-07-01`) reruns the request on a fallback model inside the same call. Routing simple requests to `claude-haiku-4-5` comes when the live eval shows Haiku passes the same cases: switching is the `ASSISTANT_MODEL` variable. Haiku gets no effort setting and no fallback (it rejects both).
+
+### D-055 · Autonomy details (amends D-045) · 2026-10-03 · default
+- A studio may lower `confirm` to `auto`, as the spec's autonomy table implies (e.g. let the assistant mark sold without a tap). `always_confirm` can only stay there or become `never`. D-045 said levels could only be raised.
+- Setting any `*Cents` field is at least `confirm`, whatever the studio chose.
+- Logging and changing a sale is `confirm`, like marking sold.
+- The assistant changing its own policy is `never`, fixed.
+- The limits apply on every route the assistant can reach: plain REST writes and `/actions/{name}` get 428 `needs_confirmation`. The assistant may not push a device outbox.
+- A card's lines are written by studio-api from the input, with linked ids turned into names and money formatted, beside the model's one-line summary. A card can't say one thing and do another.
+- Confirming runs the action with the card's id as the op id, so a double tap replays instead of writing twice. Cards expire after 24 hours. Only the person the assistant acted for can answer a card, and never the assistant.
+- An edit or delete the model sends without `version` uses the current one, and the card fails with 409 if the record changes before the tap.
+
+### D-056 · A change across both repos is tested as a pair · 2026-10-03 · default
+Each repo's CI looks for a branch of the same name in the other repo: Art-Talk-Back's `show-tracker` job checks out art-show-tracker's branch, and the app's CI checks out Art-Talk-Back's branch, falling back to `main` and the default branch. Before this, an SDK change made Art-Talk-Back's CI red (the app's `main` still had the old bundle) until the app merged first, and nothing tested the pair together. Merge order still matters when the API changes a contract (D-050: the app first).

@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+### Phase 3 · assistant v0, built without a model key
+- Migration 0005: `assistant_policy`, `pending_actions`, `assistant_messages`.
+- `runAction` enforces the assistant's level on every route; `ASSISTANT_KEY` marks its calls; a wrong key is refused (D-045, D-046, D-055).
+- `POST /assistant/act` runs or leaves a confirm card; confirm/cancel are the person's only; card lines come from studio-api; a double tap replays.
+- `GET /search`, `GET /assistant/tools` (from the registry, per app, D-052), `GET/PUT /assistant/policy`, the append-only thread (D-053).
+- `studio-assistant` Worker: `POST /assistant/chat` streams text, search results, cards, done (with Undo ids), end; Claude Sonnet 5.5 at low effort through AI Gateway with the refusal fallback (D-054).
+- Eval set (6 placeholder cases) replayed in `pnpm test`; `eval:live` and the manual "Assistant eval (live)" workflow run the real model (D-047).
+- "Deploy staging" deploys `studio-assistant-staging` once `ANTHROPIC_API_KEY` is set.
+- CI tests a cross-repo change against the app branch of the same name (D-056).
+- Show Tracker (app branch `claude/assistant-panel`): `<studio-assistant>` panel on the ledger and Money pages.
+
 ### Review fixes (2026-10-03)
 - Sessions renew while in use, so a phone used every two weeks never signs out mid-season (D-048).
 - Sign-in codes: at most 5 an hour per address; migration 0004 (D-049).

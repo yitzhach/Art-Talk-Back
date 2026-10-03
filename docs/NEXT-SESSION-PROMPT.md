@@ -2,14 +2,15 @@
 
 Paste this into a new chat:
 
-> Repo: yitzhach/Art-Talk-Back. Read `docs/HANDOFF.md`, then `CLAUDE.md`, then
-> `docs/phase-3.md`. Only touch yitzhach/art-show-tracker for step 7.
+> Repos: yitzhach/Art-Talk-Back and yitzhach/art-show-tracker. Read `docs/HANDOFF.md`, then
+> `CLAUDE.md`, then `docs/phase-3.md` in Art-Talk-Back.
 >
-> Phase 3 (assistant v0, text) is planned, not started. Start with step 1:
-> migration 0004 and `assistant_policy` enforced in `runAction`, unit-tested,
-> using the backend-builder skill. Before that, ask Isaac for the "Needs Isaac's OK"
-> items in phase-3.md that block later steps (API key, AI Gateway, his 20+ requests)
-> so they're ready by step 5.
+> 1. If the review-fix branches (`claude/optimistic-cray-4mcj1e` in both repos) aren't merged,
+>    check CI on both and remind Isaac of the merge order in HANDOFF.
+> 2. If Isaac has the Anthropic API key and the AI Gateway: run "Deploy staging" with
+>    `app_ref: claude/assistant-panel`, then the live eval, and walk him through gate 1 on his phone.
+> 3. Ask Isaac for 20+ requests in his own words, and add them to
+>    `workers/assistant/evals/cases.json` as `source: "isaac"`.
 >
-> Log defaults in `DECISIONS.md` (next is D-048), add a `CHANGELOG.md` line per
-> item, and report each item as Changed / Verified / Left.
+> Log defaults in `DECISIONS.md` (next is D-057), add a `CHANGELOG.md` line per item, and report
+> each item as Changed / Verified / Left.

@@ -1,0 +1,31 @@
+name: Assistant eval (live)
+
+# Manual only: Actions -> "Assistant eval (live)" -> Run workflow (D-047).
+# Runs the eval set in workers/assistant/evals/cases.json against the real model.
+# Spends real money (one short turn per case). PR CI replays recorded replies instead.
+# Needs: secret ANTHROPIC_API_KEY; optional variable AI_GATEWAY_URL, secret AI_GATEWAY_TOKEN.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  eval:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      AI_GATEWAY_URL: ${{ vars.AI_GATEWAY_URL }}
+      AI_GATEWAY_TOKEN: ${{ secrets.AI_GATEWAY_TOKEN }}
+    steps:
+      - name: Check the model key
+        run: '[ -n "$ANTHROPIC_API_KEY" ] || { echo "::error::Set the ANTHROPIC_API_KEY secret first"; exit 1; }'
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @studio/assistant eval:live

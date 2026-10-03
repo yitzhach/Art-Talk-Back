@@ -15,9 +15,10 @@ Read this first, then `CLAUDE.md`, then `docs/phase-3.md`.
   `claude/optimistic-cray-4mcj1e`: sliding sessions (D-048), sign-in code limits (D-049), sync inside
   D1's query budget (D-050), safe file downloads (D-051); in the app, an ended sign-in keeps unsent
   changes, the import resends what a push didn't answer, the "no show" warning (D-044). #6 was green.
-  #2's `tracker` CI was still running at handoff; its "Workers Builds" preview shows Terminated
-  (stopped in 0 s, before the PR opened; log not read: needs the Cloudflare connector).
-  **Order: merge #2 first (deploys the app), then #6, then the shipping PR below, whose green CI on the
+  #2's `tracker` CI passed; its "Workers Builds" preview shows Terminated
+  (stopped in 0 s, before the PR opened; log not read: needs the Cloudflare connector). Read that
+  log before merging #2.
+  **Order: merge #2 first (deploys the app), then #6, then the shipping PR ([#7](https://github.com/yitzhach/Art-Talk-Back/pull/7)), whose green CI on the
   default branch deploys `studio-api` with migrations 0004 + 0005.** The other way round, a
   re-import from an old app copy would report a partial import as finished (D-050).
 - **Shipping without clicks (D-057), branch `claude/dazzling-faraday-0dwvkf`:** Isaac put the Shipping

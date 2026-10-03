@@ -46,7 +46,8 @@ repo's root), rebuilt by Cloudflare's Git integration on push to its `main`.
 ## Next, in order (docs/phase-2.md has the detail)
 
 5–7. **Done** (see phase-2.md → Progress 2026-10-02).
-8. **Staging check, then the real-phone run.** `studio-api-staging` is already up.
+8. **Done 2026-10-03: gate 4 passed** (phase-2.md → Progress 2026-10-03). Left: phase-end routine, then OK #5 (replace the live app). Earlier notes:
+   **Staging check, then the real-phone run.** `studio-api-staging` is already up.
    Still needed from Isaac: Resend key + `MAIL_FROM` + `OWNER_EMAILS` if sign-in by
    email isn't working yet. Re-run "Deploy staging": it applies migration 0003 (`sales`)
    to `studio-db-staging`, deploys `studio-api-staging`, then deploys the app as

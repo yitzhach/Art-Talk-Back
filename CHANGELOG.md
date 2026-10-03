@@ -3,6 +3,7 @@
 ## Unreleased
 
 ### Phase 2 · step 8
+- Gate 4 passed on Isaac's iPhone and iMac against staging: code sign-in, import (once), offline sale reaching the other device, edits syncing both ways.
 - "Deploy staging" also deploys the Show Tracker as `studio-show-tracker-staging`, after `studio-api-staging` (D-041).
 - Show Tracker: signing in or out of the studio in Account & sync now re-wires the sync pill and ledger at once (they stayed on "Saved on this device only… Supabase" until a reload).
 

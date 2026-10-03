@@ -2,8 +2,8 @@
 
 Paste this into a new chat:
 
-> Read `docs/HANDOFF.md`, then `CLAUDE.md`, then `docs/phase-2.md`. Continue Phase 2
-> at **step 8** (staging copy of the Show Tracker + the real-phone run). Steps 5–7 are
+> Read `docs/HANDOFF.md`, then `CLAUDE.md`, then `docs/phase-2.md`. Phase 2 gate 4 passed 2026-10-03. Continue
+> after **step 8** (staging copy of the Show Tracker + the real-phone run). Steps 5–7 are
 > done on `claude/brave-feynman-9ciewn`.
 >
 > 1. Check what Isaac has set up (Resend key, `MAIL_FROM`, `OWNER_EMAILS`, Cloudflare

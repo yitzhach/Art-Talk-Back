@@ -208,3 +208,6 @@ The tracker has no build step and must keep none (its own rules), but `@studio/s
 
 ### D-040 · Signed in to the studio, the tracker doesn't also sync to Supabase · 2026-10-02 · default
 One backend for the ledger: `ASTSupabase.connect` hands the page's status and refresh hooks to the studio when the device is signed in there, and the Supabase panel is hidden. Signed out of the studio, Supabase works exactly as before. From `file://` the studio is off entirely.
+
+### D-041 · "Deploy staging" also deploys the Show Tracker's staging Worker · 2026-10-03 · default
+One manual button for step 8: after `studio-api-staging` (the app's service binding points at it), the workflow checks `tracker/studio-sdk.js` is current and runs `wrangler deploy --env staging -c apps/show-tracker/wrangler.jsonc`, creating `studio-show-tracker-staging`. The config has no production env, so the workflow cannot touch `art-show-tracker`.

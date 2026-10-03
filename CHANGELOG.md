@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+### Phase 2 · step 8
+- "Deploy staging" also deploys the Show Tracker as `studio-show-tracker-staging`, after `studio-api-staging` (D-041).
+
 ### Phase 2 · step 5–7 (Show Tracker, narrow slice)
 - Show Tracker copied unchanged into `apps/show-tracker/` (from `art-show-tracker@d32e9f1`) with its own suites; `node build/run-suites.cjs` runs all of them (D-033).
 - Show Tracker is an installable PWA: manifest, icons, network-first `sw.js` (offline app shell; `file://` unchanged). New `build/pwa-tests.cjs` (27 checks, incl. Chrome's installability verdict and offline reopen) (D-034).

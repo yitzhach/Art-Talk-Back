@@ -1,7 +1,7 @@
 # Handoff — 2026-10-02 (updated after steps 5–7)
 
 Read this first in a new session, then `CLAUDE.md`, then `docs/phase-2.md`.
-Steps 5–7 are on branch `claude/cool-albattani-y35lql` (not yet merged).
+Steps 5–7 and the app staging deploy are on branch `claude/brave-feynman-9ciewn` (merged from `claude/cool-albattani-y35lql`; not yet on the default branch).
 
 ## Where things stand
 
@@ -48,11 +48,9 @@ repo's root), rebuilt by Cloudflare's Git integration on push to its `main`.
 5–7. **Done** (see phase-2.md → Progress 2026-10-02).
 8. **Staging check, then the real-phone run.** `studio-api-staging` is already up.
    Still needed from Isaac: Resend key + `MAIL_FROM` + `OWNER_EMAILS` if sign-in by
-   email isn't working yet. Re-run "Deploy staging" first so migration 0003 (`sales`)
-   reaches `studio-db-staging`. Then deploy the app's staging Worker:
-   `wrangler deploy --env staging -c apps/show-tracker/wrangler.jsonc` →
-   `studio-show-tracker-staging` (service binding to `studio-api-staging`; no workflow
-   for it yet). Do **not** deploy over `art-show-tracker`.
+   email isn't working yet. Re-run "Deploy staging": it applies migration 0003 (`sales`)
+   to `studio-db-staging`, deploys `studio-api-staging`, then deploys the app as
+   `studio-show-tracker-staging` (D-041). Do **not** deploy over `art-show-tracker`.
    Replacing the live app needs Isaac's OK after staging passes, and an open
    question to settle with him then: the live Worker is built from the
    `art-show-tracker` repo's `main` by Cloudflare's Git integration, so either that
@@ -78,7 +76,7 @@ eval tasks for Phase 3, prune CLAUDE.md + skill with Isaac's OK, write
   `workers/studio-api/test/tenancy.test.ts` (a test fails if any route is missing).
 - New migration → hand-written SQL (D-026), mirror it in
   `packages/core/src/db/schema.ts`, `pnpm --filter @studio/api db:migrate`.
-- Log every default you take in `DECISIONS.md` (now at D-040). Add a
+- Log every default you take in `DECISIONS.md` (now at D-041). Add a
   `CHANGELOG.md` line per item.
 
 ## Things that will trip you up

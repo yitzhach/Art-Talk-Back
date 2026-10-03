@@ -4,6 +4,7 @@ name: Deploy staging
 # Needs (repo Settings -> Secrets and variables -> Actions):
 #   secrets:   CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID, RESEND_API_KEY
 #   variables: OWNER_EMAILS (comma-separated), MAIL_FROM (e.g. "Isaac Anderson Art <hello@yourdomain>")
+# Deploys studio-api-staging, then the Show Tracker as studio-show-tracker-staging.
 # Production is not deployed from here (docs/phase-2.md, step 8).
 on:
   workflow_dispatch:
@@ -68,3 +69,10 @@ jobs:
           fi
       - name: Set RESEND_API_KEY
         run: printf '%s' "$RESEND_API_KEY" | pnpm exec wrangler secret put RESEND_API_KEY --env staging
+      # After studio-api-staging, which its service binding points at. A new Worker
+      # (D-041); never art-show-tracker, the live app (phase-2 OK #5).
+      - name: Check the Show Tracker's SDK bundle is current
+        run: pnpm --filter @studio/show-tracker bundle:check
+        working-directory: .
+      - name: Deploy studio-show-tracker-staging
+        run: pnpm exec wrangler deploy --env staging -c ../../apps/show-tracker/wrangler.jsonc

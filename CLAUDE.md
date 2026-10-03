@@ -56,4 +56,5 @@ it); brand-new Workers are named `studio-*`. Don't redeploy over
 ## Shipping
 
 Claude may merge its own pull requests once tests pass and let deploys run, app before platform. Still Isaac's: secrets, spending money, deleting data or Workers, a new Worker's first deploy.
+Flow, undo and per-repo setup: `docs/SHIPPING.md` (D-057).
 

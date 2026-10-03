@@ -1,0 +1,65 @@
+name: Roll back production
+
+# Manual only: the undo for "Deploy production API" (D-057, docs/SHIPPING.md).
+# Actions tab -> "Roll back production" -> Run workflow.
+#   what = code      puts the previous studio-api version back (or `version`).
+#   what = database  restores studio-db-prod to `bookmark` (from the deploy run's
+#                    summary). Everything written after that point is lost: only
+#                    for a migration gone wrong, and only with Isaac's OK.
+# Rolling back code doesn't change the default branch: also revert the pull
+# request on GitHub, or the next merge deploys it again.
+on:
+  workflow_dispatch:
+    inputs:
+      what:
+        description: 'code or database'
+        required: true
+        type: choice
+        options: [code, database]
+      version:
+        description: 'code: Worker version id (blank = the one before the current)'
+        required: false
+      bookmark:
+        description: 'database: bookmark from the deploy run summary'
+        required: false
+      confirm:
+        description: 'Type roll back to confirm'
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  rollback:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    if: ${{ inputs.confirm == 'roll back' }}
+    defaults:
+      run:
+        working-directory: workers/studio-api
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      VERSION: ${{ inputs.version }}
+      BOOKMARK: ${{ inputs.bookmark }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+        working-directory: .
+      - name: Roll back studio-api code
+        if: ${{ inputs.what == 'code' }}
+        run: pnpm exec wrangler rollback $VERSION --env production --yes --message "Rollback from Actions run $GITHUB_RUN_ID"
+      - name: Restore studio-db-prod
+        if: ${{ inputs.what == 'database' }}
+        run: |
+          if [ -z "$BOOKMARK" ]; then echo "::error::database needs a bookmark"; exit 1; fi
+          pnpm exec wrangler d1 time-travel restore DB --env production --bookmark "$BOOKMARK"

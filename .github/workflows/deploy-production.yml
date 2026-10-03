@@ -1,12 +1,16 @@
 name: Deploy production API
 
-# Manual only: Actions tab -> "Deploy production API" -> Run workflow, type
-# studio-api to confirm. Deploys the studio API as the Worker `studio-api` on
-# studio-db-prod + iaa-files (D-030, D-043). It is a new Worker: it touches no
-# existing app, and iaa-invoice-api stays as it is. The live Show Tracker binds to
-# it, so this must run before art-show-tracker's main gets the studio build.
-# Same secrets and variables as "Deploy staging".
+# Runs by itself after CI passes on the default branch (D-057): a merged pull
+# request deploys studio-api with no clicks. Still runnable by hand: Actions tab
+# -> "Deploy production API" -> Run workflow, type studio-api to confirm.
+# Deploys the Worker `studio-api` on studio-db-prod + iaa-files (D-030, D-043).
+# Before migrating, it saves a database restore point (D1 Time Travel bookmark)
+# and the live Worker version to the run summary; "Roll back production" uses
+# them (docs/SHIPPING.md). Same secrets and variables as "Deploy staging".
 on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
   workflow_dispatch:
     inputs:
       confirm:
@@ -24,7 +28,14 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    if: ${{ inputs.confirm == 'studio-api' }}
+    # By hand: only with the confirm word. Automatic: only for a green CI run
+    # on a push to the default branch (never a pull request or other branch).
+    if: >-
+      ${{ (github.event_name == 'workflow_dispatch' && inputs.confirm == 'studio-api') ||
+          (github.event_name == 'workflow_run' &&
+           github.event.workflow_run.conclusion == 'success' &&
+           github.event.workflow_run.event == 'push' &&
+           github.event.workflow_run.head_branch == github.event.repository.default_branch) }}
     defaults:
       run:
         working-directory: workers/studio-api
@@ -47,6 +58,9 @@ jobs:
             exit 1
           fi
       - uses: actions/checkout@v4
+        with:
+          # Automatic runs deploy exactly the commit CI passed.
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
@@ -58,6 +72,16 @@ jobs:
         working-directory: .
       - run: pnpm test
         working-directory: .
+      - name: Save restore points (database bookmark + live Worker version)
+        run: |
+          bookmark=$(pnpm exec wrangler d1 time-travel info DB --env production --json | node -pe 'JSON.parse(require("fs").readFileSync(0)).bookmark')
+          version=$(pnpm exec wrangler deployments list --env production --json | node -pe 'const d=JSON.parse(require("fs").readFileSync(0)); (d.at(-1)?.versions?.[0]?.version_id) ?? "none"')
+          {
+            echo "### Restore points (before this deploy)"
+            echo "- Database bookmark: \`$bookmark\`"
+            echo "- Worker version: \`$version\`"
+            echo "To undo: Actions -> Roll back production, paste these (docs/SHIPPING.md)."
+          } >> "$GITHUB_STEP_SUMMARY"
       - name: Apply migrations to studio-db-prod
         run: pnpm exec wrangler d1 migrations apply DB --remote --env production
       - name: Deploy studio-api

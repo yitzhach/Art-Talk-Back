@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### Shipping without clicks (D-057)
+- "Deploy production API" runs by itself after CI passes on the default branch, and saves a database bookmark + Worker version to its run summary first.
+- "Roll back production" workflow: previous Worker version, or the database back to a bookmark.
+- `docs/SHIPPING.md`: the flow, undo, one-time repo setup, how a new app joins.
+
 ### Phase 3 · assistant v0, built without a model key
 - Migration 0005: `assistant_policy`, `pending_actions`, `assistant_messages`.
 - `runAction` enforces the assistant's level on every route; `ASSISTANT_KEY` marks its calls; a wrong key is refused (D-045, D-046, D-055).

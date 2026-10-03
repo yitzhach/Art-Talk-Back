@@ -10,13 +10,23 @@ Read this first, then `CLAUDE.md`, then `docs/phase-3.md`.
   `workers/assistant`. `yitzhach/art-show-tracker` is the app: Worker `art-show-tracker`, and a push
   to its `main` deploys it. A change across both repos uses the same branch name in each; CI tests
   them together (D-056).
-- **Review fixes (2026-10-03), on branch `claude/optimistic-cray-4mcj1e` in both repos, not merged:**
-  sliding sessions (D-048), sign-in code limits (D-049), sync inside D1's query budget (D-050),
-  safe file downloads (D-051). In the app: an ended sign-in no longer wipes unsent changes, the
-  import resends what a push didn't answer, and the "no show" warning (D-044).
-  **Merge order: the app's branch to its `main` first (that deploys it), then this repo's branch,
-  then run "Deploy production API" (migrations 0004 + 0005 apply).** The other way round, a
+- **Review fixes, open pull requests:** [art-show-tracker#2](https://github.com/yitzhach/art-show-tracker/pull/2)
+  (app) and [Art-Talk-Back#6](https://github.com/yitzhach/Art-Talk-Back/pull/6) (platform), both from
+  `claude/optimistic-cray-4mcj1e`: sliding sessions (D-048), sign-in code limits (D-049), sync inside
+  D1's query budget (D-050), safe file downloads (D-051); in the app, an ended sign-in keeps unsent
+  changes, the import resends what a push didn't answer, the "no show" warning (D-044). #6 was green.
+  #2's `tracker` CI was still running at handoff; its "Workers Builds" preview shows Terminated
+  (stopped in 0 s, before the PR opened; log not read: needs the Cloudflare connector).
+  **Order: merge #2 first (deploys the app), then #6, then the shipping PR below, whose green CI on the
+  default branch deploys `studio-api` with migrations 0004 + 0005.** The other way round, a
   re-import from an old app copy would report a partial import as finished (D-050).
+- **Shipping without clicks (D-057), branch `claude/dazzling-faraday-0dwvkf`:** Isaac put the Shipping
+  rule in CLAUDE.md himself. Production deploys after green CI on the default branch, with a
+  restore point saved first; "Roll back production" undoes it; recipe in `docs/SHIPPING.md`.
+  Neither workflow has run yet: check the first automatic deploy's summary shows a bookmark.
+  This branch contains #6's commits, so its PR diff shrinks once #6 merges.
+  **Isaac's clicks still to do (each repo):** Allow auto-merge; the `ci` ruleset requiring CI;
+  and the Cloudflare connector on claude.ai. Until the ruleset exists, don't turn on auto-merge.
 - **Phase 3 (assistant v0): steps 1–7 built and tested without a model key.** `docs/phase-3.md` has
   the gate status. Waiting on Isaac: an Anthropic API key, an AI Gateway, 20+ requests in his own
   words, and the OK to deploy `studio-assistant` and the panel (app branch `claude/assistant-panel`,
@@ -33,7 +43,7 @@ Read this first, then `CLAUDE.md`, then `docs/phase-3.md`.
 - App tests (only when the app changes), from the app repo: `node build/run-suites.cjs` and
   `STUDIO_PLATFORM=../Art-Talk-Back node e2e/two-devices.cjs`. Playwright comes from the global
   install: `export NODE_PATH=$(npm root -g)`.
-- Next decision is D-057. One `CHANGELOG.md` line per item.
+- Next decision is D-058. One `CHANGELOG.md` line per item.
 
 ## Things that will trip you up
 
@@ -50,6 +60,6 @@ Read this first, then `CLAUDE.md`, then `docs/phase-3.md`.
   with a scripted model. A live eval spends money: only with Isaac's OK.
 - In app Playwright suites, `page.waitForFunction` stalled once the assistant panel was streaming;
   `build/assistant-tests.cjs` polls with `page.evaluate` instead.
-- Pushing to the app's `main` is a production deploy, and the session's permissions refuse it: leave
-  that merge to Isaac.
+- Merging the app's PR deploys it. Allowed by Isaac's Shipping rule once CI is green (D-057), but
+  this session's safety check may still refuse a production change: then give Isaac the clicks.
 - The Cloudflare connector can't deploy and can't read static-asset Workers.

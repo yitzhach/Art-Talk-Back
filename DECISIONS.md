@@ -263,3 +263,10 @@ The spec's default is Haiku 4.5 for routing and simple requests, Sonnet 5.5 for 
 
 ### D-056 · A change across both repos is tested as a pair · 2026-10-03 · default
 Each repo's CI looks for a branch of the same name in the other repo: Art-Talk-Back's `show-tracker` job checks out art-show-tracker's branch, and the app's CI checks out Art-Talk-Back's branch, falling back to `main` and the default branch. Before this, an SDK change made Art-Talk-Back's CI red (the app's `main` still had the old bundle) until the app merged first, and nothing tested the pair together. Merge order still matters when the API changes a contract (D-050: the app first).
+
+### D-057 · Claude ships merges and deploys; every deploy has an undo · 2026-10-03 · Isaac
+Isaac added the rule to CLAUDE.md himself (Shipping): Claude may merge its own pull requests once tests pass and let deploys run, app before platform; secrets, spending money, deleting data or Workers and a new Worker's first deploy stay his. Applies to every app repo on the platform.
+- "Deploy production API" now also runs after a green CI run on a push to the default branch, deploying exactly that commit. Running it by hand still works.
+- Before migrating, it writes a D1 Time Travel bookmark and the live Worker version to the run summary, and won't migrate without the bookmark.
+- Undo: revert the pull request (redeploys itself), or the manual "Roll back production" workflow (`code`: `wrangler rollback`; `database`: `d1 time-travel restore` to a bookmark, Isaac's OK first).
+- Auto-merge needs a ruleset requiring CI on each default branch, or it merges at once. Recipe and setup clicks: `docs/SHIPPING.md`.

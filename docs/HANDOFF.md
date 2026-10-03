@@ -1,7 +1,11 @@
 # Handoff — 2026-10-02 (updated after steps 5–7)
 
 Read this first in a new session, then `CLAUDE.md`, then `docs/phase-2.md`.
-Steps 5–7 and the app staging deploy are on branch `claude/brave-feynman-9ciewn` (merged from `claude/cool-albattani-y35lql`; not yet on the default branch).
+**2026-10-03: Phase 2 shipped.** Gate 4 passed on Isaac's iPhone and iMac. The
+production API (`studio-api`) is deployed, and the live Show Tracker
+(`art-show-tracker`) runs the studio build from its own repo,
+yitzhach/art-show-tracker (D-042). Isaac imports his real data on each device
+from the live site. This repo no longer holds the app.
 
 ## Where things stand
 
@@ -9,12 +13,12 @@ Steps 5–7 and the app staging deploy are on branch `claude/brave-feynman-9ciew
 - **Phase 2 (offline sync + Show Tracker)**: steps 1–7 of 8 done.
   - Built: shows, sales (migration 0003, D-035), `{type}.restore`, sync push/pull with
     per-key meta merge (D-036), the SDK (+ fix for edits lost mid-push), and the Show
-    Tracker in `apps/show-tracker/` as an installable PWA with shows + sales on the
+    Tracker (now in yitzhach/art-show-tracker) as an installable PWA with shows + sales on the
     studio (D-033…D-040), "Import my existing data", and the two-device e2e run.
   - Waiting: step 8 (staging copy of the app + the phone run) — needs Isaac.
 - Tests: platform 127 (core 9, SDK 18, studio-api 100); tracker suites
   79/35/77/26/32/102/33/20/17/11 + pwa 27 + studio 26; e2e 34. Run the tracker side with
-  `cd apps/show-tracker && node build/run-suites.cjs && node e2e/two-devices.cjs`.
+  in the app repo: `node build/run-suites.cjs`, `STUDIO_PLATFORM=../Art-Talk-Back node e2e/two-devices.cjs`.
 - **`studio-api-staging` is deployed** (Isaac ran "Deploy staging"; `https://studio-api-staging.bobdylan2000.workers.dev/v1/openapi.json` loads on his phone; `/` correctly returns `not_found`). Not yet checked: migrations applied, sign-in email (Resend). The live `art-show-tracker` is untouched.
 - Cloudflare resources created for the platform:
   D1 `studio-db-staging`, D1 `studio-db-prod`, R2 `studio-files-staging`
@@ -106,4 +110,4 @@ D-015 ignore unused Workers · D-016 other-studio ids → 404 · D-017 idempoten
 from activity_log · D-020 file links signed by studio-api · D-022 owner's first
 sign-in creates the studio · D-027 one undo for a multi-record action ·
 D-028 sync merge rules (money/status never auto-merge) · D-029 sale price in
-`artwork.meta.sale` until Phase 4 · D-030 production DB is `studio-db-prod` · D-031 staging deploys by manual workflow · D-032 Show Tracker moves onto the platform as a narrow slice (shows + sales only) · D-033 tracker copied to apps/show-tracker · D-034 network-first PWA · D-035 `sales` table · D-036 meta merges per key · D-037 SDK as a checked-in classic-script bundle · D-038 tracker↔platform mapping and ids · D-039 one origin for app + API · D-040 studio replaces Supabase sync when signed in.
+`artwork.meta.sale` until Phase 4 · D-030 production DB is `studio-db-prod` · D-031 staging deploys by manual workflow · D-032 Show Tracker moves onto the platform as a narrow slice (shows + sales only) · D-033 tracker copied to apps/show-tracker · D-034 network-first PWA · D-035 `sales` table · D-036 meta merges per key · D-037 SDK as a checked-in classic-script bundle · D-038 tracker↔platform mapping and ids · D-039 one origin for app + API · D-040 studio replaces Supabase sync when signed in · D-041 staging deploys the app too · D-042 apps live in their own repos · D-043 manual production API workflow.

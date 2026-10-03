@@ -52,3 +52,8 @@ or redeploy a Worker the platform doesn't use; ignore it (D-015). Apps moving
 onto the platform keep their Worker name (their localStorage import depends on
 it); brand-new Workers are named `studio-*`. Don't redeploy over
 `iaa-invoice-api` until `studio-api` replaces it in production.
+
+## Shipping
+
+Claude may merge its own pull requests once tests pass and let deploys run, app before platform. Still Isaac's: secrets, spending money, deleting data or Workers, a new Worker's first deploy.
+

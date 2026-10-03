@@ -27,8 +27,30 @@ and a second device shows it. Concretely:
 - [x] Show Tracker into `apps/show-tracker/`, installable PWA, then **shows + sales only** on the SDK (D-032); everything else stays in localStorage (D-033…D-040)
 - [x] "Import my existing data" from localStorage, once, through sync push
 - [x] Offline test: automated two-device Playwright test (gate 1–3) — `apps/show-tracker/e2e/two-devices.cjs`, CI job `show-tracker`
-- [ ] Deploy `studio-api-staging` + Show Tracker staging; real-device run (gate 4)
+- [x] Deploy `studio-api-staging` + Show Tracker staging; real-device run (gate 4)
 - [x] Move the built routes out of `openapi.phase2.draft.yaml`; delete it when empty (D-013)
+
+## Progress (2026-10-03) · gate 4 passed
+
+Isaac ran "Deploy staging" (now also deploys `studio-show-tracker-staging`, D-041)
+and ran the flow on his iPhone and iMac against staging:
+- Sign-in by emailed code works (Resend on staging confirmed).
+- "Import my existing data" put 9 shows in the studio; a second run added nothing.
+- A $11 sale logged on the iPhone in airplane mode reached the studio after
+  reconnecting (seen in `/v1/sales`) and appears on the iMac. Linking it to a
+  show on the iPhone, and editing a show's price back, both reached the iMac.
+- Same-field conflict cards were not tried on the devices; gate 2 is covered by
+  the automated two-device run.
+
+Findings:
+- Signing in without a reload left the page on local data and the old Supabase
+  status text. Fixed: the page re-wires on the studio's `session` event.
+- A sale added on the Money page while it shows "All shows" is saved with
+  "No show", so it disappears once one show is picked. This is the app's existing
+  behaviour, not a sync fault. It's open whether to require a show or warn.
+
+Next: the phase-end routine, and Isaac's OK #5 on replacing the live
+`art-show-tracker` (and how its build should change).
 
 ## Progress (2026-10-02)
 

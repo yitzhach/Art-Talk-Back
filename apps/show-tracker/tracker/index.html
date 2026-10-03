@@ -1665,6 +1665,9 @@ function startSync() {
   if (!syncStore) paintSync('local');
   return syncStore;
 }
+/* Signing in or out of the studio in the drawer swaps the backend without a
+   reload, so re-wire the pill and refresh to whichever one is now active. */
+if (window.ASTStudio) ASTStudio.on('session', () => { startSync(); paintAccount(); });
 
 /* ==========================================================================
    12. EVENTS

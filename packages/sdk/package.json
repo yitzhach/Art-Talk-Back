@@ -5,7 +5,8 @@
   "type": "module",
   "main": "src/index.ts",
   "scripts": {
-    "typecheck": "tsc -p tsconfig.json"
+    "typecheck": "tsc -p tsconfig.json",
+    "bundle:classic": "node build/classic.mjs"
   },
   "dependencies": {
     "@studio/core": "workspace:*",
@@ -13,6 +14,7 @@
     "zod": "^4.6.5"
   },
   "devDependencies": {
-    "fake-indexeddb": "^6.2.5"
+    "fake-indexeddb": "^6.2.5",
+    "esbuild": "0.28.2"
   }
 }

@@ -14,7 +14,7 @@ spending money, deleting data or Workers, a new Worker's first deploy.
 3. Merging to the default branch deploys:
    - Platform: CI passes → "Deploy production API" runs by itself.
    - App: Cloudflare's Git integration builds the app's `main`.
-4. Claude checks the deploy (run summary; Worker state through the Cloudflare
+4. Claude checks the deploy (run summary, also printed in the job log; Worker state through the Cloudflare
    connector) and tells Isaac what changed.
 
 ## Undo

@@ -28,17 +28,17 @@ is read, never changed.
    tests: records, sync, files, tenancy; `docs/openapi.json` regenerated.
 3. [x] SDK: `bundle:esm` (same source, ES module, `--check`) for Vite apps (D-064). The classic bundle's
    output must not change: the Show Tracker's copy is checked against it.
-4. [ ] App Worker: service binding `API` → `studio-api`, `/v1/*` in `run_worker_first` and forwarded
+4. [x] App Worker: service binding `API` → `studio-api`, `/v1/*` in `run_worker_first` and forwarded
    in `worker/index.js`; `env.staging` → `studio-booth-studio-staging` bound to `studio-api-staging`,
    with no share-links bucket (D-065).
-5. [ ] App: the studio bridge — email-code sign-in from inside the app (same origin), the open
+5. [x] App: the studio bridge — email-code sign-in from inside the app (same origin), the open
    project linked to a placement, saves pushed, images uploaded and attached, pulls applied, a
    review card on a conflict (D-062), an ended sign-in keeps changes, "Import my existing projects"
    (loops until every op is answered, D-050), a list of the studio's projects to open. Signed out,
    the bridge's code is never loaded.
-6. [ ] App: two-device test (`tests/two-devices.mjs`) against a local studio-api from an Art-Talk-Back
+6. [x] App: two-device test (`tests/two-devices.mjs`) against a local studio-api from an Art-Talk-Back
    checkout, like the tracker's `e2e/two-devices.cjs`; runs with both compatibility dates.
-7. [ ] CI: booth-studio `.github/workflows/ci.yml` (job `booth`); Art-Talk-Back job `booth-studio`;
+7. [x] CI: booth-studio `.github/workflows/ci.yml` (job `booth`); Art-Talk-Back job `booth-studio`;
    "Deploy staging" also deploys `studio-booth-studio-staging` (input `booth_ref`).
 8. [ ] Ship in order (below); first deploy of `studio-booth-studio-staging`; check both deploys.
 9. [ ] Stage 2: the assistant panel — only once `studio-assistant` is deployed (see Needs Isaac's OK).

@@ -8,13 +8,17 @@ name: Deploy staging
 #   secrets:   ANTHROPIC_API_KEY, AI_GATEWAY_TOKEN (only if the gateway requires auth)
 #   variables: AI_GATEWAY_URL (https://gateway.ai.cloudflare.com/v1/<account id>/<gateway>/anthropic)
 # Deploys studio-api-staging, then the Show Tracker (yitzhach/art-show-tracker, branch
-# `app_ref`) as studio-show-tracker-staging.
+# `app_ref`) as studio-show-tracker-staging, then Booth Studio (yitzhach/booth-studio,
+# branch `booth_ref`) as studio-booth-studio-staging (D-065).
 # Production is not deployed from here (docs/phase-2.md, step 8).
 on:
   workflow_dispatch:
     inputs:
       app_ref:
         description: "art-show-tracker branch to deploy as studio-show-tracker-staging"
+        default: main
+      booth_ref:
+        description: "booth-studio branch to deploy as studio-booth-studio-staging"
         default: main
 
 permissions:
@@ -112,3 +116,26 @@ jobs:
         working-directory: .
       - name: Deploy studio-show-tracker-staging
         run: pnpm exec wrangler deploy --env staging -c "$GITHUB_WORKSPACE/.show-tracker/wrangler.toml"
+      # Booth Studio lives in its own repo too (D-042). Its `staging` env is a new
+      # Worker, studio-booth-studio-staging, bound to studio-api-staging (D-065); its
+      # top level is the live booth-studio, which only its own Git integration deploys.
+      # A branch whose wrangler.jsonc has no staging Worker isn't deployed at all.
+      - uses: actions/checkout@v4
+        with:
+          repository: yitzhach/booth-studio
+          ref: ${{ inputs.booth_ref }}
+          path: .booth-studio
+      - name: Is this Booth Studio on the platform?
+        id: booth
+        working-directory: .
+        run: |
+          if grep -q '"studio-booth-studio-staging"' .booth-studio/wrangler.jsonc; then echo "yes=true" >> "$GITHUB_OUTPUT"
+          else echo "yes=false" >> "$GITHUB_OUTPUT"; echo "::notice::booth-studio@${{ inputs.booth_ref }} has no staging Worker: not deployed"; fi
+      - name: Check Booth Studio's SDK copy matches this SDK
+        if: steps.booth.outputs.yes == 'true'
+        working-directory: .
+        run: pnpm --filter @studio/sdk bundle:esm --check --out "$GITHUB_WORKSPACE/.booth-studio/src/vendor/studio-sdk.js"
+      - name: Deploy studio-booth-studio-staging
+        if: steps.booth.outputs.yes == 'true'
+        working-directory: .booth-studio
+        run: npm ci && npm run build && npx wrangler deploy --env staging

@@ -249,7 +249,7 @@ export const saleActions = crudActions(saleEntity, SaleInput, SalePatch, {
 // A booth or wall scene (D-062). Only Booth Studio's assistant gets these as tools (D-052).
 export const placementActions = crudActions(placementEntity, PlacementInput, PlacementPatch, {
   apps: ["booth-studio"],
-  about: "A booth (or wall) scene: name, kind (booth or wall), the space's real size (width, depth, height in sizeUnit), format (the app that wrote the scene and its version, e.g. booth-studio/1), scene (that app's JSON: positions and the rest) and images (the studio files the scene uses, by key). Change scene only in the format it already has; never invent file ids.",
+  about: "A booth (or wall) scene: name, kind (booth or wall), the space's real size (width, depth, height in sizeUnit), format (the app that wrote the scene and its version, e.g. booth-studio/1), scene (that app's JSON: positions and the rest) and images (the studio files the scene uses, by key). To change what is inside a booth use placement_edit, and to make one placement_build: never send scene yourself. Never invent file ids.",
 });
 
 export const settingsUpdate = defineAction({

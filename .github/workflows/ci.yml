@@ -122,6 +122,14 @@ jobs:
         if: steps.on.outputs.yes == 'true'
         working-directory: .booth-studio
         run: npm ci && npm run build && npx playwright install --with-deps chromium
+      - name: workers/studio-api/src/vendor/booth-scene.js is this app's scene build (D-070)
+        if: steps.on.outputs.yes == 'true'
+        working-directory: .booth-studio
+        run: |
+          if ! grep -q '"bundle:scene"' package.json; then echo "::notice::booth-studio@${{ steps.app.outputs.ref }} has no scene build yet"; exit 0; fi
+          npm run -s bundle:scene
+          cmp dist-scene/booth-scene.js "$GITHUB_WORKSPACE/workers/studio-api/src/vendor/booth-scene.js" || {
+            echo "::error::workers/studio-api/src/vendor/booth-scene.js differs from booth-studio's npm run bundle:scene: copy its dist-scene/booth-scene.js over it"; exit 1; }
       - name: Two devices, offline, against this API
         if: steps.on.outputs.yes == 'true'
         working-directory: .booth-studio

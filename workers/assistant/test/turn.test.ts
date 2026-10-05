@@ -210,3 +210,64 @@ describe("model settings (D-054)", () => {
     expect(modelSettings({ ...env, ASSISTANT_MODEL: "claude-haiku-4-5" })).toEqual({ model: "claude-haiku-4-5" });
   });
 });
+
+describe("Booth Studio: the assistant reads a booth and proposes a change in the app's own words (D-070)", () => {
+  it("search → describe_booth → placement_edit: one card, nothing written until the tap", async () => {
+    const built = (await api(server, cookie, "POST", "/actions/placement.build", {
+      name: "Coconut Grove booth", show: "artfair", size: "10x10", ops: [{ op: "add_furniture", kind: "table6", x: 0, z: 30 }],
+    })).data.result;
+    let tableId = "";
+    const { model } = scripted([
+      (req) => {
+        expect(req.tools!.map((t) => (t as { name: string }).name).slice(0, 2)).toEqual(["search", "describe_booth"]);
+        return message([toolUse("search", { q: "coconut grove", types: ["placement"] })]);
+      },
+      (req) => {
+        const id = lastResult(req).items[0].id;
+        return message([toolUse("describe_booth", { id })]);
+      },
+      (req) => {
+        const booth = lastResult(req);
+        expect(booth).toMatchObject({ id: built.id, name: "Coconut Grove booth", units: "inches" });
+        tableId = booth.furniture[0].id;
+        return message([toolUse("placement_edit", {
+          id: built.id, ops: [{ op: "change_furniture", id: tableId, x: -24 }, { op: "set_booth", width: 180 }],
+          card_summary: "Table 2′ left; booth 15′ wide",
+        })]);
+      },
+    ]);
+    const out = await chat(makeHandler(() => model), assistantEnv(server), cookie, {
+      app: "booth-studio", today: "2027-03-20", page: "Booth Studio", message: "slide the table two feet left and make the booth 10 by 15",
+      record: { type: "placement", id: built.id, label: "Coconut Grove booth" },
+    });
+    expect(out.events.map((e: any) => e.type)).toEqual(["search", "card", "end"]);
+    const card = out.events[1].proposal;
+    expect(card.details.slice(1)).toEqual([
+      { label: "Booth", value: "Coconut Grove booth" },
+      { label: "Change 1", value: "Table 6′ with cloth: to 2′ left of centre, 2′ 6″ toward the front" },
+      { label: "Change 2", value: "Make the booth 15′ wide × 10′ deep" },
+    ]);
+    expect((await api(server, cookie, "GET", `/placements/${built.id}`)).data.version).toBe(1);
+    expect((await api(server, cookie, "POST", `/assistant/proposals/${card.id}/confirm`)).status).toBe(200);
+    const now = (await api(server, cookie, "GET", `/placements/${built.id}`)).data;
+    expect(now).toMatchObject({ version: 2, width: 180 });
+    expect(now.scene.booth.pedestals[0]).toMatchObject({ id: tableId, x: -24 });
+  });
+
+  it("a read tool with its id missing says so to the model; a booth that isn't there is the API's 404", async () => {
+    const { model, requests } = scripted([
+      () => message([toolUse("describe_booth", {})]),
+      (req) => {
+        expect(lastResult(req)).toBe("describe_booth needs id.");
+        return message([toolUse("describe_booth", { id: "01J0000000000000000000NONE" })]);
+      },
+      (req) => {
+        expect(lastResult(req)).toMatchObject({ error: "not_found" });
+        return message([text("I can't find that booth.")]);
+      },
+    ]);
+    const out = await chat(makeHandler(() => model), assistantEnv(server), cookie, { app: "booth-studio", message: "what's in my booth?" });
+    expect(out.status).toBe(200);
+    expect(requests).toHaveLength(3);
+  });
+});

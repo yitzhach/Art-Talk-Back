@@ -173,6 +173,21 @@ async function runTool(studio: Studio, tool: Tool | undefined, use: Anthropic.Be
   const input = (use.input ?? {}) as Record<string, unknown>;
   if (!tool) return { result: result(use, `There is no tool named ${use.name}.`, true) };
   try {
+    if (!tool.action && tool.read) {
+      // `{name}` from the input, each part escaped; the rest of the input goes as the query.
+      let missing = "";
+      const used = new Set<string>();
+      const path = tool.read.path.replace(/\{(\w+)\}/g, (_m, k: string) => {
+        used.add(k);
+        const v = input[k];
+        if (typeof v !== "string" || !v) missing = k;
+        return encodeURIComponent(String(v ?? ""));
+      });
+      if (missing) return { result: result(use, `${tool.name} needs ${missing}.`, true) };
+      const query = Object.entries(input).filter(([k, v]) => !used.has(k) && v !== undefined && v !== null)
+        .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(String(v))}`).join("&");
+      return { result: result(use, await studio.read(query ? `${path}?${query}` : path)) };
+    }
     if (!tool.action) {
       const q = String(input.q ?? "").trim();
       if (!q) return { result: result(use, "Give search some words to look for (q).", true) };

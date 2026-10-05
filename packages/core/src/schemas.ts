@@ -372,11 +372,17 @@ export const SearchResponse = z.object({ items: z.array(SearchItem) });
 export const ToolDef = z.object({
   /** Tool name for the model (letters, digits, _ and -). */
   name: z.string(),
-  /** The registry action it runs, or null for a read tool (search). */
+  /** The registry action it runs, or null for a read tool (search, describe_booth). */
   action: z.string().nullable(),
   description: z.string(),
   inputSchema: Meta,
   level: AssistantLevel,
+  /**
+   * A read tool other than search: the studio-api GET it runs, with `{name}`
+   * filled from the input of that name (D-070). The assistant needs no code of
+   * its own for a new one.
+   */
+  read: z.object({ path: z.string() }).optional(),
 });
 export const ToolsResponse = z.object({ app: z.string(), tools: z.array(ToolDef) });
 

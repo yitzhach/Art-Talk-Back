@@ -79,7 +79,7 @@ assistantRoutes.openapi(
 /** Edits and deletes the model sends without a version get the current one (see the route's description). */
 async function withVersion(ctx: ActionCtx, def: ActionDef, input: Snapshot): Promise<Snapshot> {
   const [type, verb] = def.name.split(".") as [string, string];
-  if (!["update", "delete"].includes(verb) || input.version !== undefined) return input;
+  if (!["update", "delete", "edit"].includes(verb) || input.version !== undefined) return input;
   const entity = getEntity(type);
   if (!entity) return input;
   const id = type === "settings" ? ctx.actor.studioId : input.id;
@@ -230,6 +230,21 @@ const SEARCH_TOOL = {
   level: "auto" as Level,
 };
 
+/** Booth Studio's read tool: what is in a booth, with ids and positions (D-070). */
+const DESCRIBE_BOOTH_TOOL = {
+  name: "describe_booth",
+  action: null,
+  read: { path: "/placements/{id}/summary" },
+  description: "What is in a Booth Studio booth: its size and venue, its walls, each work (with its wall and position) and each piece of furniture, with their ids, in inches. Call it before placement_edit, and again after a change if you need the new positions.",
+  inputSchema: {
+    type: "object",
+    properties: { id: { type: "string", description: "The booth's id (from search, or the booth on screen)" } },
+    required: ["id"],
+  },
+  level: "auto" as Level,
+};
+const READ_TOOLS: Record<string, (typeof DESCRIBE_BOOTH_TOOL)[]> = { "booth-studio": [DESCRIBE_BOOTH_TOOL], studio: [DESCRIBE_BOOTH_TOOL] };
+
 const LEVEL_NOTE: Record<Level, string> = {
   auto: "",
   confirm: " The artist confirms this with one tap before anything is saved.",
@@ -238,10 +253,12 @@ const LEVEL_NOTE: Record<Level, string> = {
 };
 
 export function toolFor(def: ActionDef, level: Level) {
-  const schemaOut = z.toJSONSchema(def.input, { io: "input", unrepresentable: "any" }) as Snapshot;
+  const schemaOut = def.toolSchema
+    ? (structuredClone(def.toolSchema) as Snapshot)
+    : (z.toJSONSchema(def.input, { io: "input", unrepresentable: "any" }) as Snapshot);
   delete schemaOut.$schema;
   // Edits and deletes may leave out `version` (see /assistant/act).
-  if (/\.(update|delete)$/.test(def.name) && Array.isArray(schemaOut.required)) {
+  if (/\.(update|delete|edit)$/.test(def.name) && Array.isArray(schemaOut.required)) {
     schemaOut.required = (schemaOut.required as string[]).filter((f) => f !== "version");
   }
   return {
@@ -272,7 +289,8 @@ assistantRoutes.openapi(
       .filter(({ level }) => level !== "never")
       .sort((a, b) => a.d.name.localeCompare(b.d.name))
       .map(({ d, level }) => toolFor(d, level));
-    return send(c, { app, tools: [SEARCH_TOOL, ...tools] });
+    const reads = can(actor.role, "placements:read") ? READ_TOOLS[app] ?? [] : [];
+    return send(c, { app, tools: [SEARCH_TOOL, ...reads, ...tools] });
   },
 );
 

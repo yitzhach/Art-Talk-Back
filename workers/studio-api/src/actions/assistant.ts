@@ -167,6 +167,12 @@ export async function cardLines(ctx: ActionCtx, def: ActionDef, input: Snapshot)
   const [type, verb] = def.name.split(".") as [string, string];
   const entity: EntityDef | undefined = getEntity(type);
   const lines: { label: string; value: string }[] = [{ label: "Action", value: def.description.split(".")[0]! }];
+  if (def.card) {
+    const parsed = def.input.safeParse(input);
+    if (!parsed.success) throw new HttpError("bad_request", "Invalid input", { issues: parsed.error.issues });
+    lines.push(...(await def.card(ctx, parsed.data)));
+    return lines;
+  }
   if (entity && verb === "create") {
     const currency = typeof input.currency === "string" ? input.currency : undefined;
     lines.push(...(await fieldLines(ctx, input, currency)));

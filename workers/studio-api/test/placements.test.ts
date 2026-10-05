@@ -187,10 +187,10 @@ describe("a booth's images are studio files attached to it (D-063)", () => {
 });
 
 describe("Booth Studio's assistant tools (D-052)", () => {
-  it("app=booth-studio gets search and the placement tools only; the Show Tracker doesn't get them", async () => {
+  it("app=booth-studio gets search, describe_booth and the placement tools only; the Show Tracker doesn't get them", async () => {
     const a = await makeStudio();
     const booth = (await call("/v1/assistant/tools?app=booth-studio", { cookie: a.cookie, headers: ASSISTANT })).data.tools.map((t: any) => t.name);
-    expect(booth).toEqual(["search", "placement_create", "placement_delete", "placement_restore", "placement_update"]);
+    expect(booth).toEqual(["search", "describe_booth", "placement_build", "placement_create", "placement_delete", "placement_edit", "placement_restore", "placement_update"]);
     const tracker = (await call("/v1/assistant/tools?app=show-tracker", { cookie: a.cookie, headers: ASSISTANT })).data.tools.map((t: any) => t.name);
     expect(tracker.some((n: string) => n.startsWith("placement"))).toBe(false);
   });

@@ -52,17 +52,17 @@ is read, never changed.
      scene).
    - [ ] 9b. Booth actions for the assistant and any agent (Isaac approved 2026-10-05, D-070). Studio-api runs
      Booth Studio's own scene code, vendored like the SDK the other way (D-066), so the format has one author:
-     - [ ] 9b-1. booth-studio `src/scene-ops.js` (pure): `describe(scene, images)` (a compact summary: booth,
+     - [x] 9b-1. booth-studio `src/scene-ops.js` (pure): `describe(scene, images)` (a compact summary: booth,
        walls, art, furniture, free-standing walls, each with its id and position in inches), `applyOps(scene,
        ops, images)` (each op checked, applied with the app's own helpers, the result through
        `validateProject`; returns the new scene and one plain line per op for the confirm card), `build(spec)`
        (quick start + ops), and `OPS`, the catalog with each op's JSON Schema and words. `npm run
        bundle:scene` builds them as one ES module; node tests run every op and validate every result.
-     - [ ] 9b-2. studio-api: `src/vendor/booth-scene.js` (CI fails when it differs from booth-studio's build);
+     - [x] 9b-2. studio-api: `src/vendor/booth-scene.js` (CI fails when it differs from booth-studio's build);
        `placement.edit` (a list of ops, confirm; name and size columns kept in step with the scene),
        `placement.build` (a new booth from a spec, confirm), the read tool `describe_booth`
        (`GET /placements/{id}/summary`); tests, tenancy, `docs/openapi.json`.
-     - [ ] 9b-3. studio-assistant: read tools name their route, so `describe_booth` (and later ones) need no
+     - [x] 9b-3. studio-assistant: read tools name their route, so `describe_booth` (and later ones) need no
        new code in the assistant.
      - [ ] 9b-4. booth-studio two-device run: a booth built and edited through the API opens on screen,
        passes `validateProject`, and exports a backup today's app loads.

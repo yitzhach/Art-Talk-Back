@@ -47,10 +47,11 @@ is read, never changed.
    (`04d694f` on its `main`), which Cloudflare's Git integration deployed to `booth-studio`.
 9. [ ] Stage 2: the assistant panel. Built on a branch and tried on staging; it reaches Booth Studio's
    `main` only after "Deploy production assistant" has run once (Isaac, D-068), because production's
-   `ASSISTANT` binding needs `studio-assistant` to exist.
+   `ASSISTANT` binding needs `studio-assistant` to exist. The platform's parts (9a, 9b) ship before
+   that (D-070): agents can use them without the assistant.
    - [x] 9a. `GET /search` and the `search` tool find placements by name (D-069) (summary columns only, never the
      scene).
-   - [ ] 9b. Booth actions for the assistant and any agent (Isaac approved 2026-10-05, D-070). Studio-api runs
+   - [x] 9b. Booth actions for the assistant and any agent (Isaac approved 2026-10-05, D-070). Studio-api runs
      Booth Studio's own scene code, vendored like the SDK the other way (D-066), so the format has one author:
      - [x] 9b-1. booth-studio `src/scene-ops.js` (pure): `describe(scene, images)` (a compact summary: booth,
        walls, art, furniture, free-standing walls, each with its id and position in inches), `applyOps(scene,
@@ -64,7 +65,7 @@ is read, never changed.
        (`GET /placements/{id}/summary`); tests, tenancy, `docs/openapi.json`.
      - [x] 9b-3. studio-assistant: read tools name their route, so `describe_booth` (and later ones) need no
        new code in the assistant.
-     - [ ] 9b-4. booth-studio two-device run: a booth built and edited through the API opens on screen,
+     - [x] 9b-4. booth-studio two-device run: a booth built and edited through the API opens on screen,
        passes `validateProject`, and exports a backup today's app loads.
    - [ ] 9c. Booth Studio: `<studio-assistant>` panel (the Show Tracker's, as an ES module), `/assistant/*`
      forwarded, `ASSISTANT` bindings (production `studio-assistant`, staging `studio-assistant-staging`),

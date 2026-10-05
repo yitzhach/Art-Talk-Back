@@ -56,6 +56,11 @@ is read, never changed.
    - [ ] 9c. Booth Studio: `<studio-assistant>` panel (the Show Tracker's, as an ES module), `/assistant/*`
      forwarded, `ASSISTANT` bindings (production `studio-assistant`, staging `studio-assistant-staging`),
      the open booth sent as the chat's record; a confirmed change reaches the screen through sync.
+     What the app does with the placement tools it already gets (booth-studio#11): a rename by the `name`
+     column alone reaches the screen and stays; a delete leaves the booth on the device, unsynced, and
+     says so (before #11 the app looped re-creating it). A change to `width`/`depth`/`height` alone is
+     overwritten from the scene on the next save: resizing needs 9b. So without 9b the booth assistant
+     can find, rename and delete booths, and nothing finer.
    - [ ] 9d. "Deploy staging" with that branch; Isaac tries it on staging; then production after D-068's
      first run.
 

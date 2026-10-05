@@ -50,9 +50,22 @@ is read, never changed.
    `ASSISTANT` binding needs `studio-assistant` to exist.
    - [x] 9a. `GET /search` and the `search` tool find placements by name (D-069) (summary columns only, never the
      scene).
-   - [ ] 9b. Scene-level booth actions, so the assistant changes one thing without resending a whole
-     scene (`placement_update` replaces `scene` as one field, up to 600 KB). **Needs Isaac's OK (#5):**
-     it teaches studio-api Booth Studio's scene format.
+   - [ ] 9b. Booth actions for the assistant and any agent (Isaac approved 2026-10-05, D-070). Studio-api runs
+     Booth Studio's own scene code, vendored like the SDK the other way (D-066), so the format has one author:
+     - [ ] 9b-1. booth-studio `src/scene-ops.js` (pure): `describe(scene, images)` (a compact summary: booth,
+       walls, art, furniture, free-standing walls, each with its id and position in inches), `applyOps(scene,
+       ops, images)` (each op checked, applied with the app's own helpers, the result through
+       `validateProject`; returns the new scene and one plain line per op for the confirm card), `build(spec)`
+       (quick start + ops), and `OPS`, the catalog with each op's JSON Schema and words. `npm run
+       bundle:scene` builds them as one ES module; node tests run every op and validate every result.
+     - [ ] 9b-2. studio-api: `src/vendor/booth-scene.js` (CI fails when it differs from booth-studio's build);
+       `placement.edit` (a list of ops, confirm; name and size columns kept in step with the scene),
+       `placement.build` (a new booth from a spec, confirm), the read tool `describe_booth`
+       (`GET /placements/{id}/summary`); tests, tenancy, `docs/openapi.json`.
+     - [ ] 9b-3. studio-assistant: read tools name their route, so `describe_booth` (and later ones) need no
+       new code in the assistant.
+     - [ ] 9b-4. booth-studio two-device run: a booth built and edited through the API opens on screen,
+       passes `validateProject`, and exports a backup today's app loads.
    - [ ] 9c. Booth Studio: `<studio-assistant>` panel (the Show Tracker's, as an ES module), `/assistant/*`
      forwarded, `ASSISTANT` bindings (production `studio-assistant`, staging `studio-assistant-staging`),
      the open booth sent as the chat's record; a confirmed change reaches the screen through sync.
@@ -63,6 +76,18 @@ is read, never changed.
      can find, rename and delete booths, and nothing finer.
    - [ ] 9d. "Deploy staging" with that branch; Isaac tries it on staging; then production after D-068's
      first run.
+
+10. [ ] Where this goes (Isaac, 2026-10-05): an artist or an AI agent can make and change booths and show
+    floors by asking, from words, a photo or a show's map, and can drive the app itself. In order, each on
+    9b's actions:
+    - [ ] 10a. Pictures in the chat: a photo, sketch or floor plan attached to a message; the model reads it
+      and builds or changes a booth with `placement_build` / `placement_edit`.
+    - [ ] 10b. Show floors: ops for the show floor (`hall`: its size, booth blocks, aisles, numbers, shapes),
+      so a show's map or spec becomes the floor and its 3D walk-through.
+    - [ ] 10c. The app as a tool: app commands the panel runs on the device ("export this as a PDF", "take me
+      to lighting", "record a walk-through"), from the app's own tool list (`src/toolsearch.js`).
+    - [ ] 10d. Agents outside the chat: the same actions through the studio API (and an MCP server), so an
+      agent can work on booths without the app open.
 
 ## Gate (v1)
 
@@ -99,7 +124,7 @@ The platform's merge is safe alone: nothing calls the new routes until the app s
 | 2 | Art-Talk-Back `ci` ruleset: add `booth-studio` | The API can't merge past a broken Booth Studio | — |
 | 3 | First **production** deploy of `studio-assistant` (stage 2): Actions → **Deploy production assistant** → Run workflow → type `studio-assistant` → Run (D-068) | A new Worker's first production deploy is Isaac's | Pay per use (model) |
 | 4 | Share links on staging: an R2 bucket `booth-studio-shares-staging` | Only if he wants share links testable on staging (D-067) | Free tier |
-| 5 | Scene-level booth actions in studio-api (step 9b) | The assistant can then move, hang or resize one piece in a booth; studio-api learns Booth Studio's scene format | — |
+| 5 | ~~Scene-level booth actions in studio-api (step 9b)~~ Approved 2026-10-05 (D-070) | The assistant can then build a booth and move, hang or resize one piece in it; studio-api runs Booth Studio's own scene code | — |
 
 Approved 2026-10-05 (recorded in each repo): Booth Studio may sign in and sync through studio-api;
 this part of Phase 5 before Phase 4 (D-061); SHIPPING.md applies to booth-studio; Claude does the

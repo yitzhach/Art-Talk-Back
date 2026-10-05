@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+### Phase 5 · Booth Studio's part (D-059)
+- Plan, gate and "Needs Isaac's OK" in `docs/phase-5-booth.md`; decisions D-059…D-065.
+
 ### Assistant on staging (2026-10-05)
 - First live run on staging: a sale said in words became one card, and the tap saved it as the assistant.
 - Fix: the assistant is told how its newest cards ended (`GET /assistant/proposals?status=all`), so it no longer says a confirmed sale "isn't saved yet" (D-058).

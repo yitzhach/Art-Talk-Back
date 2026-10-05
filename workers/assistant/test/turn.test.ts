@@ -93,6 +93,34 @@ describe("gate 1: a sale said in words becomes one confirm card", () => {
   });
 });
 
+describe("suggested replies", () => {
+  it("a closing [[replies: …]] line becomes buttons, never text, even split across chunks", async () => {
+    const { replySplitter } = await import("../src/turn");
+    const out: string[] = [];
+    const r = replySplitter((t) => out.push(t));
+    for (const chunk of ["Which show? Bonita or Naples", "?\n[", "[repl", "ies: Bonita Springs | Naples ]]"]) r.push(chunk);
+    expect(r.end()).toEqual(["Bonita Springs", "Naples"]);
+    expect(out.join("")).toBe("Which show? Bonita or Naples?\n");
+  });
+
+  it("brackets that aren't the replies line are sent as they are", async () => {
+    const { replySplitter } = await import("../src/turn");
+    const out: string[] = [];
+    const r = replySplitter((t) => out.push(t));
+    r.push("Booth [[12]] is yours [");
+    expect(r.end()).toEqual([]);
+    expect(out.join("")).toBe("Booth [[12]] is yours [");
+  });
+
+  it("the panel gets a replies event and the text without the line", async () => {
+    const { model } = scripted([() => message([text("Add a second sale?\n[[replies: Yes | No]]")])]);
+    const out = await chat(makeHandler(() => model), assistantEnv(server), cookie, { app: "show-tracker", message: "two herons at Bonita" });
+    expect(out.events).toEqual([
+      { type: "text", text: "Add a second sale?\n" }, { type: "replies", items: ["Yes", "No"] }, { type: "end", reason: "end_turn" },
+    ]);
+  });
+});
+
 describe("card outcomes in the context line", () => {
   it("names each card's state, newest five", async () => {
     const { cardOutcomes } = await import("../src/turn");

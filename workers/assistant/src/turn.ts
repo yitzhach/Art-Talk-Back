@@ -16,6 +16,7 @@ export type TurnEvent =
   | { type: "text"; text: string }
   | { type: "search"; q: string; items: { type: string; id: string; label: string; detail: string }[] }
   | { type: "card"; proposal: Record<string, unknown> }
+  | { type: "replies"; items: string[] }
   | { type: "done"; action: string; record: Record<string, unknown>; activityIds: string[] }
   | { type: "end"; reason: "end_turn" | "refusal" | "max_tokens" | "step_limit" | "error"; message?: string };
 
@@ -46,6 +47,33 @@ export function cardOutcomes(cards: CardState[], now = new Date().toISOString())
       : c.expiresAt < now ? "expired, nothing saved" : "waiting for the artist's tap, nothing saved yet";
     return `card ${c.id} "${c.summary.slice(0, 120)}": ${state}`;
   });
+}
+
+const REPLIES = /^\[\[replies:([^\]]*)\]\]$/;
+
+/**
+ * Streams the model's text through, but holds back a closing
+ * "[[replies: Yes | No]]" line (the panel shows those as buttons). Anything
+ * held that turns out not to be that line is sent at the end, unchanged.
+ */
+export function replySplitter(send: (text: string) => void) {
+  let held = "";
+  return {
+    push(delta: string) {
+      held += delta;
+      const at = held.indexOf("[[");
+      // A lone "[" at the end may be the start of "[[": keep it back too.
+      const cut = at >= 0 ? at : held.endsWith("[") ? held.length - 1 : held.length;
+      if (cut > 0) { send(held.slice(0, cut)); held = held.slice(cut); }
+    },
+    end(): string[] {
+      const rest = held;
+      held = "";
+      const m = REPLIES.exec(rest.trim());
+      if (!m) { if (rest) send(rest); return []; }
+      return m[1]!.split("|").map((r) => r.trim().slice(0, 60)).filter(Boolean).slice(0, 4);
+    },
+  };
 }
 
 export function modelTools(tools: Tool[]): Anthropic.Beta.Messages.BetaTool[] {
@@ -79,6 +107,7 @@ export async function runTurn(
   let end: TurnEvent = { type: "end", reason: "step_limit" };
   try {
     for (let step = 0; step < MAX_STEPS; step++) {
+      const replies = replySplitter((text) => emit({ type: "text", text }));
       const msg = await model({
         ...deps.settings,
         model: deps.settings.model ?? "claude-sonnet-5-5",
@@ -88,7 +117,9 @@ export async function runTurn(
         // Caches the stable prefix (tools, system, earlier turns) across the loop.
         cache_control: { type: "ephemeral" },
         messages: [...history, ...turn],
-      }, (text) => emit({ type: "text", text }));
+      }, (text) => replies.push(text));
+      const suggested = replies.end();
+      if (suggested.length) emit({ type: "replies", items: suggested });
       turn.push({ role: "assistant", content: msg.content as MessageParam["content"] });
 
       const uses = msg.content.filter((b): b is Anthropic.Beta.Messages.BetaToolUseBlock => b.type === "tool_use");

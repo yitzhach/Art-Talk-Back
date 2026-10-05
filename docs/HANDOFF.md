@@ -92,9 +92,15 @@ Read this first, then `CLAUDE.md`, then `docs/phase-3.md` (assistant) or `docs/p
 
 ## Where Booth Studio's work stands (2026-10-05)
 
-- Both PRs open, CI watched by the session that built them. Merge order: Art-Talk-Back#17, check
-  "Deploy production API" applied 0006 (job log: bookmark, migration, version), then booth-studio#9.
-- Staging: `studio-booth-studio-staging` version `090d194a` (API → `studio-api-staging`), and
-  `studio-api-staging` with 0006, from this branch. Isaac can sign in there with his email.
+- **Shipped.** [Art-Talk-Back#17](https://github.com/yitzhach/Art-Talk-Back/pull/17) merged first:
+  "Deploy production API" applied migration 0006 to `studio-db-prod` and deployed `studio-api`
+  `2c706cd5` (restore: bookmark `00000009-00000000-000050fb-e57b76aabaee651ce8ee99f88fda66df`, previous
+  Worker `bb83f90d`). Then [booth-studio#9](https://github.com/yitzhach/booth-studio/pull/9) merged
+  (`04d694f`), deploying `booth-studio` with the `API` binding. Signed out, Booth Studio is unchanged.
+- Staging: `studio-booth-studio-staging` (API → `studio-api-staging`, which has 0006). Isaac can sign
+  in there with his email.
+- Booth Studio's CI (job `booth`) runs its 37 view suites and e2e checks on Chromium build 1194, the
+  sandbox's: the pinned Playwright's own headless shell stops drawing under the suites' flags.
 - Left for Isaac: the `ci` ruleset entries (`booth-studio` here, `booth` there) and auto-merge on
-  booth-studio; his first real use (HANDOFF → Next in booth-studio); stage 2 (above).
+  booth-studio; his first real use (booth-studio HANDOFF → Next); the first run of "Deploy
+  production assistant" (D-068), which stage 2 waits on.

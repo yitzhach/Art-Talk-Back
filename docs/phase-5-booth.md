@@ -40,9 +40,11 @@ is read, never changed.
    checkout, like the tracker's `e2e/two-devices.cjs`; runs with both compatibility dates.
 7. [x] CI: booth-studio `.github/workflows/ci.yml` (job `booth`); Art-Talk-Back job `booth-studio`;
    "Deploy staging" also deploys `studio-booth-studio-staging` (input `booth_ref`).
-8. [ ] Ship in order (below); first deploy of `studio-booth-studio-staging`; check both deploys.
-   Done so far: staging deployed (`090d194a`); Art-Talk-Back#17 merged and "Deploy production API"
-   applied 0006 to `studio-db-prod` (`studio-api` `2c706cd5`, bookmark `00000009-00000000-000050fb-e57b76aabaee651ce8ee99f88fda66df`).
+8. [x] Ship in order (below); first deploy of `studio-booth-studio-staging`; check both deploys.
+   Staging deployed (`090d194a`). Art-Talk-Back#17 merged; "Deploy production API" applied 0006 to
+   `studio-db-prod` (`studio-api` `2c706cd5`; restore bookmark
+   `00000009-00000000-000050fb-e57b76aabaee651ce8ee99f88fda66df`). Then booth-studio#9 merged
+   (`04d694f` on its `main`), which Cloudflare's Git integration deployed to `booth-studio`.
 9. [ ] Stage 2: the assistant panel — only once `studio-assistant` is deployed (see Needs Isaac's OK). Its button
    exists now ("Deploy production assistant", D-068); the first press is Isaac's.
 

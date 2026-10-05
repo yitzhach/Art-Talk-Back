@@ -7,12 +7,9 @@ Paste this into a new chat:
 > Art-Talk-Back `docs/HANDOFF.md` first, then `docs/phase-5-booth.md`, and booth-studio's
 > `CLAUDE.md` and `HANDOFF.md` → Studio platform. Read other files only when a step needs them.
 >
-> 1. Booth Studio on the platform (D-061…D-067): if
->    [Art-Talk-Back#17](https://github.com/yitzhach/Art-Talk-Back/pull/17) or
->    [booth-studio#9](https://github.com/yitzhach/booth-studio/pull/9) is still open, finish them:
->    CI green in both, then merge #17 first, check in the job log that "Deploy production API"
->    applied migration 0006 to `studio-db-prod`, then merge #9 and check the `booth-studio`
->    production build through the Cloudflare connector. Tick step 8 in `phase-5-booth.md`.
+> 1. Booth Studio on the platform (D-061…D-068) shipped on 2026-10-05: Art-Talk-Back#17, then
+>    booth-studio#9. Check nothing is red on either default branch, and that the `booth-studio`
+>    Worker's latest version is the one built from booth-studio `main`.
 > 2. Walk Isaac through his first real use, in clicks: sign in on
 >    `studio-booth-studio-staging`, Import my existing projects, open the booth on his phone; then
 >    the same on production. Record what he says in booth-studio HANDOFF → Next.

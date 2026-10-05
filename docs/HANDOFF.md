@@ -40,6 +40,49 @@ Read this first, then `CLAUDE.md`, then `docs/phase-3.md` (assistant) or `docs/p
   production assistant" (D-068: Actions → Run workflow → type `studio-assistant`). Booth Studio's
   assistant panel (stage 2 of `phase-5-booth.md`) waits on that.
 
+## Next up: the assistant panel on the Show Tracker's staging site
+
+**Isaac's report (2026-10-05, end of session):** after signing in again on staging, he no longer saw
+the "Ask the assistant" button. Not diagnosed yet; start here. What was checked:
+- The last "Deploy staging" (run 37264635067, from `claude/festive-curie-ohram8`, the Booth Studio
+  session) deployed app branch `claude/assistant-panel` at `ca8f6dc` (which has the panel) and
+  `studio-assistant-staging` on `claude-haiku-4-5`. That branch contains everything below.
+- Not yet ruled out: Isaac on the live site (art-show-tracker, which has no panel) instead of
+  `studio-show-tracker-staging.bobdylan2000.workers.dev`; a page other than the ledger or Money
+  (the only two with `<studio-assistant>`); a cached old copy (service worker); or the panel hiding
+  itself because `ASTStudio.session()` reads as signed out or expired (`paint()` in
+  `tracker/studio-assistant.js`). Ask for a screenshot with the address bar, then check the staging
+  Worker's assets (connector can't read static assets; use the deploy log's uploaded-file list).
+
+**What the panel does on staging (all tested: app `build/assistant-tests.cjs` 43/43, 188 here):**
+confirm card → Confirm → Saved → Undo (gate 1 done by Isaac on staging, sale stored as
+`actor_type: assistant`); cards say "Price each"; suggested replies as buttons and Tab; grey
+finish-my-sentence text (Tab); New chat; Past chats (`GET /assistant/threads`,
+`GET /assistant/thread?id=`, chat `threadId`); a "start a new chat" note after 8 messages; recent
+confirmed cards keep Undo across pages; a failed turn shows the error text.
+Assistant side: each turn tells the model how its newest cards ended (D-058); a step that only left
+cards ends the turn, one model call fewer per sale (D-059); threads close after 4 quiet hours or 40
+messages (D-060); the system prompt names the deployed model; text from separate steps is spaced.
+
+**Model:** staging runs Haiku 4.5 for Isaac's cost comparison ("Deploy staging" input
+`assistant_model`; Sonnet 5.5 is the default). Haiku's 4096-token cache minimum means it may save
+less than half. Isaac picks the default after comparing costs in AI Gateway `studio` → Logs.
+
+**Setup done 2026-10-05:** `ci` rulesets in both repos (Isaac, verified); Cloudflare connector
+connected; `ANTHROPIC_API_KEY` secret and `AI_GATEWAY_URL` variable set; gateway `studio` has
+authentication **off** (it was on at first and silently refused every call: no log entries).
+
+**CI is red on the default branch (2026-10-05, after #20):** job `booth-studio` fails at
+"workers/studio-api/src/vendor/booth-scene.js is this app's scene build (D-070)": the vendored copy
+doesn't match booth-studio's build. `check` and `show-tracker` pass. Because CI isn't green, "Deploy
+production API" was **skipped** for the latest default-branch commits: production `studio-api` is
+behind until this is fixed (rebuild in booth-studio, copy over on the same-named branch, per D-070).
+The `ci` ruleset requires only `check` and `show-tracker`, so merges aren't blocked.
+
+**Still open for the assistant:** Isaac's 20+ requests in his own words for the eval set (gate 4);
+the first production deploy ("Deploy production assistant", D-068) and then merging app branch
+`claude/assistant-panel` into the app's `main` (never before `studio-assistant` exists in production).
+
 ## How to work
 
 - Use the `backend-builder` skill for every backend change. Report Changed / Verified / Left.

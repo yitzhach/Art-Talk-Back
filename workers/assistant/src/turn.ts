@@ -121,7 +121,7 @@ export async function runTurn(
         ...deps.settings,
         model: deps.settings.model ?? "claude-sonnet-5-5",
         max_tokens: 16000,
-        system: systemFor(deps.settings.model ?? "claude-sonnet-5-5"),
+        system: systemFor(deps.settings.model ?? "claude-sonnet-5-5", input.app),
         tools: modelTools(tools),
         // Caches the stable prefix (tools, system, earlier turns) across the loop.
         cache_control: { type: "ephemeral" },

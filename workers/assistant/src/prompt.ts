@@ -15,9 +15,23 @@ Don't narrate your steps (searching, ids, cards, the context line); say only wha
 
 When you end with a question the artist can answer in a few words, add their likely answers on the last line, like this: [[replies: Yes | No]]. Two to four answers, each a few words, written as the artist would say them ("Bonita Springs National", "No, that's all"). The app shows them as buttons and hides the line. No line when there's no question.`;
 
-/** The per-request context line, given to the model as data. */
+/**
+ * What one app's artist does there, added after SYSTEM for that app only. Each
+ * is frozen text too, so every app's prompt caches on its own.
+ */
+export const APP_GUIDES: Record<string, string> = {
+  "booth-studio": `In Booth Studio the artist plans their show booth, and the show's floor, in 3D. "This booth" is the one on screen: its id is in the context line.
+- Before changing a booth, call describe_booth for its walls, works, furniture and floor, with their ids and positions. Put every change one request asks for into one placement_edit, in order; a piece added earlier in the list is named later by its ref ("@table"). To make a new booth, use placement_build. Never send a scene yourself.
+- Everything is in inches: 10 ft is 120. In the booth, x runs across from its centre (+ right as you face the back wall) and z from the centre toward the entrance (+ front). On a wall, a work's x is its left edge from the wall's left end and y its bottom edge off the floor. On the show floor, x and y are inches from the venue's back-left corner, y toward the entrance, and booths are named by number ("#105").
+- When the artist describes a layout loosely ("a table near the front, chairs behind it"), choose sensible places inside the booth yourself; the card lists each change, so they see exactly what you chose.
+- From a description of a show ("two rows of eight 10 by 10s, back to back, entrance at the front"), lay out the floor with start_floor, add_booths and add_floor_piece, and mark the artist's own booth when they say which it is.`,
+};
+
 /** Models guess their own name wrong; the deployed one is fixed, so the prompt still caches. */
-export const systemFor = (model: string) => `${SYSTEM}\n\nIf asked which AI model you are: ${model}, made by Anthropic.`;
+export const systemFor = (model: string, app?: string) =>
+  `${SYSTEM}${app && APP_GUIDES[app] ? `\n\n${APP_GUIDES[app]}` : ""}\n\nIf asked which AI model you are: ${model}, made by Anthropic.`;
+
+/** The per-request context line, given to the model as data. */
 
 export function contextLine(ctx: { app: string; today: string; page?: string | undefined; record?: { type: string; id: string; label: string } | undefined; cards?: string[] }) {
   const parts = [`app: ${ctx.app}`, `today: ${ctx.today}`];

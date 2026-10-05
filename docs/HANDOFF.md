@@ -72,6 +72,13 @@ less than half. Isaac picks the default after comparing costs in AI Gateway `stu
 connected; `ANTHROPIC_API_KEY` secret and `AI_GATEWAY_URL` variable set; gateway `studio` has
 authentication **off** (it was on at first and silently refused every call: no log entries).
 
+**CI is red on the default branch (2026-10-05, after #20):** job `booth-studio` fails at
+"workers/studio-api/src/vendor/booth-scene.js is this app's scene build (D-070)": the vendored copy
+doesn't match booth-studio's build. `check` and `show-tracker` pass. Because CI isn't green, "Deploy
+production API" was **skipped** for the latest default-branch commits: production `studio-api` is
+behind until this is fixed (rebuild in booth-studio, copy over on the same-named branch, per D-070).
+The `ci` ruleset requires only `check` and `show-tracker`, so merges aren't blocked.
+
 **Still open for the assistant:** Isaac's 20+ requests in his own words for the eval set (gate 4);
 the first production deploy ("Deploy production assistant", D-068) and then merging app branch
 `claude/assistant-panel` into the app's `main` (never before `studio-assistant` exists in production).

@@ -20,6 +20,6 @@ Paste this into a new chat:
 >    learn placements first), on staging before production.
 >
 > Isaac isn't technical: give him clicks, not commands, all in one list. Use the `backend-builder`
-> skill for every Art-Talk-Back change. Next decision is D-069 (fetch the default branch first:
+> skill for every Art-Talk-Back change. Next decision is D-070 (fetch the default branch first:
 > another session may have taken it). Add a `CHANGELOG.md` line per item; report each item as
 > Changed / Verified / Left.

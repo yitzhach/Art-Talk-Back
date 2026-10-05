@@ -7219,10 +7219,10 @@
           {
             "schema": {
               "type": "string",
-              "description": "Comma-separated: show,sale,artwork,client"
+              "description": "Comma-separated: show,sale,artwork,client,placement"
             },
             "required": false,
-            "description": "Comma-separated: show,sale,artwork,client",
+            "description": "Comma-separated: show,sale,artwork,client,placement",
             "name": "types",
             "in": "query"
           },
@@ -7257,7 +7257,8 @@
                               "show",
                               "sale",
                               "artwork",
-                              "client"
+                              "client",
+                              "placement"
                             ]
                           },
                           "id": {

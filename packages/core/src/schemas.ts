@@ -359,7 +359,7 @@ export const ActResponse = z.discriminatedUnion("status", [
 
 export const ConfirmResponse = z.object({ proposal: Proposal, result: Meta, activityIds: z.array(Id) });
 
-export const SearchType = z.enum(["show", "sale", "artwork", "client"]);
+export const SearchType = z.enum(["show", "sale", "artwork", "client", "placement"]);
 export const SearchItem = z.object({
   type: SearchType,
   id: Id,

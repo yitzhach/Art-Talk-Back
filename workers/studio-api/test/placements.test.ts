@@ -195,3 +195,26 @@ describe("Booth Studio's assistant tools (D-052)", () => {
     expect(tracker.some((n: string) => n.startsWith("placement"))).toBe(false);
   });
 });
+
+describe("search finds booths by name (D-069)", () => {
+  it("by any words of the name, with its size; another studio's never; the scene is never read", async () => {
+    const a = await makeStudio();
+    const big = { ...booth("Winter Park corner booth"), scene: { blob: "x".repeat(500_000) } };
+    const p = (await call("/v1/placements", { method: "POST", cookie: a.cookie, json: big })).data;
+    await call("/v1/placements", { method: "POST", cookie: a.cookie, json: booth("Spring booth") });
+    const res = await call("/v1/search?q=winter%20corner&types=placement", { cookie: a.cookie });
+    expect(res.status).toBe(200);
+    expect(res.data.items).toEqual([{ type: "placement", id: p.id, version: 1, label: "Winter Park corner booth", detail: "booth · 120 × 120 in" }]);
+    expect(res.raw.length).toBeLessThan(1000);
+    // No type filter: booths come back beside everything else.
+    expect((await call("/v1/search?q=spring", { cookie: a.cookie })).data.items.map((i: any) => i.type)).toContain("placement");
+    const b = await makeStudio("B");
+    expect((await call("/v1/search?q=winter", { cookie: b.cookie })).data.items).toEqual([]);
+  });
+
+  it("the search tool offers placement as a kind", async () => {
+    const a = await makeStudio();
+    const tools = (await call("/v1/assistant/tools?app=booth-studio", { cookie: a.cookie, headers: ASSISTANT })).data.tools;
+    expect(tools.find((t: any) => t.name === "search").inputSchema.properties.types.items.enum).toContain("placement");
+  });
+});

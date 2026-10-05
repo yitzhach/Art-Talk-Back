@@ -9,6 +9,7 @@ import { createRoute } from "@hono/zod-openapi";
 import { and, desc, eq, gt, inArray, isNull, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import type { Context } from "hono";
+import type { SQLiteColumn } from "drizzle-orm/sqlite-core";
 import { z } from "zod";
 import { appendMessages, cardLines, nameOf, pendingEntity, propose, resolve } from "../actions/assistant";
 import { getEntity, getRecord } from "../actions/records";
@@ -217,7 +218,7 @@ assistantRoutes.openapi(
 const SEARCH_TOOL = {
   name: "search",
   action: null,
-  description: "Find shows, sales, artworks or clients by name, to get their ids. Use it before naming a record in any other tool. Several matches: ask the artist which one.",
+  description: "Find shows, sales, artworks, clients or booths (placements) by name, to get their ids. Use it before naming a record in any other tool. Several matches: ask the artist which one.",
   inputSchema: {
     type: "object",
     properties: {
@@ -372,9 +373,11 @@ assistantRoutes.openapi(
 interface SearchDef {
   type: z.infer<typeof SearchType>;
   perm: Permission;
-  table: typeof schema.shows | typeof schema.sales | typeof schema.artworks | typeof schema.clients;
+  table: typeof schema.shows | typeof schema.sales | typeof schema.artworks | typeof schema.clients | typeof schema.placements;
   fields: string[]; // SQL columns searched
   detail: (r: Snapshot) => string;
+  /** Read only these columns: a placement's scene can be 600 KB, and a search needs none of it (D-069). */
+  columns?: Record<string, SQLiteColumn>;
 }
 
 const money = (cents: unknown) => (typeof cents === "number" ? `$${(cents / 100).toFixed(2)}` : "unpriced");
@@ -387,6 +390,13 @@ const SEARCHABLE: SearchDef[] = [
     detail: (r) => [r.inventoryCode, r.medium, r.status].filter(Boolean).join(" · ") },
   { type: "client", perm: "clients:read", table: schema.clients, fields: ["name", "email"],
     detail: (r) => [r.kind, r.email].filter(Boolean).join(" · ") },
+  { type: "placement", perm: "placements:read", table: schema.placements, fields: ["name"],
+    detail: (r) => [r.kind, r.width && r.depth ? `${r.width} × ${r.depth} ${r.sizeUnit}` : ""].filter(Boolean).join(" · "),
+    columns: {
+      id: schema.placements.id, version: schema.placements.version, name: schema.placements.name, kind: schema.placements.kind,
+      width: schema.placements.width, depth: schema.placements.depth, sizeUnit: schema.placements.sizeUnit,
+      updatedAt: schema.placements.updatedAt,
+    } },
 ];
 
 /** LIKE pattern for one word, with LIKE's own wildcards escaped. */
@@ -399,7 +409,7 @@ assistantRoutes.openapi(
     request: {
       query: z.object({
         q: z.string().trim().min(1).max(200),
-        types: z.string().optional().meta({ description: "Comma-separated: show,sale,artwork,client" }),
+        types: z.string().optional().meta({ description: "Comma-separated: show,sale,artwork,client,placement" }),
         limit: z.coerce.number().int().min(1).max(25).default(10),
       }),
     },
@@ -416,7 +426,7 @@ assistantRoutes.openapi(
       if (!wanted.has(s.type) || !can(actor.role, s.perm)) continue;
       const haystack = sql.raw(s.fields.map((f) => `coalesce(${f}, '')`).join(" || ' ' || "));
       const t = s.table as typeof schema.shows;
-      const rows = await db.select().from(s.table).where(and(
+      const rows = await (s.columns ? db.select(s.columns) : db.select()).from(s.table as typeof schema.shows).where(and(
         eq(t.studioId, actor.studioId), isNull(t.deletedAt),
         ...words.map((w) => sql`lower(${haystack}) LIKE ${pattern(w)} ESCAPE '\\'`),
       )).orderBy(desc(t.updatedAt)).limit(25) as Snapshot[];

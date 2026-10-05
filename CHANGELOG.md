@@ -15,6 +15,7 @@
 - Shipped: migration 0006 live on `studio-db-prod`, `studio-api` `2c706cd5` ("Deploy production API" after #17).
 - "Deploy production assistant": a manual button for `studio-assistant`, with a confirm word; never automatic (D-068).
 - Booth Studio's side merged (booth-studio#9, `04d694f`) and deployed by its Git integration: Booth Studio signs in and syncs through production `studio-api`.
+- Stage 2, step 9a: search finds booths by name, reading only their summary columns (D-069).
 
 ### Assistant on staging (2026-10-05)
 - First live run on staging: a sale said in words became one card, and the tap saved it as the assistant.

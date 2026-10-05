@@ -45,8 +45,19 @@ is read, never changed.
    `studio-db-prod` (`studio-api` `2c706cd5`; restore bookmark
    `00000009-00000000-000050fb-e57b76aabaee651ce8ee99f88fda66df`). Then booth-studio#9 merged
    (`04d694f` on its `main`), which Cloudflare's Git integration deployed to `booth-studio`.
-9. [ ] Stage 2: the assistant panel — only once `studio-assistant` is deployed (see Needs Isaac's OK). Its button
-   exists now ("Deploy production assistant", D-068); the first press is Isaac's.
+9. [ ] Stage 2: the assistant panel. Built on a branch and tried on staging; it reaches Booth Studio's
+   `main` only after "Deploy production assistant" has run once (Isaac, D-068), because production's
+   `ASSISTANT` binding needs `studio-assistant` to exist.
+   - [x] 9a. `GET /search` and the `search` tool find placements by name (D-069) (summary columns only, never the
+     scene).
+   - [ ] 9b. Scene-level booth actions, so the assistant changes one thing without resending a whole
+     scene (`placement_update` replaces `scene` as one field, up to 600 KB). **Needs Isaac's OK (#5):**
+     it teaches studio-api Booth Studio's scene format.
+   - [ ] 9c. Booth Studio: `<studio-assistant>` panel (the Show Tracker's, as an ES module), `/assistant/*`
+     forwarded, `ASSISTANT` bindings (production `studio-assistant`, staging `studio-assistant-staging`),
+     the open booth sent as the chat's record; a confirmed change reaches the screen through sync.
+   - [ ] 9d. "Deploy staging" with that branch; Isaac tries it on staging; then production after D-068's
+     first run.
 
 ## Gate (v1)
 
@@ -83,6 +94,7 @@ The platform's merge is safe alone: nothing calls the new routes until the app s
 | 2 | Art-Talk-Back `ci` ruleset: add `booth-studio` | The API can't merge past a broken Booth Studio | — |
 | 3 | First **production** deploy of `studio-assistant` (stage 2): Actions → **Deploy production assistant** → Run workflow → type `studio-assistant` → Run (D-068) | A new Worker's first production deploy is Isaac's | Pay per use (model) |
 | 4 | Share links on staging: an R2 bucket `booth-studio-shares-staging` | Only if he wants share links testable on staging (D-067) | Free tier |
+| 5 | Scene-level booth actions in studio-api (step 9b) | The assistant can then move, hang or resize one piece in a booth; studio-api learns Booth Studio's scene format | — |
 
 Approved 2026-10-05 (recorded in each repo): Booth Studio may sign in and sync through studio-api;
 this part of Phase 5 before Phase 4 (D-061); SHIPPING.md applies to booth-studio; Claude does the

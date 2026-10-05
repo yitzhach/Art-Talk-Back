@@ -1,6 +1,6 @@
 # Phase 3 · Assistant v0 (text)
 
-**Status (2026-10-03):** steps 1–7 built, tested and merged (the API half is in production), with no model key (a scripted
+**Status (2026-10-05):** steps 1–7 merged; step 8 under way: live on staging, gate 1 passed there by Isaac (see HANDOFF "Next up"), with no model key (a scripted
 model in tests, recorded replies in the eval). Left: step 8 (staging and Isaac's run),
 the live eval, and Isaac's own requests: "Needs Isaac's OK" below. Defaults:
 D-045…D-047, D-052…D-056.

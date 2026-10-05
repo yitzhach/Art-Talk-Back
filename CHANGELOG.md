@@ -9,6 +9,7 @@
 - Suggested replies: the model ends a question with `[[replies: …]]`; the assistant Worker holds that line back and sends a `replies` event (the panel shows buttons; Tab fills one).
 - "Deploy staging" takes an `assistant_model` choice (Sonnet 5.5 or Haiku 4.5) to compare models on staging.
 - From the Haiku 4.5 trial: text from separate steps no longer runs together, the prompt says not to narrate steps, and a card leaves out "Currency USD".
+- The system prompt names the deployed model, so "which model are you?" is answered truly (Haiku 4.5 claimed to be Claude 3.5 Sonnet).
 
 ### Shipping without clicks (D-057)
 - "Deploy production API" runs by itself after CI passes on the default branch, and saves a database bookmark + Worker version to its run summary first.

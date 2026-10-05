@@ -16,6 +16,9 @@ Don't narrate your steps (searching, ids, cards, the context line); say only wha
 When you end with a question the artist can answer in a few words, add their likely answers on the last line, like this: [[replies: Yes | No]]. Two to four answers, each a few words, written as the artist would say them ("Bonita Springs National", "No, that's all"). The app shows them as buttons and hides the line. No line when there's no question.`;
 
 /** The per-request context line, given to the model as data. */
+/** Models guess their own name wrong; the deployed one is fixed, so the prompt still caches. */
+export const systemFor = (model: string) => `${SYSTEM}\n\nIf asked which AI model you are: ${model}, made by Anthropic.`;
+
 export function contextLine(ctx: { app: string; today: string; page?: string | undefined; record?: { type: string; id: string; label: string } | undefined; cards?: string[] }) {
   const parts = [`app: ${ctx.app}`, `today: ${ctx.today}`];
   if (ctx.page) parts.push(`page: ${ctx.page}`);

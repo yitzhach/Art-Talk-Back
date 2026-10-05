@@ -4,7 +4,7 @@
 // confirm card (D-045). The thread is append-only: this turn's messages are
 // added at the end, exactly as sent and received (D-053).
 import type Anthropic from "@anthropic-ai/sdk";
-import { SYSTEM, contextLine } from "./prompt";
+import { contextLine, systemFor } from "./prompt";
 import type { Model, ModelRequest } from "./model";
 import { type CardState, type Studio, StudioError, type Tool } from "./studio";
 
@@ -119,7 +119,7 @@ export async function runTurn(
         ...deps.settings,
         model: deps.settings.model ?? "claude-sonnet-5-5",
         max_tokens: 16000,
-        system: SYSTEM,
+        system: systemFor(deps.settings.model ?? "claude-sonnet-5-5"),
         tools: modelTools(tools),
         // Caches the stable prefix (tools, system, earlier turns) across the loop.
         cache_control: { type: "ephemeral" },

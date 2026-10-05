@@ -26,7 +26,7 @@ describe("gate 1: a sale said in words becomes one confirm card", () => {
     let showId = "";
     const { model, requests } = scripted([
       (req) => {
-        expect(req.system).toBe(SYSTEM);
+        expect(req.system).toBe(`${SYSTEM}\n\nIf asked which AI model you are: claude-sonnet-5-5, made by Anthropic.`);
         expect(req.tools!.map((t) => (t as { name: string }).name)).toEqual([
           "search", "sale_create", "sale_delete", "sale_restore", "sale_update", "show_create", "show_delete", "show_restore", "show_update",
         ]);

@@ -1,8 +1,8 @@
 // Studio-owned record types and their CRUD actions. Every action reads with
 // studio_id from the session, so another studio's id is simply "not found" (D-016).
 import {
-  ArtworkInput, ArtworkPatch, ClientInput, ClientPatch, Id, SaleInput, SalePatch, SettingsPatch, ShowInput, ShowPatch,
-  db as schema, newId,
+  ArtworkInput, ArtworkPatch, ClientInput, ClientPatch, Id, PlacementInput, PlacementPatch, SaleInput, SalePatch,
+  SettingsPatch, ShowInput, ShowPatch, db as schema, newId,
 } from "@studio/core";
 import { and, eq, isNull } from "drizzle-orm";
 import type { SQLiteColumn, SQLiteTable } from "drizzle-orm/sqlite-core";
@@ -86,6 +86,14 @@ export const saleEntity = define({
   defaults: {
     ...recordDefaults, showId: null, artworkId: null, title: null, priceCents: null, currency: "USD", quantity: 1,
     soldOn: null, paymentMethod: null, size: null, medium: null, source: "manual", externalId: null, notes: null,
+  },
+});
+
+export const placementEntity = define({
+  type: "placement", table: schema.placements, key: schema.placements.id, studio: schema.placements.studioId,
+  version: schema.placements.version, deletedAt: schema.placements.deletedAt, perm: "placements",
+  defaults: {
+    ...recordDefaults, kind: "booth", width: null, depth: null, height: null, sizeUnit: "in", scene: {}, images: [],
   },
 });
 
@@ -236,6 +244,12 @@ export const saleActions = crudActions(saleEntity, SaleInput, SalePatch, {
     if (f.showId) await getRecord(ctx.db, showEntity, ctx.actor.studioId, f.showId as string, opts);
     if (f.artworkId) await getRecord(ctx.db, artworkEntity, ctx.actor.studioId, f.artworkId as string, opts);
   },
+});
+
+// A booth or wall scene (D-062). Only Booth Studio's assistant gets these as tools (D-052).
+export const placementActions = crudActions(placementEntity, PlacementInput, PlacementPatch, {
+  apps: ["booth-studio"],
+  about: "A booth (or wall) scene: name, kind (booth or wall), the space's real size (width, depth, height in sizeUnit), format (the app that wrote the scene and its version, e.g. booth-studio/1), scene (that app's JSON: positions and the rest) and images (the studio files the scene uses, by key). Change scene only in the format it already has; never invent file ids.",
 });
 
 export const settingsUpdate = defineAction({

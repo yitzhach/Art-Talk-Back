@@ -74,3 +74,56 @@ jobs:
         working-directory: .show-tracker
         env: { HTTPS_PROXY: "http://127.0.0.1:9", HTTP_PROXY: "http://127.0.0.1:9", NO_PROXY: "127.0.0.1,localhost", STUDIO_PLATFORM: ".." }
         run: node e2e/two-devices.cjs
+
+  # Booth Studio lives in yitzhach/booth-studio (D-042, phase-5-booth.md). From
+  # here: its vendored ES-module SDK still matches this SDK, and this API still
+  # passes its two-device run (images, offline edits, conflicts, import). Its
+  # branch of the same name, else its main (D-056). Until Booth Studio's main is
+  # on the platform (no tests/two-devices.mjs there yet), the job says so and
+  # passes: this API's changes can't break an app that doesn't call it.
+  booth-studio:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - name: Pick the app branch
+        id: app
+        run: |
+          ref="${GITHUB_HEAD_REF:-$GITHUB_REF_NAME}"
+          if git ls-remote --exit-code --heads https://github.com/yitzhach/booth-studio "$ref" >/dev/null 2>&1; then
+            echo "ref=$ref" >> "$GITHUB_OUTPUT"
+          else
+            echo "ref=main" >> "$GITHUB_OUTPUT"
+          fi
+          echo "Testing against booth-studio@$(grep -o 'ref=.*' "$GITHUB_OUTPUT" | tail -1 | cut -d= -f2)"
+      - uses: actions/checkout@v4
+        with:
+          repository: yitzhach/booth-studio
+          ref: ${{ steps.app.outputs.ref }}
+          path: .booth-studio
+      - name: Is this Booth Studio on the platform?
+        id: on
+        run: |
+          if [ -f .booth-studio/tests/two-devices.mjs ]; then echo "yes=true" >> "$GITHUB_OUTPUT"
+          else echo "yes=false" >> "$GITHUB_OUTPUT"; echo "::notice::booth-studio@${{ steps.app.outputs.ref }} doesn't use the studio yet: nothing to test"; fi
+      - uses: pnpm/action-setup@v4
+        if: steps.on.outputs.yes == 'true'
+      - uses: actions/setup-node@v4
+        if: steps.on.outputs.yes == 'true'
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+        if: steps.on.outputs.yes == 'true'
+      - name: The app's src/vendor/studio-sdk.js matches this SDK
+        if: steps.on.outputs.yes == 'true'
+        run: pnpm --filter @studio/sdk bundle:esm --check --out "$GITHUB_WORKSPACE/.booth-studio/src/vendor/studio-sdk.js"
+      - name: Build Booth Studio
+        if: steps.on.outputs.yes == 'true'
+        working-directory: .booth-studio
+        run: npm ci && npm run build && npx playwright install --with-deps chromium
+      - name: Two devices, offline, against this API
+        if: steps.on.outputs.yes == 'true'
+        working-directory: .booth-studio
+        env: { HTTPS_PROXY: "http://127.0.0.1:9", HTTP_PROXY: "http://127.0.0.1:9", NO_PROXY: "127.0.0.1,localhost", STUDIO_PLATFORM: ".." }
+        run: node tests/two-devices.mjs

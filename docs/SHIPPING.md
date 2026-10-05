@@ -34,8 +34,8 @@ version** to its run summary before it migrates. No bookmark, no migration.
 1. **Settings → General →** *Pull Requests* → tick **Allow auto-merge**.
 2. **Settings → Rules → Rulesets → New ruleset → New branch ruleset.** Name `ci`,
    Enforcement **Active**, **Add target → Include default branch**, tick **Require
-   status checks to pass → Add checks** (`check` and `show-tracker` here, `tracker`
-   in art-show-tracker), **Create**. Without required checks, auto-merge merges at once.
+   status checks to pass → Add checks** (`check`, `show-tracker` and `booth-studio`
+   here, `tracker` in art-show-tracker, `booth` in booth-studio), **Create**. Without required checks, auto-merge merges at once.
 3. Deploying repos need the `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`
    secrets (this repo has them).
 4. Once per account: claude.ai → Settings → Connectors → **Cloudflare → Connect**.

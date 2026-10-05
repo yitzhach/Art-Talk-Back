@@ -2,17 +2,28 @@
 
 Paste this into a new chat:
 
-> Repos: yitzhach/Art-Talk-Back and yitzhach/art-show-tracker (keep them separate). Read
-> `docs/HANDOFF.md` in Art-Talk-Back first; read other files only when a step needs them.
+> Repos: yitzhach/Art-Talk-Back (the platform) and yitzhach/booth-studio (the app); read
+> yitzhach/art-show-tracker only as a reference. Keep them separate (D-042). Read
+> Art-Talk-Back `docs/HANDOFF.md` first, then `docs/phase-5-booth.md`, and booth-studio's
+> `CLAUDE.md` and `HANDOFF.md` → Studio platform. Read other files only when a step needs them.
 >
-> 1. Check whether `claude/optimistic-cray-4mcj1e` is merged in both repos (app first) and
->    "Deploy production API" has run. If not, check CI and walk Isaac through the three steps
->    in HANDOFF in plain words.
-> 2. If Isaac has the Anthropic API key and an AI Gateway: run "Deploy staging" with
->    `app_ref: claude/assistant-panel`, run the live eval, then guide him through Phase 3
->    gate 1 on his phone.
-> 3. Ask him for 20+ requests in his own words for the eval (`workers/assistant/evals/cases.json`,
->    `source: "isaac"`).
+> 1. Booth Studio on the platform (D-061…D-067): if
+>    [Art-Talk-Back#17](https://github.com/yitzhach/Art-Talk-Back/pull/17) or
+>    [booth-studio#9](https://github.com/yitzhach/booth-studio/pull/9) is still open, finish them:
+>    CI green in both, then merge #17 first, check in the job log that "Deploy production API"
+>    applied migration 0006 to `studio-db-prod`, then merge #9 and check the `booth-studio`
+>    production build through the Cloudflare connector. Tick step 8 in `phase-5-booth.md`.
+> 2. Walk Isaac through his first real use, in clicks: sign in on
+>    `studio-booth-studio-staging`, Import my existing projects, open the booth on his phone; then
+>    the same on production. Record what he says in booth-studio HANDOFF → Next.
+> 3. Stage 2 (the assistant panel in Booth Studio) starts only once production `studio-assistant`
+>    exists. Its first deploy is Isaac's and there is no workflow for it yet: if he wants it,
+>    build a manual "Deploy production assistant" workflow (confirm input, like "Deploy
+>    production API"), give him the clicks to run it, and only then add `<studio-assistant>` to
+>    Booth Studio (forward `/assistant/*` like the tracker's app branch `claude/assistant-panel`;
+>    search should learn placements first).
 >
-> Isaac isn't technical: give him clicks, not commands. Next decision is D-057; add a
-> `CHANGELOG.md` line per item; report each item as Changed / Verified / Left.
+> Isaac isn't technical: give him clicks, not commands, all in one list. Use the `backend-builder`
+> skill for every Art-Talk-Back change. Next decision is D-068 (fetch the default branch first:
+> another session may have taken it). Add a `CHANGELOG.md` line per item; report each item as
+> Changed / Verified / Left.

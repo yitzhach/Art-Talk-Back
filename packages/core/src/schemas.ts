@@ -102,7 +102,7 @@ export const UploadRequest = z.object({
   kind: FileKind.optional(),
 }).strict();
 
-export const AttachableType = z.enum(["artwork", "client"]);
+export const AttachableType = z.enum(["artwork", "client", "placement"]);
 export const AttachRequest = z.object({ entityType: AttachableType, entityId: Id }).strict();
 
 export const FileRecord = RecordMeta.extend({
@@ -221,6 +221,55 @@ export const SalePatch = SaleFields.partial().strict()
   .refine((v) => Object.keys(v).length > 0, "Send at least one field");
 export const SaleInput = SaleFields.partial().extend({ id: Id.optional() }).strict();
 export const Sale = RecordMeta.extend(SaleFields.shape);
+
+// -------------------------------------------------------------- placements
+// Phase 5 (D-062): one scene, a booth or a wall. The space's real size is in
+// fields; positions and the rest are in `scene`, in the format `format` names;
+// `images` lists the studio files the scene uses (D-063), never the bytes.
+
+/**
+ * Caps that keep a logged write (before + after in one activity_log row)
+ * well under D1's ~2 MB row limit (D-062).
+ */
+export const PLACEMENT_SCENE_MAX = 600_000;
+export const PLACEMENT_IMAGES_MAX = 400;
+
+export const PlacementImage = z.object({
+  /** The image's key inside the scene (Booth Studio: its asset id). */
+  key: z.string().min(1).max(100),
+  /** The studio file holding it; null until the upload has been attached. */
+  fileId: Id.nullable(),
+  name: z.string().max(200).nullable(),
+  contentType: z.string().max(200).nullable(),
+  /** Pixel size (1 x 1 for non-images such as a 3D model). */
+  width: z.number().int().min(0).max(100_000).nullable(),
+  height: z.number().int().min(0).max(100_000).nullable(),
+  /** Size of the original in bytes, as the device had it. */
+  bytes: z.number().int().min(0).nullable(),
+  /** What the scene uses it for (Booth Studio: artwork, ground, photo, model…). */
+  role: z.string().max(50).nullable(),
+}).strict();
+
+const Scene = Meta.refine((v) => JSON.stringify(v).length <= PLACEMENT_SCENE_MAX,
+  `The scene is too big to sync (over ${PLACEMENT_SCENE_MAX} characters of JSON)`);
+
+export const PlacementFields = z.object({
+  kind: z.enum(["booth", "wall"]),
+  name: z.string().trim().min(1).max(200),
+  format: z.string().regex(/^[a-z0-9-]+\/\d+$/, "app-name/version, e.g. booth-studio/1"),
+  width: z.number().nonnegative().nullable(),
+  depth: z.number().nonnegative().nullable(),
+  height: z.number().nonnegative().nullable(),
+  sizeUnit: SizeUnit,
+  scene: Scene,
+  images: z.array(PlacementImage).max(PLACEMENT_IMAGES_MAX),
+  meta: Meta,
+});
+export const PlacementPatch = PlacementFields.partial().strict()
+  .refine((v) => Object.keys(v).length > 0, "Send at least one field");
+export const PlacementInput = PlacementFields.partial().required({ name: true, format: true })
+  .extend({ id: Id.optional() }).strict();
+export const Placement = RecordMeta.extend(PlacementFields.shape);
 
 // -------------------------------------------------------------------- sync
 

@@ -6,7 +6,8 @@
   "main": "src/index.ts",
   "scripts": {
     "typecheck": "tsc -p tsconfig.json",
-    "bundle:classic": "node build/classic.mjs"
+    "bundle:classic": "node build/classic.mjs",
+    "bundle:esm": "node build/esm.mjs"
   },
   "dependencies": {
     "@studio/core": "workspace:*",

@@ -1,12 +1,24 @@
-# Handoff — 2026-10-03
+# Handoff — 2026-10-05
 
-Read this first, then `CLAUDE.md`, then `docs/phase-3.md`.
+Read this first, then `CLAUDE.md`, then `docs/phase-3.md` (assistant) or `docs/phase-5-booth.md`
+(Booth Studio), whichever your task is.
 
 ## Where things stand
 
 - **Phases 0–2 shipped.** Production `studio-api` is live (`studio-db-prod`, `iaa-files`). The Show
   Tracker syncs shows + sales through it, and Isaac's data is imported (iPhone + iMac verified).
-- **Two repos (D-042), reconfirmed by Isaac 2026-10-03: don't propose merging them.** This one holds `studio-api`, `packages/core`, `packages/sdk` and
+- **Booth Studio is the platform's second app (2026-10-05, D-061…D-067, `docs/phase-5-booth.md`).**
+  Isaac moved Booth Studio's part of Phase 5 (the `placements` scene format) ahead of Phase 4.
+  `yitzhach/booth-studio` (Worker `booth-studio`, Vite) signs in with the studio's email code and
+  syncs its booth projects as placements (migration 0006), images as studio files attached to them.
+  Built and tested: 208 tests here, the app's two-device run 37/37 against this API at both
+  compatibility dates. `studio-booth-studio-staging` was deployed for the first time (Isaac's OK)
+  from branch `claude/festive-curie-ohram8` by "Deploy staging" (`booth_ref`), bound to
+  `studio-api-staging`. The PRs: [Art-Talk-Back#17](https://github.com/yitzhach/Art-Talk-Back/pull/17)
+  merges **first** (production needs 0006 before the app's `main` uses it), then
+  [booth-studio#9](https://github.com/yitzhach/booth-studio/pull/9). See "Where Booth Studio's
+  work stands" below for what is merged and deployed.
+- **Two repos per app (D-042), reconfirmed by Isaac 2026-10-03: don't propose merging them.** This one holds `studio-api`, `packages/core`, `packages/sdk` and
   `workers/assistant`. `yitzhach/art-show-tracker` is the app: Worker `art-show-tracker`, and a push
   to its `main` deploys it. A change across both repos uses the same branch name in each; CI tests
   them together (D-056).
@@ -21,10 +33,11 @@ Read this first, then `CLAUDE.md`, then `docs/phase-3.md`.
   build after the merge passed, so it didn't matter.
   **Isaac's clicks still to do (each repo):** Allow auto-merge; the `ci` ruleset requiring CI;
   and the Cloudflare connector on claude.ai. Until the ruleset exists, don't turn on auto-merge.
-- **Phase 3 (assistant v0): steps 1–7 built and tested without a model key.** `docs/phase-3.md` has
-  the gate status. Waiting on Isaac: an Anthropic API key, an AI Gateway, 20+ requests in his own
-  words, and the OK to deploy `studio-assistant` and the panel (app branch `claude/assistant-panel`,
-  which must not reach the app's `main` before `studio-assistant` exists).
+- **Phase 3 (assistant v0): live on staging only.** The key and the AI Gateway exist; another session
+  ran it on staging on 2026-10-05 (D-058…D-060; `studio-assistant-staging` runs Haiku 4.5, and the
+  Show Tracker's staging Worker carries the panel from app branch `claude/assistant-panel`). There is
+  **no production `studio-assistant`**: its first deploy is Isaac's, and no workflow deploys it yet.
+  Booth Studio's assistant panel (stage 2 of `phase-5-booth.md`) waits on that.
 
 ## How to work
 
@@ -37,7 +50,12 @@ Read this first, then `CLAUDE.md`, then `docs/phase-3.md`.
 - App tests (only when the app changes), from the app repo: `node build/run-suites.cjs` and
   `STUDIO_PLATFORM=../Art-Talk-Back node e2e/two-devices.cjs`. Playwright comes from the global
   install: `export NODE_PATH=$(npm root -g)`.
-- Next decision is D-061. One `CHANGELOG.md` line per item.
+- Booth Studio's (from its repo): `npm test`, `npm run build`, then
+  `STUDIO_PLATFORM=../Art-Talk-Back BOOTH_TEST_CHROMIUM=/opt/pw-browsers/chromium node tests/two-devices.mjs`
+  (`BOOTH_COMPAT_DATE=2026-08-15` for the platform's date; `E2E_LOG=<file>` keeps wrangler's log on a failure).
+- Next decision is D-068. **Fetch the default branch before taking a number**: two sessions worked
+  here on 2026-10-05 and both took D-059/D-060; this branch's were renumbered. One `CHANGELOG.md`
+  line per item.
 
 ## Things that will trip you up
 
@@ -56,4 +74,26 @@ Read this first, then `CLAUDE.md`, then `docs/phase-3.md`.
   `build/assistant-tests.cjs` polls with `page.evaluate` instead.
 - Merging the app's PR deploys it. Allowed by Isaac's Shipping rule once CI is green (D-057), but
   this session's safety check may still refuse a production change: then give Isaac the clicks.
-- The Cloudflare connector can't deploy and can't read static-asset Workers.
+- The Cloudflare connector can't deploy and can't read static-asset Workers. This sandbox's proxy
+  refuses `*.workers.dev`, so a deployed Worker is checked through the connector and the job log.
+- Booth Studio's `src/vendor/studio-sdk.js` is generated here too, as an ES module
+  (`pnpm --filter @studio/sdk bundle:esm --out …`, D-066). Both apps' copies are checked in CI and in
+  "Deploy staging". Never change the classic bundle's output by accident: the tracker's copy must match.
+- The dev `studio-api` has no `SIGNING_KEY` (`.dev.vars` is never committed), so file links fail
+  under plain `wrangler dev`. Booth Studio's two-device test writes its own copy of the dev config
+  with a throwaway key. `wrangler dev` with several Workers also refuses a main module with named
+  non-handler exports (Booth Studio's Worker exports constants), so that test wraps it.
+- "Deploy staging" redeploys everything staging has: pass the inputs it already runs with
+  (`app_ref`, `assistant_model`; see the last run's log) so a Booth Studio deploy doesn't change the
+  assistant someone else is testing.
+- On a GitHub runner, several pages drawing WebGL on the CPU can starve each other: Booth Studio's
+  two-device test closes finished devices and waits for frames before clicking.
+
+## Where Booth Studio's work stands (2026-10-05)
+
+- Both PRs open, CI watched by the session that built them. Merge order: Art-Talk-Back#17, check
+  "Deploy production API" applied 0006 (job log: bookmark, migration, version), then booth-studio#9.
+- Staging: `studio-booth-studio-staging` version `090d194a` (API → `studio-api-staging`), and
+  `studio-api-staging` with 0006, from this branch. Isaac can sign in there with his email.
+- Left for Isaac: the `ci` ruleset entries (`booth-studio` here, `booth` there) and auto-merge on
+  booth-studio; his first real use (HANDOFF → Next in booth-studio); stage 2 (above).

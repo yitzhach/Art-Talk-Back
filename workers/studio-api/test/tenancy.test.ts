@@ -164,6 +164,11 @@ describe("studio A can't reach studio B", () => {
       const t = (await call("/v1/assistant/thread", { cookie: A.cookie })).data;
       expect(t.threadId).not.toBe(b.thread);
       expect(t.messages).toEqual([]);
+      // B's conversation by id: not found for A.
+      expect((await call(`/v1/assistant/thread?id=${b.thread}`, { cookie: A.cookie })).status).toBe(404);
+    }],
+    ["get", "/assistant/threads", async () => {
+      expect((await call("/v1/assistant/threads", { cookie: A.cookie })).data.items.map((t: any) => t.title)).not.toContain("B's words");
     }],
     ["post", "/assistant/thread/messages", async () => {
       // Even naming B's thread id, the message lands in A's studio, as A's.

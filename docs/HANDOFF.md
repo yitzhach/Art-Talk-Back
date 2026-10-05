@@ -37,7 +37,7 @@ Read this first, then `CLAUDE.md`, then `docs/phase-3.md`.
 - App tests (only when the app changes), from the app repo: `node build/run-suites.cjs` and
   `STUDIO_PLATFORM=../Art-Talk-Back node e2e/two-devices.cjs`. Playwright comes from the global
   install: `export NODE_PATH=$(npm root -g)`.
-- Next decision is D-059. One `CHANGELOG.md` line per item.
+- Next decision is D-061. One `CHANGELOG.md` line per item.
 
 ## Things that will trip you up
 

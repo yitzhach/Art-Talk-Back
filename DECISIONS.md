@@ -273,3 +273,9 @@ Isaac added the rule to CLAUDE.md himself (Shipping): Claude may merge its own p
 
 ### D-058 · Each turn tells the assistant how its cards ended · 2026-10-05 · default
 The artist answers a card by tapping, outside the conversation, so the stored thread still ends at "tap Confirm". On staging the model then told Isaac a confirmed sale wasn't saved. Each turn's context line now lists the five newest cards and their state (waiting, confirmed and saved then, cancelled, expired; "saved then" because the artist may delete it later, so the model searches before calling a request a duplicate), read from `GET /assistant/proposals?status=all` (additive). The thread stays append-only (D-053): the line is part of the new user message, not an edit of an old one.
+
+### D-059 · A turn that leaves only confirm cards ends without another model call · 2026-10-05 · default
+A sale took three model calls: search, the tool call that leaves the card, and a sentence describing the card. The card already shows what it will do (studio-api's lines plus the model's card_summary), so when every tool call in a step left a card, the turn ends there and the thread ends on that tool result (the next user message follows it; the API joins them). About a third fewer calls per sale. A step with a search, a "done" or an error still goes back to the model.
+
+### D-060 · Shorter conversations, and past ones you can open · 2026-10-05 · default
+Every turn re-sends the whole thread, so long threads cost more per message. A new thread now starts after 4 quiet hours or 40 stored messages (was 12 h / 60, D-053); a sale is about five. The panel suggests a new chat after 8 messages from the artist. Old threads are kept: `GET /assistant/threads` lists my 20 newest by their first words, `GET /assistant/thread?id=` opens one, and a chat body's `threadId` carries it on (it becomes current again). Append-only is unchanged.

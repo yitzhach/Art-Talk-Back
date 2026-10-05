@@ -28,6 +28,8 @@ export interface TurnInput {
   record?: { type: string; id: string; label: string } | undefined;
   /** The artist tapped New conversation: start an empty thread. */
   fresh?: boolean | undefined;
+  /** Continue this past conversation (from the panel's Past chats). */
+  threadId?: string | undefined;
 }
 
 /** Each action tool also takes the line for its confirm card; studio-api never sees it in the input. */
@@ -95,7 +97,7 @@ export async function runTurn(
   emit: (e: TurnEvent) => void,
 ): Promise<void> {
   const { studio, model } = deps;
-  const [tools, thread, cards] = await Promise.all([studio.tools(input.app), studio.thread(input.fresh), studio.cards()]);
+  const [tools, thread, cards] = await Promise.all([studio.tools(input.app), studio.thread(input.fresh, input.threadId), studio.cards()]);
   const byName = new Map(tools.map((t) => [t.name, t]));
   // Exactly the role and content that were stored: nothing added, nothing edited.
   const history = thread.messages.map(({ role, content }) => ({ role, content }) as MessageParam);
@@ -136,16 +138,22 @@ export async function runTurn(
       if (!uses.length) { end = { type: "end", reason: msg.stop_reason === "max_tokens" ? "max_tokens" : "end_turn" }; break; }
 
       const results: ToolResult[] = [];
+      let cards = 0;
       for (const use of uses) {
         // A tool call cut off at max_tokens may parse as a smaller valid object: never run it.
         if (msg.stop_reason === "max_tokens") {
           results.push({ type: "tool_result", tool_use_id: use.id, is_error: true, content: "Cut off before the input was complete; not run." });
           continue;
         }
-        results.push(await runTool(studio, byName.get(use.name), use, emit));
+        const ran = await runTool(studio, byName.get(use.name), use, emit);
+        if (ran.card) cards++;
+        results.push(ran.result);
       }
       turn.push({ role: "user", content: results });
       if (msg.stop_reason === "max_tokens") { end = { type: "end", reason: "max_tokens" }; break; }
+      // Every call left a confirm card: the card says what it does, so the turn ends here
+      // instead of paying for another model call to describe it (D-059).
+      if (cards === uses.length) { end = { type: "end", reason: "end_turn" }; break; }
     }
   } catch (err) {
     // Nothing from a failed turn is kept, so the stored thread never ends on an unanswered tool call.
@@ -161,32 +169,32 @@ const result = (use: { id: string }, content: unknown, isError = false): ToolRes
   ...(isError ? { is_error: true } : {}),
 });
 
-async function runTool(studio: Studio, tool: Tool | undefined, use: Anthropic.Beta.Messages.BetaToolUseBlock, emit: (e: TurnEvent) => void): Promise<ToolResult> {
+async function runTool(studio: Studio, tool: Tool | undefined, use: Anthropic.Beta.Messages.BetaToolUseBlock, emit: (e: TurnEvent) => void): Promise<{ result: ToolResult; card?: true }> {
   const input = (use.input ?? {}) as Record<string, unknown>;
-  if (!tool) return result(use, `There is no tool named ${use.name}.`, true);
+  if (!tool) return { result: result(use, `There is no tool named ${use.name}.`, true) };
   try {
     if (!tool.action) {
       const q = String(input.q ?? "").trim();
-      if (!q) return result(use, "Give search some words to look for (q).", true);
+      if (!q) return { result: result(use, "Give search some words to look for (q).", true) };
       const types = Array.isArray(input.types) ? input.types.map(String) : undefined;
       const items = await studio.search(q, types);
       emit({ type: "search", q, items: items.map(({ type, id, label, detail }) => ({ type, id, label, detail })) });
-      return result(use, items.length ? { items } : `Nothing in the studio matches "${q}".`);
+      return { result: result(use, items.length ? { items } : `Nothing in the studio matches "${q}".`) };
     }
     const { [CARD_FIELD]: summary, ...actionInput } = input;
     const out = await studio.act(tool.action, actionInput, String(summary || tool.description).slice(0, 300));
     if (out.status === "done") {
       emit({ type: "done", action: tool.action, record: out.result, activityIds: out.activityIds });
-      return result(use, { saved: true, record: out.result });
+      return { result: result(use, { saved: true, record: out.result }) };
     }
     emit({ type: "card", proposal: out.proposal });
-    return result(use, {
+    return { card: true, result: result(use, {
       saved: false, card: out.proposal.id, card_lines: out.proposal.details,
       note: "A confirm card is on the artist's screen. Nothing is saved until they tap Confirm.",
-    });
+    }) };
   } catch (err) {
     if (err instanceof StudioError && err.status < 500) {
-      return result(use, { error: err.code, message: err.message, ...(err.details ? { details: err.details } : {}) }, true);
+      return { result: result(use, { error: err.code, message: err.message, ...(err.details ? { details: err.details } : {}) }, true) };
     }
     throw err;
   }

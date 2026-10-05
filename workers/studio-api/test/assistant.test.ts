@@ -53,7 +53,7 @@ describe("POST /assistant/act", () => {
     expect(card).toMatchObject({ action: "sale.create", level: "confirm", status: "pending", summary: "Two small heron prints, $90 each, cash, at Winter Park" });
     // The card's own lines come from the input, not from the model.
     expect(card.details).toEqual(expect.arrayContaining([
-      { label: "Price", value: "$90.00" }, { label: "Quantity", value: "2" },
+      { label: "Price each", value: "$90.00" }, { label: "Quantity", value: "2" },
       { label: "Show", value: "Winter Park Sidewalk Art Festival" }, { label: "Paid by", value: "cash" },
     ]));
     expect(await rowCount("SELECT COUNT(*) AS n FROM sales WHERE studio_id = ?", a.studioId)).toBe(0);

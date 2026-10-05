@@ -60,7 +60,7 @@ describe("gate 1: a sale said in words becomes one confirm card", () => {
     expect(out.events.at(-1)).toEqual({ type: "end", reason: "end_turn" });
     const card = out.events[1].proposal;
     expect(card.summary).toBe("2 small heron prints, $90 each, cash, Winter Park");
-    expect(card.details).toEqual(expect.arrayContaining([{ label: "Show", value: "Winter Park Sidewalk Art Festival" }, { label: "Price", value: "$90.00" }]));
+    expect(card.details).toEqual(expect.arrayContaining([{ label: "Show", value: "Winter Park Sidewalk Art Festival" }, { label: "Price each", value: "$90.00" }]));
     expect(card.input.card_summary).toBeUndefined();
     expect(showId).toBe(show.id);
     expect(await salesCount()).toBe(before);
@@ -85,6 +85,11 @@ describe("gate 1: a sale said in words becomes one confirm card", () => {
     }]);
     const again = await chat(makeHandler(() => next.model), assistantEnv(server), cookie, { app: "show-tracker", message: "thanks" });
     expect(again.events.at(-1)).toEqual({ type: "end", reason: "end_turn" });
+
+    // New conversation: the model sees none of that, and the new thread becomes current.
+    const fresh = scripted([(req) => { expect(req.messages).toHaveLength(1); return message([text("Hi.")]); }]);
+    await chat(makeHandler(() => fresh.model), assistantEnv(server), cookie, { app: "show-tracker", message: "hello", fresh: true });
+    expect((await api(server, cookie, "GET", "/assistant/thread")).data.messages.map((m: any) => m.role)).toEqual(["user", "assistant"]);
   });
 });
 

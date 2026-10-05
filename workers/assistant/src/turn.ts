@@ -25,6 +25,8 @@ export interface TurnInput {
   today: string; // YYYY-MM-DD in the artist's time zone
   page?: string | undefined;
   record?: { type: string; id: string; label: string } | undefined;
+  /** The artist tapped New conversation: start an empty thread. */
+  fresh?: boolean | undefined;
 }
 
 /** Each action tool also takes the line for its confirm card; studio-api never sees it in the input. */
@@ -65,7 +67,7 @@ export async function runTurn(
   emit: (e: TurnEvent) => void,
 ): Promise<void> {
   const { studio, model } = deps;
-  const [tools, thread, cards] = await Promise.all([studio.tools(input.app), studio.thread(), studio.cards()]);
+  const [tools, thread, cards] = await Promise.all([studio.tools(input.app), studio.thread(input.fresh), studio.cards()]);
   const byName = new Map(tools.map((t) => [t.name, t]));
   // Exactly the role and content that were stored: nothing added, nothing edited.
   const history = thread.messages.map(({ role, content }) => ({ role, content }) as MessageParam);

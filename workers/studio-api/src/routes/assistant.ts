@@ -285,12 +285,14 @@ assistantRoutes.openapi(
   createRoute({
     method: "get", path: "/assistant/thread", tags: ["assistant"],
     summary: "The current conversation, on any device",
-    description: "A new thread starts after 12 quiet hours or 60 messages; the messages come back exactly as stored, so the model sees an unedited history.",
+    description: "A new thread starts after 12 quiet hours or 60 messages; the messages come back exactly as stored, so the model sees an unedited history. With fresh=1: a new, empty thread (the panel's New conversation); it becomes current once its first turn is stored.",
+    request: { query: z.object({ fresh: z.enum(["1"]).optional() }) },
     responses: { 200: json(ThreadResponse), 401: errors[401] },
   }),
   async (c) => {
     const actor = requireActor(c);
     requirePermission(actor.role, "assistant:use");
+    if (c.req.valid("query").fresh) return send(c, { threadId: newId(), messages: [] });
     const t = schema.assistantMessages;
     const db = drizzle(c.env.DB);
     const last = (await db.select({ threadId: t.threadId, createdAt: t.createdAt }).from(t)

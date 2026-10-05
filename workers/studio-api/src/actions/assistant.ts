@@ -155,7 +155,9 @@ async function fieldLines(ctx: ActionCtx, fields: Snapshot, currency?: string) {
       for (const [mk, mv] of Object.entries(v as Snapshot)) lines.push({ label: label(mk), value: await valueText(ctx, mk, mv, currency) });
       continue;
     }
-    lines.push({ label: label(k), value: await valueText(ctx, k, v, currency) });
+    // A sale's price is per piece: with a quantity, say so ("2 × Price $90" read as $90 total).
+    const name = k === "priceCents" && "quantity" in fields ? "Price each" : label(k);
+    lines.push({ label: name, value: await valueText(ctx, k, v, currency) });
   }
   return lines;
 }

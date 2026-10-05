@@ -78,10 +78,27 @@ describe("gate 1: a sale said in words becomes one confirm card", () => {
     expect(thread.messages.map((m: any) => m.role)).toEqual(["user", "assistant", "user", "assistant", "user", "assistant"]);
     const next = scripted([(req) => {
       expect(req.messages.slice(0, 6)).toEqual(requests[2]!.messages.concat([{ role: "assistant", content: [text("Tap Confirm to log the two heron prints.")] }]));
+      // The tap happened outside the conversation: this turn says so.
+      const now = (req.messages.at(-1)!.content as { text: string }[])[0]!.text;
+      expect(now).toContain(`card ${card.id} "2 small heron prints, $90 each, cash, Winter Park": confirmed by the artist, saved`);
       return message([text("You're welcome.")]);
     }]);
     const again = await chat(makeHandler(() => next.model), assistantEnv(server), cookie, { app: "show-tracker", message: "thanks" });
     expect(again.events.at(-1)).toEqual({ type: "end", reason: "end_turn" });
+  });
+});
+
+describe("card outcomes in the context line", () => {
+  it("names each card's state, newest five", async () => {
+    const { cardOutcomes } = await import("../src/turn");
+    const base = { summary: "x", expiresAt: "2027-01-02T00:00:00.000Z" };
+    expect(cardOutcomes([
+      { ...base, id: "a", status: "pending" }, { ...base, id: "b", status: "pending", expiresAt: "2026-01-01T00:00:00.000Z" },
+      { ...base, id: "c", status: "cancelled" }, { ...base, id: "d", status: "confirmed" },
+    ], "2026-06-01T00:00:00.000Z")).toEqual([
+      'card a "x": waiting for the artist\'s tap, nothing saved yet', 'card b "x": expired, nothing saved',
+      'card c "x": cancelled, nothing saved', 'card d "x": confirmed by the artist, saved',
+    ]);
   });
 });
 

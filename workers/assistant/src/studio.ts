@@ -21,6 +21,7 @@ export type Proposal = Record<string, unknown> & { id: string; summary: string; 
 export type ActResult =
   | { status: "done"; result: Record<string, unknown>; activityIds: string[] }
   | { status: "needs_confirmation"; proposal: Proposal };
+export interface CardState { id: string; summary: string; status: "pending" | "confirmed" | "cancelled"; expiresAt: string }
 export interface StoredMessage { role: "user" | "assistant"; content: unknown }
 
 export interface Studio {
@@ -28,6 +29,8 @@ export interface Studio {
   search(q: string, types?: string[]): Promise<SearchItem[]>;
   act(action: string, input: Record<string, unknown>, summary: string): Promise<ActResult>;
   thread(): Promise<{ threadId: string; messages: StoredMessage[] }>;
+  /** My newest cards, any status: how each one ended. */
+  cards(): Promise<CardState[]>;
   append(threadId: string, app: string | null, messages: StoredMessage[]): Promise<void>;
 }
 
@@ -48,6 +51,7 @@ export function studioFor(env: Env, cookie: string): Studio {
       `/search?q=${encodeURIComponent(q)}${types?.length ? `&types=${encodeURIComponent(types.join(","))}` : ""}`)).items,
     act: (action, input, summary) => call<ActResult>("POST", "/assistant/act", { action, input, summary }),
     thread: () => call("GET", "/assistant/thread"),
+    cards: async () => (await call<{ items: CardState[] }>("GET", "/assistant/proposals?status=all")).items,
     append: async (threadId, app, messages) => { await call("POST", "/assistant/thread/messages", { threadId, app, messages }); },
   };
 }

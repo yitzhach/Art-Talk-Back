@@ -6,7 +6,7 @@
 import type Anthropic from "@anthropic-ai/sdk";
 import { SYSTEM, contextLine } from "./prompt";
 import type { Model, ModelRequest } from "./model";
-import { type Studio, StudioError, type Tool } from "./studio";
+import { type CardState, type Studio, StudioError, type Tool } from "./studio";
 
 type MessageParam = Anthropic.Beta.Messages.BetaMessageParam;
 type ToolResult = Anthropic.Beta.Messages.BetaToolResultBlockParam;
@@ -32,6 +32,20 @@ const CARD_FIELD = "card_summary";
 /** Tool calls per turn before the assistant stops and says so. */
 const MAX_STEPS = 8;
 
+/**
+ * The artist answers cards by tapping, outside the conversation, so each turn
+ * says how the newest cards ended. Without it the model claimed a confirmed
+ * sale was "not saved yet" (staging, 2026-10-05).
+ */
+export function cardOutcomes(cards: CardState[], now = new Date().toISOString()): string[] {
+  return cards.slice(0, 5).map((c) => {
+    const state = c.status === "confirmed" ? "confirmed by the artist, saved"
+      : c.status === "cancelled" ? "cancelled, nothing saved"
+      : c.expiresAt < now ? "expired, nothing saved" : "waiting for the artist's tap, nothing saved yet";
+    return `card ${c.id} "${c.summary.slice(0, 120)}": ${state}`;
+  });
+}
+
 export function modelTools(tools: Tool[]): Anthropic.Beta.Messages.BetaTool[] {
   return tools.map((t) => {
     const schema = structuredClone(t.inputSchema) as { properties?: Record<string, unknown>; required?: string[] };
@@ -51,13 +65,13 @@ export async function runTurn(
   emit: (e: TurnEvent) => void,
 ): Promise<void> {
   const { studio, model } = deps;
-  const [tools, thread] = await Promise.all([studio.tools(input.app), studio.thread()]);
+  const [tools, thread, cards] = await Promise.all([studio.tools(input.app), studio.thread(), studio.cards()]);
   const byName = new Map(tools.map((t) => [t.name, t]));
   // Exactly the role and content that were stored: nothing added, nothing edited.
   const history = thread.messages.map(({ role, content }) => ({ role, content }) as MessageParam);
   const turn: MessageParam[] = [{
     role: "user",
-    content: [{ type: "text", text: `${contextLine(input)}\n\n${input.message}` }],
+    content: [{ type: "text", text: `${contextLine({ ...input, cards: cardOutcomes(cards) })}\n\n${input.message}` }],
   }];
 
   let end: TurnEvent = { type: "end", reason: "step_limit" };

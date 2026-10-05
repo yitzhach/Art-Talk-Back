@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Assistant on staging (2026-10-05)
+- First live run on staging: a sale said in words became one card, and the tap saved it as the assistant.
+- Fix: the assistant is told how its newest cards ended (`GET /assistant/proposals?status=all`), so it no longer says a confirmed sale "isn't saved yet" (D-058).
+
 ### Shipping without clicks (D-057)
 - "Deploy production API" runs by itself after CI passes on the default branch, and saves a database bookmark + Worker version to its run summary first.
 - "Roll back production" workflow: previous Worker version, or the database back to a bookmark.

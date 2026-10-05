@@ -123,6 +123,10 @@ describe("cards are the person's to answer", () => {
     const cancelled = await call(`/v1/assistant/proposals/${card.id}/cancel`, { method: "POST", cookie: a.cookie });
     expect(cancelled.data.status).toBe("cancelled");
     expect((await call(`/v1/assistant/proposals/${card.id}/confirm`, { method: "POST", cookie: a.cookie })).status).toBe(409);
+    // status=all still lists it, with what happened; staff never see it.
+    const all = (await call("/v1/assistant/proposals?status=all", { cookie: a.cookie })).data.items;
+    expect(all.find((p: any) => p.id === card.id)).toMatchObject({ status: "cancelled" });
+    expect((await call("/v1/assistant/proposals?status=all", { cookie: staff.cookie })).data.items.find((p: any) => p.id === card.id)).toBeUndefined();
     expect(await rowCount("SELECT COUNT(*) AS n FROM sales WHERE studio_id = ?", a.studioId)).toBe(0);
   });
 

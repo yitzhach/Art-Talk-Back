@@ -3,7 +3,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { Server } from "../../../packages/sdk/test/server";
 import { makeHandler } from "../src/index";
 import { modelSettings } from "../src/model";
-import { SYSTEM } from "../src/prompt";
+import { APP_GUIDES, SYSTEM } from "../src/prompt";
 import { api, assistantEnv, chat, lastResult, message, ownerCookie, scripted, startStudio, text, toolUse } from "./harness";
 
 let server: Server;
@@ -220,6 +220,8 @@ describe("Booth Studio: the assistant reads a booth and proposes a change in the
     const { model } = scripted([
       (req) => {
         expect(req.tools!.map((t) => (t as { name: string }).name).slice(0, 2)).toEqual(["search", "describe_booth"]);
+        // Booth Studio's own guide follows the shared prompt; the tracker's chats don't get it.
+        expect(req.system).toBe(`${SYSTEM}\n\n${APP_GUIDES["booth-studio"]}\n\nIf asked which AI model you are: claude-sonnet-5-5, made by Anthropic.`);
         return message([toolUse("search", { q: "coconut grove", types: ["placement"] })]);
       },
       (req) => {

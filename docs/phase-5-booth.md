@@ -41,7 +41,10 @@ is read, never changed.
 7. [x] CI: booth-studio `.github/workflows/ci.yml` (job `booth`); Art-Talk-Back job `booth-studio`;
    "Deploy staging" also deploys `studio-booth-studio-staging` (input `booth_ref`).
 8. [ ] Ship in order (below); first deploy of `studio-booth-studio-staging`; check both deploys.
-9. [ ] Stage 2: the assistant panel — only once `studio-assistant` is deployed (see Needs Isaac's OK).
+   Done so far: staging deployed (`090d194a`); Art-Talk-Back#17 merged and "Deploy production API"
+   applied 0006 to `studio-db-prod` (`studio-api` `2c706cd5`, bookmark `00000009-00000000-000050fb-e57b76aabaee651ce8ee99f88fda66df`).
+9. [ ] Stage 2: the assistant panel — only once `studio-assistant` is deployed (see Needs Isaac's OK). Its button
+   exists now ("Deploy production assistant", D-068); the first press is Isaac's.
 
 ## Gate (v1)
 
@@ -76,7 +79,7 @@ The platform's merge is safe alone: nothing calls the new routes until the app s
 |---|---|---|---|
 | 1 | booth-studio repo: Allow auto-merge + `ci` ruleset requiring `booth` (SHIPPING.md setup) | Auto-merge without required checks merges at once | — |
 | 2 | Art-Talk-Back `ci` ruleset: add `booth-studio` | The API can't merge past a broken Booth Studio | — |
-| 3 | First **production** deploy of `studio-assistant` (stage 2) | A new Worker's first production deploy is Isaac's; no workflow deploys it yet | Pay per use (model) |
+| 3 | First **production** deploy of `studio-assistant` (stage 2): Actions → **Deploy production assistant** → Run workflow → type `studio-assistant` → Run (D-068) | A new Worker's first production deploy is Isaac's | Pay per use (model) |
 | 4 | Share links on staging: an R2 bucket `booth-studio-shares-staging` | Only if he wants share links testable on staging (D-067) | Free tier |
 
 Approved 2026-10-05 (recorded in each repo): Booth Studio may sign in and sync through studio-api;

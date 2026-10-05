@@ -36,8 +36,9 @@ Read this first, then `CLAUDE.md`, then `docs/phase-3.md` (assistant) or `docs/p
 - **Phase 3 (assistant v0): live on staging only.** The key and the AI Gateway exist; another session
   ran it on staging on 2026-10-05 (D-058…D-060; `studio-assistant-staging` runs Haiku 4.5, and the
   Show Tracker's staging Worker carries the panel from app branch `claude/assistant-panel`). There is
-  **no production `studio-assistant`**: its first deploy is Isaac's, and no workflow deploys it yet.
-  Booth Studio's assistant panel (stage 2 of `phase-5-booth.md`) waits on that.
+  **no production `studio-assistant`**: its first deploy is Isaac's, by the manual button "Deploy
+  production assistant" (D-068: Actions → Run workflow → type `studio-assistant`). Booth Studio's
+  assistant panel (stage 2 of `phase-5-booth.md`) waits on that.
 
 ## How to work
 
@@ -53,7 +54,7 @@ Read this first, then `CLAUDE.md`, then `docs/phase-3.md` (assistant) or `docs/p
 - Booth Studio's (from its repo): `npm test`, `npm run build`, then
   `STUDIO_PLATFORM=../Art-Talk-Back BOOTH_TEST_CHROMIUM=/opt/pw-browsers/chromium node tests/two-devices.mjs`
   (`BOOTH_COMPAT_DATE=2026-08-15` for the platform's date; `E2E_LOG=<file>` keeps wrangler's log on a failure).
-- Next decision is D-068. **Fetch the default branch before taking a number**: two sessions worked
+- Next decision is D-069. **Fetch the default branch before taking a number**: two sessions worked
   here on 2026-10-05 and both took D-059/D-060; this branch's were renumbered. One `CHANGELOG.md`
   line per item.
 

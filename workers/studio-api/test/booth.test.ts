@@ -139,6 +139,30 @@ describe("booth actions", () => {
     expect((await run(a.cookie, "placement.build", { show: "circus" })).status).toBe(400);
   });
 
+  it("a show floor from a spec (10b): booths in rows, an exhibitor, my booth; the summary reads it back by number", async () => {
+    const a = await makeStudio();
+    const p = (await call("/v1/placements", { method: "POST", cookie: a.cookie, json: syncedBooth() })).data;
+    const res = await run(a.cookie, "placement.edit", {
+      id: p.id, version: 1,
+      ops: [
+        { op: "start_floor", venue: "indoor", width: 1440, depth: 960 },
+        { op: "add_booths", count: 16, perRow: 8, x: 120, y: 120, backToBack: true },
+        { op: "add_floor_piece", kind: "door", x: 720, y: 954, w: 192, text: "Main entrance" },
+        { op: "set_exhibitor", number: 105, name: "Ada Pottery", status: "sold" },
+        { op: "mark_my_booth", number: 112 },
+      ],
+    });
+    expect(res.status).toBe(200);
+    const floor = (await call(`/v1/placements/${p.id}/summary`, { cookie: a.cookie })).data.floor;
+    expect(floor).toMatchObject({ venue: { kind: "indoor", width: 1440, depth: 960 }, mine: 112, counts: { booths: 16, other: 1 } });
+    expect(floor.booths.find((b: any) => b.number === 105)).toMatchObject({ status: "sold", exhibitor: "Ada Pottery" });
+    expect(floor.pieces).toEqual([expect.objectContaining({ kind: "door", text: "Main entrance" })]);
+    // A booth number the floor doesn't have is a 400 naming the op.
+    const bad = await run(a.cookie, "placement.edit", { id: p.id, version: 2, ops: [{ op: "set_exhibitor", number: 999, name: "X" }] });
+    expect(bad.status).toBe(400);
+    expect(bad.data.error.message).toBe("Op 1: the show floor has no booth 999.");
+  });
+
   it("Booth Studio's assistant gets describe_booth and the booth tools, with the app's op schemas; the tracker's doesn't", async () => {
     const a = await makeStudio();
     const tools = (await call("/v1/assistant/tools?app=booth-studio", { cookie: a.cookie, headers: ASSISTANT })).data.tools;

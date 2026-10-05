@@ -8,6 +8,7 @@
 - A sale's card says "Price each"; `GET /assistant/thread?fresh=1` starts a new conversation (the panel's New conversation button).
 - Suggested replies: the model ends a question with `[[replies: …]]`; the assistant Worker holds that line back and sends a `replies` event (the panel shows buttons; Tab fills one).
 - "Deploy staging" takes an `assistant_model` choice (Sonnet 5.5 or Haiku 4.5) to compare models on staging.
+- From the Haiku 4.5 trial: text from separate steps no longer runs together, the prompt says not to narrate steps, and a card leaves out "Currency USD".
 
 ### Shipping without clicks (D-057)
 - "Deploy production API" runs by itself after CI passes on the default branch, and saves a database bookmark + Worker version to its run summary first.

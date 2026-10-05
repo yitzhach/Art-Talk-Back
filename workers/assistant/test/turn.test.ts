@@ -121,6 +121,17 @@ describe("suggested replies", () => {
   });
 });
 
+describe("text across steps", () => {
+  it("sentences from separate model calls don't run together", async () => {
+    const { model } = scripted([
+      () => message([text("Looking."), toolUse("search", { q: "bonita", types: ["show"] })]),
+      () => message([text("No show called Bonita.")]),
+    ]);
+    const out = await chat(makeHandler(() => model), assistantEnv(server), cookie, { app: "show-tracker", message: "sold one at bonita" });
+    expect(out.events.filter((e: any) => e.type === "text").map((e: any) => e.text).join("")).toBe("Looking. No show called Bonita.");
+  });
+});
+
 describe("card outcomes in the context line", () => {
   it("names each card's state, newest five", async () => {
     const { cardOutcomes } = await import("../src/turn");

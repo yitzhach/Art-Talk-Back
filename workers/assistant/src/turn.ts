@@ -39,7 +39,7 @@ const MAX_STEPS = 8;
  */
 export function cardOutcomes(cards: CardState[], now = new Date().toISOString()): string[] {
   return cards.slice(0, 5).map((c) => {
-    const state = c.status === "confirmed" ? "confirmed by the artist, saved"
+    const state = c.status === "confirmed" ? "confirmed by the artist and saved then (it may since have been changed or deleted: search before relying on it)"
       : c.status === "cancelled" ? "cancelled, nothing saved"
       : c.expiresAt < now ? "expired, nothing saved" : "waiting for the artist's tap, nothing saved yet";
     return `card ${c.id} "${c.summary.slice(0, 120)}": ${state}`;

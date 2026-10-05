@@ -80,7 +80,7 @@ describe("gate 1: a sale said in words becomes one confirm card", () => {
       expect(req.messages.slice(0, 6)).toEqual(requests[2]!.messages.concat([{ role: "assistant", content: [text("Tap Confirm to log the two heron prints.")] }]));
       // The tap happened outside the conversation: this turn says so.
       const now = (req.messages.at(-1)!.content as { text: string }[])[0]!.text;
-      expect(now).toContain(`card ${card.id} "2 small heron prints, $90 each, cash, Winter Park": confirmed by the artist, saved`);
+      expect(now).toContain(`card ${card.id} "2 small heron prints, $90 each, cash, Winter Park": confirmed by the artist and saved then`);
       return message([text("You're welcome.")]);
     }]);
     const again = await chat(makeHandler(() => next.model), assistantEnv(server), cookie, { app: "show-tracker", message: "thanks" });
@@ -97,7 +97,7 @@ describe("card outcomes in the context line", () => {
       { ...base, id: "c", status: "cancelled" }, { ...base, id: "d", status: "confirmed" },
     ], "2026-06-01T00:00:00.000Z")).toEqual([
       'card a "x": waiting for the artist\'s tap, nothing saved yet', 'card b "x": expired, nothing saved',
-      'card c "x": cancelled, nothing saved', 'card d "x": confirmed by the artist, saved',
+      'card c "x": cancelled, nothing saved', 'card d "x": confirmed by the artist and saved then (it may since have been changed or deleted: search before relying on it)',
     ]);
   });
 });

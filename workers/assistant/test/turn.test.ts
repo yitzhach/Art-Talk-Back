@@ -26,7 +26,7 @@ describe("gate 1: a sale said in words becomes one confirm card", () => {
     let showId = "";
     const { model, requests } = scripted([
       (req) => {
-        expect(req.system).toBe(SYSTEM);
+        expect(req.system).toBe(`${SYSTEM}\n\nIf asked which AI model you are: claude-sonnet-5-5, made by Anthropic.`);
         expect(req.tools!.map((t) => (t as { name: string }).name)).toEqual([
           "search", "sale_create", "sale_delete", "sale_restore", "sale_update", "show_create", "show_delete", "show_restore", "show_update",
         ]);
@@ -45,18 +45,14 @@ describe("gate 1: a sale said in words becomes one confirm card", () => {
           card_summary: "2 small heron prints, $90 each, cash, Winter Park",
         })]);
       },
-      (req) => {
-        const r = lastResult(req);
-        expect(r).toMatchObject({ saved: false, note: expect.stringMatching(/Confirm/) });
-        return message([text("Tap Confirm to log the two heron prints.")]);
-      },
-    ]);
+    ]); // No third call: the card ends the turn (D-059).
     const handler = makeHandler(() => model);
     const out = await chat(handler, assistantEnv(server), cookie, {
       app: "show-tracker", today: "2027-03-20", page: "Money", message: "sold two small heron prints for $90 each at Winter Park, cash",
     });
     expect(out.status).toBe(200);
-    expect(out.events.map((e: any) => e.type)).toEqual(["search", "card", "text", "end"]);
+    expect(out.events.map((e: any) => e.type)).toEqual(["search", "card", "end"]);
+    expect(requests).toHaveLength(2);
     expect(out.events.at(-1)).toEqual({ type: "end", reason: "end_turn" });
     const card = out.events[1].proposal;
     expect(card.summary).toBe("2 small heron prints, $90 each, cash, Winter Park");
@@ -75,9 +71,12 @@ describe("gate 1: a sale said in words becomes one confirm card", () => {
 
     // The turn is stored exactly; the next turn replays it unedited (D-053).
     const thread = (await api(server, cookie, "GET", "/assistant/thread")).data;
-    expect(thread.messages.map((m: any) => m.role)).toEqual(["user", "assistant", "user", "assistant", "user", "assistant"]);
+    // It ends on the card's tool result; the next user message follows it.
+    expect(thread.messages.map((m: any) => m.role)).toEqual(["user", "assistant", "user", "assistant", "user"]);
+    expect(JSON.parse(thread.messages[4].content[0].content)).toMatchObject({ saved: false, card: card.id });
     const next = scripted([(req) => {
-      expect(req.messages.slice(0, 6)).toEqual(requests[2]!.messages.concat([{ role: "assistant", content: [text("Tap Confirm to log the two heron prints.")] }]));
+      expect(req.messages.slice(0, 3)).toEqual(requests[1]!.messages);
+      expect(req.messages.slice(0, 5)).toEqual(thread.messages.map(({ role, content }: any) => ({ role, content })));
       // The tap happened outside the conversation: this turn says so.
       const now = (req.messages.at(-1)!.content as { text: string }[])[0]!.text;
       expect(now).toContain(`card ${card.id} "2 small heron prints, $90 each, cash, Winter Park": confirmed by the artist and saved then`);
@@ -90,6 +89,50 @@ describe("gate 1: a sale said in words becomes one confirm card", () => {
     const fresh = scripted([(req) => { expect(req.messages).toHaveLength(1); return message([text("Hi.")]); }]);
     await chat(makeHandler(() => fresh.model), assistantEnv(server), cookie, { app: "show-tracker", message: "hello", fresh: true });
     expect((await api(server, cookie, "GET", "/assistant/thread")).data.messages.map((m: any) => m.role)).toEqual(["user", "assistant"]);
+
+    // Past chats: continuing the sale conversation by id replays it, and it becomes current again.
+    const back = scripted([(req) => { expect(req.messages.slice(0, 5)).toEqual(thread.messages.map(({ role, content }: any) => ({ role, content }))); return message([text("Sure.")]); }]);
+    await chat(makeHandler(() => back.model), assistantEnv(server), cookie, { app: "show-tracker", message: "one more", threadId: thread.threadId });
+    expect((await api(server, cookie, "GET", "/assistant/thread")).data.threadId).toBe(thread.threadId);
+  });
+});
+
+describe("suggested replies", () => {
+  it("a closing [[replies: …]] line becomes buttons, never text, even split across chunks", async () => {
+    const { replySplitter } = await import("../src/turn");
+    const out: string[] = [];
+    const r = replySplitter((t) => out.push(t));
+    for (const chunk of ["Which show? Bonita or Naples", "?\n[", "[repl", "ies: Bonita Springs | Naples ]]"]) r.push(chunk);
+    expect(r.end()).toEqual(["Bonita Springs", "Naples"]);
+    expect(out.join("")).toBe("Which show? Bonita or Naples?\n");
+  });
+
+  it("brackets that aren't the replies line are sent as they are", async () => {
+    const { replySplitter } = await import("../src/turn");
+    const out: string[] = [];
+    const r = replySplitter((t) => out.push(t));
+    r.push("Booth [[12]] is yours [");
+    expect(r.end()).toEqual([]);
+    expect(out.join("")).toBe("Booth [[12]] is yours [");
+  });
+
+  it("the panel gets a replies event and the text without the line", async () => {
+    const { model } = scripted([() => message([text("Add a second sale?\n[[replies: Yes | No]]")])]);
+    const out = await chat(makeHandler(() => model), assistantEnv(server), cookie, { app: "show-tracker", message: "two herons at Bonita" });
+    expect(out.events).toEqual([
+      { type: "text", text: "Add a second sale?\n" }, { type: "replies", items: ["Yes", "No"] }, { type: "end", reason: "end_turn" },
+    ]);
+  });
+});
+
+describe("text across steps", () => {
+  it("sentences from separate model calls don't run together", async () => {
+    const { model } = scripted([
+      () => message([text("Looking."), toolUse("search", { q: "bonita", types: ["show"] })]),
+      () => message([text("No show called Bonita.")]),
+    ]);
+    const out = await chat(makeHandler(() => model), assistantEnv(server), cookie, { app: "show-tracker", message: "sold one at bonita" });
+    expect(out.events.filter((e: any) => e.type === "text").map((e: any) => e.text).join("")).toBe("Looking. No show called Bonita.");
   });
 });
 

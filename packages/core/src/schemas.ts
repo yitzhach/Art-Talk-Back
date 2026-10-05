@@ -390,6 +390,10 @@ export const AssistantMessage = z.object({
   createdAt: z.string(),
 });
 export const ThreadResponse = z.object({ threadId: Id, messages: z.array(AssistantMessage) });
+/** One past conversation in the list: its first words, when, and how long. */
+export const ThreadSummary = z.object({
+  threadId: Id, title: z.string(), startedAt: z.string(), lastAt: z.string(), messages: z.number().int(),
+});
 export const AppendMessages = z.object({
   threadId: Id,
   app: z.string().max(50).nullable(),

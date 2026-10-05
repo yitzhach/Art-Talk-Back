@@ -4,7 +4,7 @@
 // confirm card (D-045). The thread is append-only: this turn's messages are
 // added at the end, exactly as sent and received (D-053).
 import type Anthropic from "@anthropic-ai/sdk";
-import { SYSTEM, contextLine } from "./prompt";
+import { contextLine, systemFor } from "./prompt";
 import type { Model, ModelRequest } from "./model";
 import { type CardState, type Studio, StudioError, type Tool } from "./studio";
 
@@ -16,6 +16,7 @@ export type TurnEvent =
   | { type: "text"; text: string }
   | { type: "search"; q: string; items: { type: string; id: string; label: string; detail: string }[] }
   | { type: "card"; proposal: Record<string, unknown> }
+  | { type: "replies"; items: string[] }
   | { type: "done"; action: string; record: Record<string, unknown>; activityIds: string[] }
   | { type: "end"; reason: "end_turn" | "refusal" | "max_tokens" | "step_limit" | "error"; message?: string };
 
@@ -27,6 +28,8 @@ export interface TurnInput {
   record?: { type: string; id: string; label: string } | undefined;
   /** The artist tapped New conversation: start an empty thread. */
   fresh?: boolean | undefined;
+  /** Continue this past conversation (from the panel's Past chats). */
+  threadId?: string | undefined;
 }
 
 /** Each action tool also takes the line for its confirm card; studio-api never sees it in the input. */
@@ -48,6 +51,33 @@ export function cardOutcomes(cards: CardState[], now = new Date().toISOString())
   });
 }
 
+const REPLIES = /^\[\[replies:([^\]]*)\]\]$/;
+
+/**
+ * Streams the model's text through, but holds back a closing
+ * "[[replies: Yes | No]]" line (the panel shows those as buttons). Anything
+ * held that turns out not to be that line is sent at the end, unchanged.
+ */
+export function replySplitter(send: (text: string) => void) {
+  let held = "";
+  return {
+    push(delta: string) {
+      held += delta;
+      const at = held.indexOf("[[");
+      // A lone "[" at the end may be the start of "[[": keep it back too.
+      const cut = at >= 0 ? at : held.endsWith("[") ? held.length - 1 : held.length;
+      if (cut > 0) { send(held.slice(0, cut)); held = held.slice(cut); }
+    },
+    end(): string[] {
+      const rest = held;
+      held = "";
+      const m = REPLIES.exec(rest.trim());
+      if (!m) { if (rest) send(rest); return []; }
+      return m[1]!.split("|").map((r) => r.trim().slice(0, 60)).filter(Boolean).slice(0, 4);
+    },
+  };
+}
+
 export function modelTools(tools: Tool[]): Anthropic.Beta.Messages.BetaTool[] {
   return tools.map((t) => {
     const schema = structuredClone(t.inputSchema) as { properties?: Record<string, unknown>; required?: string[] };
@@ -67,7 +97,7 @@ export async function runTurn(
   emit: (e: TurnEvent) => void,
 ): Promise<void> {
   const { studio, model } = deps;
-  const [tools, thread, cards] = await Promise.all([studio.tools(input.app), studio.thread(input.fresh), studio.cards()]);
+  const [tools, thread, cards] = await Promise.all([studio.tools(input.app), studio.thread(input.fresh, input.threadId), studio.cards()]);
   const byName = new Map(tools.map((t) => [t.name, t]));
   // Exactly the role and content that were stored: nothing added, nothing edited.
   const history = thread.messages.map(({ role, content }) => ({ role, content }) as MessageParam);
@@ -77,18 +107,29 @@ export async function runTurn(
   }];
 
   let end: TurnEvent = { type: "end", reason: "step_limit" };
+  // Text from separate model calls in one turn: keep the sentences apart.
+  let wrote = false, gap = false;
   try {
     for (let step = 0; step < MAX_STEPS; step++) {
+      const replies = replySplitter((text) => {
+        if (gap && !/^\s/.test(text)) text = ` ${text}`;
+        gap = false;
+        wrote = true;
+        emit({ type: "text", text });
+      });
       const msg = await model({
         ...deps.settings,
         model: deps.settings.model ?? "claude-sonnet-5-5",
         max_tokens: 16000,
-        system: SYSTEM,
+        system: systemFor(deps.settings.model ?? "claude-sonnet-5-5"),
         tools: modelTools(tools),
         // Caches the stable prefix (tools, system, earlier turns) across the loop.
         cache_control: { type: "ephemeral" },
         messages: [...history, ...turn],
-      }, (text) => emit({ type: "text", text }));
+      }, (text) => replies.push(text));
+      const suggested = replies.end();
+      gap = wrote;
+      if (suggested.length) emit({ type: "replies", items: suggested });
       turn.push({ role: "assistant", content: msg.content as MessageParam["content"] });
 
       const uses = msg.content.filter((b): b is Anthropic.Beta.Messages.BetaToolUseBlock => b.type === "tool_use");
@@ -97,16 +138,22 @@ export async function runTurn(
       if (!uses.length) { end = { type: "end", reason: msg.stop_reason === "max_tokens" ? "max_tokens" : "end_turn" }; break; }
 
       const results: ToolResult[] = [];
+      let cards = 0;
       for (const use of uses) {
         // A tool call cut off at max_tokens may parse as a smaller valid object: never run it.
         if (msg.stop_reason === "max_tokens") {
           results.push({ type: "tool_result", tool_use_id: use.id, is_error: true, content: "Cut off before the input was complete; not run." });
           continue;
         }
-        results.push(await runTool(studio, byName.get(use.name), use, emit));
+        const ran = await runTool(studio, byName.get(use.name), use, emit);
+        if (ran.card) cards++;
+        results.push(ran.result);
       }
       turn.push({ role: "user", content: results });
       if (msg.stop_reason === "max_tokens") { end = { type: "end", reason: "max_tokens" }; break; }
+      // Every call left a confirm card: the card says what it does, so the turn ends here
+      // instead of paying for another model call to describe it (D-059).
+      if (cards === uses.length) { end = { type: "end", reason: "end_turn" }; break; }
     }
   } catch (err) {
     // Nothing from a failed turn is kept, so the stored thread never ends on an unanswered tool call.
@@ -122,32 +169,32 @@ const result = (use: { id: string }, content: unknown, isError = false): ToolRes
   ...(isError ? { is_error: true } : {}),
 });
 
-async function runTool(studio: Studio, tool: Tool | undefined, use: Anthropic.Beta.Messages.BetaToolUseBlock, emit: (e: TurnEvent) => void): Promise<ToolResult> {
+async function runTool(studio: Studio, tool: Tool | undefined, use: Anthropic.Beta.Messages.BetaToolUseBlock, emit: (e: TurnEvent) => void): Promise<{ result: ToolResult; card?: true }> {
   const input = (use.input ?? {}) as Record<string, unknown>;
-  if (!tool) return result(use, `There is no tool named ${use.name}.`, true);
+  if (!tool) return { result: result(use, `There is no tool named ${use.name}.`, true) };
   try {
     if (!tool.action) {
       const q = String(input.q ?? "").trim();
-      if (!q) return result(use, "Give search some words to look for (q).", true);
+      if (!q) return { result: result(use, "Give search some words to look for (q).", true) };
       const types = Array.isArray(input.types) ? input.types.map(String) : undefined;
       const items = await studio.search(q, types);
       emit({ type: "search", q, items: items.map(({ type, id, label, detail }) => ({ type, id, label, detail })) });
-      return result(use, items.length ? { items } : `Nothing in the studio matches "${q}".`);
+      return { result: result(use, items.length ? { items } : `Nothing in the studio matches "${q}".`) };
     }
     const { [CARD_FIELD]: summary, ...actionInput } = input;
     const out = await studio.act(tool.action, actionInput, String(summary || tool.description).slice(0, 300));
     if (out.status === "done") {
       emit({ type: "done", action: tool.action, record: out.result, activityIds: out.activityIds });
-      return result(use, { saved: true, record: out.result });
+      return { result: result(use, { saved: true, record: out.result }) };
     }
     emit({ type: "card", proposal: out.proposal });
-    return result(use, {
+    return { card: true, result: result(use, {
       saved: false, card: out.proposal.id, card_lines: out.proposal.details,
       note: "A confirm card is on the artist's screen. Nothing is saved until they tap Confirm.",
-    });
+    }) };
   } catch (err) {
     if (err instanceof StudioError && err.status < 500) {
-      return result(use, { error: err.code, message: err.message, ...(err.details ? { details: err.details } : {}) }, true);
+      return { result: result(use, { error: err.code, message: err.message, ...(err.details ? { details: err.details } : {}) }, true) };
     }
     throw err;
   }

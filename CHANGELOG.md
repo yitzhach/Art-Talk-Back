@@ -15,6 +15,12 @@
 - First live run on staging: a sale said in words became one card, and the tap saved it as the assistant.
 - Fix: the assistant is told how its newest cards ended (`GET /assistant/proposals?status=all`), so it no longer says a confirmed sale "isn't saved yet" (D-058).
 - A sale's card says "Price each"; `GET /assistant/thread?fresh=1` starts a new conversation (the panel's New conversation button).
+- Suggested replies: the model ends a question with `[[replies: …]]`; the assistant Worker holds that line back and sends a `replies` event (the panel shows buttons; Tab fills one).
+- "Deploy staging" takes an `assistant_model` choice (Sonnet 5.5 or Haiku 4.5) to compare models on staging.
+- From the Haiku 4.5 trial: text from separate steps no longer runs together, the prompt says not to narrate steps, and a card leaves out "Currency USD".
+- The system prompt names the deployed model, so "which model are you?" is answered truly (Haiku 4.5 claimed to be Claude 3.5 Sonnet).
+- Token savings: a turn that leaves only confirm cards ends without another model call (D-059); threads close after 4 quiet hours or 40 messages, and the panel suggests a new chat when one gets long (D-060).
+- Past chats: `GET /assistant/threads`, `GET /assistant/thread?id=`, and the chat body's `threadId` to carry one on.
 
 ### Shipping without clicks (D-057)
 - "Deploy production API" runs by itself after CI passes on the default branch, and saves a database bookmark + Worker version to its run summary first.

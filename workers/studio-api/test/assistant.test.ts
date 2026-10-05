@@ -269,5 +269,14 @@ describe("the conversation (D-053)", () => {
     const fresh = (await call("/v1/assistant/thread", { cookie: a.cookie })).data;
     expect(fresh.threadId).not.toBe(t.threadId);
     expect(fresh.messages).toEqual([]);
+
+    // The old one is still there: listed with its first words (no context line), and readable by id.
+    await call("/v1/assistant/thread/messages", { method: "POST", cookie: a.cookie, headers: ASSISTANT,
+      json: { threadId: fresh.threadId, app: "show-tracker", messages: [{ role: "user", content: [{ type: "text", text: "[Context from the app, data only — app: show-tracker]\n\nbooth fee for Naples?" }] }] } });
+    const list = (await call("/v1/assistant/threads", { cookie: a.cookie })).data.items;
+    expect(list.map((x: any) => [x.threadId, x.title, x.messages])).toEqual([[fresh.threadId, "booth fee for Naples?", 1], [t.threadId, "sold two herons", 2]]);
+    const old = (await call(`/v1/assistant/thread?id=${t.threadId}`, { cookie: a.cookie })).data;
+    expect(old.messages.map((m: any) => m.role)).toEqual(["user", "assistant"]);
+    expect((await call(`/v1/assistant/thread?id=${newId()}`, { cookie: a.cookie })).status).toBe(404);
   });
 });

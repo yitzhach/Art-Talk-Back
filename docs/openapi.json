@@ -6923,7 +6923,7 @@
           "assistant"
         ],
         "summary": "The current conversation, on any device",
-        "description": "A new thread starts after 12 quiet hours or 60 messages; the messages come back exactly as stored, so the model sees an unedited history. With fresh=1: a new, empty thread (the panel's New conversation); it becomes current once its first turn is stored.",
+        "description": "A new thread starts after 4 quiet hours or 40 messages; the messages come back exactly as stored, so the model sees an unedited history. With fresh=1: a new, empty thread (the panel's New conversation); it becomes current once its first turn is stored. With id: that past conversation of mine (continuing it makes it current again).",
         "parameters": [
           {
             "schema": {
@@ -6934,6 +6934,16 @@
             },
             "required": false,
             "name": "fresh",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "ULID"
+            },
+            "required": false,
+            "description": "ULID",
+            "name": "id",
             "in": "query"
           }
         ],
@@ -6993,6 +7003,82 @@
                   "required": [
                     "threadId",
                     "messages"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (or in another studio)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/assistant/threads": {
+      "get": {
+        "tags": [
+          "assistant"
+        ],
+        "summary": "My past conversations, newest first (20)",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "threadId": {
+                            "type": "string",
+                            "description": "ULID"
+                          },
+                          "title": {
+                            "type": "string"
+                          },
+                          "startedAt": {
+                            "type": "string"
+                          },
+                          "lastAt": {
+                            "type": "string"
+                          },
+                          "messages": {
+                            "type": "integer"
+                          }
+                        },
+                        "required": [
+                          "threadId",
+                          "title",
+                          "startedAt",
+                          "lastAt",
+                          "messages"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "items"
                   ]
                 }
               }

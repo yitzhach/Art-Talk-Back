@@ -105,9 +105,16 @@ export async function runTurn(
   }];
 
   let end: TurnEvent = { type: "end", reason: "step_limit" };
+  // Text from separate model calls in one turn: keep the sentences apart.
+  let wrote = false, gap = false;
   try {
     for (let step = 0; step < MAX_STEPS; step++) {
-      const replies = replySplitter((text) => emit({ type: "text", text }));
+      const replies = replySplitter((text) => {
+        if (gap && !/^\s/.test(text)) text = ` ${text}`;
+        gap = false;
+        wrote = true;
+        emit({ type: "text", text });
+      });
       const msg = await model({
         ...deps.settings,
         model: deps.settings.model ?? "claude-sonnet-5-5",
@@ -119,6 +126,7 @@ export async function runTurn(
         messages: [...history, ...turn],
       }, (text) => replies.push(text));
       const suggested = replies.end();
+      gap = wrote;
       if (suggested.length) emit({ type: "replies", items: suggested });
       turn.push({ role: "assistant", content: msg.content as MessageParam["content"] });
 

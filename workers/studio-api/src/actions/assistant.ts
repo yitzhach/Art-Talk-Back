@@ -151,6 +151,7 @@ async function fieldLines(ctx: ActionCtx, fields: Snapshot, currency?: string) {
   const lines = [];
   for (const [k, v] of Object.entries(fields)) {
     if (k === "id" || k === "version") continue;
+    if (k === "currency" && v === "USD") continue; // the studio's currency: saying so is noise
     if (k === "meta" && v && typeof v === "object") {
       for (const [mk, mv] of Object.entries(v as Snapshot)) lines.push({ label: label(mk), value: await valueText(ctx, mk, mv, currency) });
       continue;

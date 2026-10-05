@@ -2,14 +2,14 @@
 
 ## Unreleased
 
-### Phase 5 · Booth Studio's part (D-059)
-- Plan, gate and "Needs Isaac's OK" in `docs/phase-5-booth.md`; decisions D-059…D-065.
-- Migration 0006 `placements` (a booth or wall scene: real size, `scene` JSON in the app's `format`, `images` manifest; capped so a logged write fits a D1 row, D-060) and `/v1/placements`.
-- Placement actions tagged `apps: ["booth-studio"]`; placements sync (push and pull); `file.attach` accepts a placement (D-061).
-- Pull ends a page early once its placements pass 8 MB (D-063).
-- `bundle:esm`: the SDK as one ES module for apps with a bundler, with `--check` (D-064). The classic bundle's output is unchanged.
+### Phase 5 · Booth Studio's part (D-061)
+- Plan, gate and "Needs Isaac's OK" in `docs/phase-5-booth.md`; decisions D-061…D-067.
+- Migration 0006 `placements` (a booth or wall scene: real size, `scene` JSON in the app's `format`, `images` manifest; capped so a logged write fits a D1 row, D-062) and `/v1/placements`.
+- Placement actions tagged `apps: ["booth-studio"]`; placements sync (push and pull); `file.attach` accepts a placement (D-063).
+- Pull ends a page early once its placements pass 8 MB (D-065).
+- `bundle:esm`: the SDK as one ES module for apps with a bundler, with `--check` (D-066). The classic bundle's output is unchanged.
 - CI job `booth-studio`: Booth Studio's branch of the same name (else its main) — SDK copy current, two-device run against this API. Passes with a notice while Booth Studio's main isn't on the platform.
-- "Deploy staging" also deploys `studio-booth-studio-staging` (input `booth_ref`), only from a Booth Studio branch that has the staging Worker (D-065).
+- "Deploy staging" also deploys `studio-booth-studio-staging` (input `booth_ref`), only from a Booth Studio branch that has the staging Worker (D-067).
 
 ### Assistant on staging (2026-10-05)
 - First live run on staging: a sale said in words became one card, and the tap saved it as the assistant.

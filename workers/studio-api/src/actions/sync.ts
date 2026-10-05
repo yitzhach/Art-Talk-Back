@@ -33,7 +33,7 @@ export const SYNCED_TYPES = ["artwork", "client", "show", "show_artwork", "sale"
 const PULL_CHUNK = 50;
 
 /**
- * Where a pull page ends early because of placements (D-063): each can carry
+ * Where a pull page ends early because of placements (D-065): each can carry
  * a scene of up to PLACEMENT_SCENE_MAX, so 200 of them would be ~140 MB.
  */
 export const PULL_PAGE_BYTES = 8_000_000;
@@ -165,7 +165,7 @@ export async function pullChanges(env: Env, actor: Actor, since: number, limit: 
   let more = rows.results.length > limit;
 
   // Placements are measured before they're read, and the page ends once it
-  // passes PULL_PAGE_BYTES (always keeping at least one change), D-063.
+  // passes PULL_PAGE_BYTES (always keeping at least one change), D-065.
   const placementIds = page.filter((r) => r.entity_type === "placement").map((r) => r.entity_id);
   if (placementIds.length) {
     const bytes = new Map<string, number>();

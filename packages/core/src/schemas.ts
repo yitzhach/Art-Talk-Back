@@ -223,13 +223,13 @@ export const SaleInput = SaleFields.partial().extend({ id: Id.optional() }).stri
 export const Sale = RecordMeta.extend(SaleFields.shape);
 
 // -------------------------------------------------------------- placements
-// Phase 5 (D-060): one scene, a booth or a wall. The space's real size is in
+// Phase 5 (D-062): one scene, a booth or a wall. The space's real size is in
 // fields; positions and the rest are in `scene`, in the format `format` names;
-// `images` lists the studio files the scene uses (D-061), never the bytes.
+// `images` lists the studio files the scene uses (D-063), never the bytes.
 
 /**
  * Caps that keep a logged write (before + after in one activity_log row)
- * well under D1's ~2 MB row limit (D-060).
+ * well under D1's ~2 MB row limit (D-062).
  */
 export const PLACEMENT_SCENE_MAX = 600_000;
 export const PLACEMENT_IMAGES_MAX = 400;

@@ -3,7 +3,7 @@
 Booth Studio (`yitzhach/booth-studio`, Worker `booth-studio`) joins the platform:
 studio sign-in, booth projects synced between devices through studio-api, images
 as studio files. Backend first, assistant panel second. Isaac moved this ahead
-of Phase 4 on 2026-10-05 (D-059); Phase 3 stays open.
+of Phase 4 on 2026-10-05 (D-061); Phase 3 stays open.
 
 Both repos work on the branch `claude/festive-curie-ohram8` (D-056). The app is
 the reference pattern's second user: the Show Tracker (`yitzhach/art-show-tracker`)
@@ -12,28 +12,28 @@ is read, never changed.
 ## What's built here, and what isn't
 
 - **Built:** the `placements` table in the spec's scene format (images, positions,
-  real sizes), shaped so ar-wall-placer can use it later (D-060); its actions,
+  real sizes), shaped so ar-wall-placer can use it later (D-062); its actions,
   tagged `apps: ["booth-studio"]`; its REST routes; sync of placements; images as
-  studio files attached to a placement (D-061); an ES-module build of the SDK for
-  apps with a bundler (D-064); Booth Studio's sign-in, sync, import and CI.
+  studio files attached to a placement (D-063); an ES-module build of the SDK for
+  apps with a bundler (D-066); Booth Studio's sign-in, sync, import and CI.
 - **Not built:** anything ar-wall-placer needs beyond the row's shape; the
   place-art job; the assistant panel in Booth Studio (stage 2, below).
 
 ## Steps
 
-1. [x] Plan (this file), decisions D-059…D-065, the owner's approvals recorded in each repo.
+1. [x] Plan (this file), decisions D-061…D-067, the owner's approvals recorded in each repo.
 2. [x] Platform: migration `0006_placements.sql` + Drizzle mirror; `Placement*` Zod shapes with the size caps;
    entity + create/update/delete/restore actions (`apps: ["booth-studio"]`); `/v1/placements` routes;
-   placements in sync push/pull; `file.attach` to a placement; pull's byte budget (D-063);
+   placements in sync push/pull; `file.attach` to a placement; pull's byte budget (D-065);
    tests: records, sync, files, tenancy; `docs/openapi.json` regenerated.
-3. [x] SDK: `bundle:esm` (same source, ES module, `--check`) for Vite apps (D-064). The classic bundle's
+3. [x] SDK: `bundle:esm` (same source, ES module, `--check`) for Vite apps (D-066). The classic bundle's
    output must not change: the Show Tracker's copy is checked against it.
 4. [x] App Worker: service binding `API` → `studio-api`, `/v1/*` in `run_worker_first` and forwarded
    in `worker/index.js`; `env.staging` → `studio-booth-studio-staging` bound to `studio-api-staging`,
-   with no share-links bucket (D-065).
+   with no share-links bucket (D-067).
 5. [x] App: the studio bridge — email-code sign-in from inside the app (same origin), the open
    project linked to a placement, saves pushed, images uploaded and attached, pulls applied, a
-   review card on a conflict (D-062), an ended sign-in keeps changes, "Import my existing projects"
+   review card on a conflict (D-064), an ended sign-in keeps changes, "Import my existing projects"
    (loops until every op is answered, D-050), a list of the studio's projects to open. Signed out,
    the bridge's code is never loaded.
 6. [x] App: two-device test (`tests/two-devices.mjs`) against a local studio-api from an Art-Talk-Back
@@ -77,8 +77,8 @@ The platform's merge is safe alone: nothing calls the new routes until the app s
 | 1 | booth-studio repo: Allow auto-merge + `ci` ruleset requiring `booth` (SHIPPING.md setup) | Auto-merge without required checks merges at once | — |
 | 2 | Art-Talk-Back `ci` ruleset: add `booth-studio` | The API can't merge past a broken Booth Studio | — |
 | 3 | First **production** deploy of `studio-assistant` (stage 2) | A new Worker's first production deploy is Isaac's; no workflow deploys it yet | Pay per use (model) |
-| 4 | Share links on staging: an R2 bucket `booth-studio-shares-staging` | Only if he wants share links testable on staging (D-065) | Free tier |
+| 4 | Share links on staging: an R2 bucket `booth-studio-shares-staging` | Only if he wants share links testable on staging (D-067) | Free tier |
 
 Approved 2026-10-05 (recorded in each repo): Booth Studio may sign in and sync through studio-api;
-this part of Phase 5 before Phase 4 (D-059); SHIPPING.md applies to booth-studio; Claude does the
+this part of Phase 5 before Phase 4 (D-061); SHIPPING.md applies to booth-studio; Claude does the
 first deploy of `studio-booth-studio-staging`.

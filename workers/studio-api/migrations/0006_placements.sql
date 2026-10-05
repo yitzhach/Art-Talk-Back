@@ -1,9 +1,9 @@
--- Migration 0006 — placements (Phase 5, Booth Studio's part: D-059, D-060)
+-- Migration 0006 — placements (Phase 5, Booth Studio's part: D-061, D-062)
 --
 -- One scene per row: a booth (Booth Studio) or a wall (ar-wall-placer, later).
 -- The space's real size is in columns; the positions and everything else are
 -- in `scene`, in the format `format` names (e.g. 'booth-studio/1'); `images`
--- is the manifest of studio files the scene uses (D-061). Images never go in
+-- is the manifest of studio files the scene uses (D-063). Images never go in
 -- the row. The two JSON columns are capped in packages/core (PLACEMENT_*_MAX)
 -- so a logged write (before + after) stays well under D1's ~2 MB row limit.
 -- Same conventions as 0001. Mirrored by packages/core/src/db/schema.ts.

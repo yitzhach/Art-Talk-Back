@@ -1,4 +1,4 @@
-// Placements (Phase 5, Booth Studio's part: D-060…D-063): the record, its
+// Placements (Phase 5, Booth Studio's part: D-062…D-065): the record, its
 // caps, sync, images as attached studio files, pull's byte budget, and the
 // tools Booth Studio's assistant gets.
 import { env } from "cloudflare:test";
@@ -47,7 +47,7 @@ describe("placements", () => {
     expect((await call("/v1/placements?limit=20", { cookie: a.cookie })).status).toBe(200);
   });
 
-  it("refuses a scene or a manifest past the caps, so a logged write fits in a D1 row (D-060)", async () => {
+  it("refuses a scene or a manifest past the caps, so a logged write fits in a D1 row (D-062)", async () => {
     const a = await makeStudio();
     const huge = { ...booth(), scene: { blob: "x".repeat(PLACEMENT_SCENE_MAX) } };
     const res = await call("/v1/placements", { method: "POST", cookie: a.cookie, json: huge });
@@ -92,7 +92,7 @@ describe("placements in sync", () => {
     expect(await rowCount("SELECT COUNT(*) AS n FROM activity_log WHERE entity_id = ? AND source = 'sync'", id)).toBe(1);
   });
 
-  it("the same scene changed on two devices: the studio keeps its copy and the second device gets both (D-062)", async () => {
+  it("the same scene changed on two devices: the studio keeps its copy and the second device gets both (D-064)", async () => {
     const a = await makeStudio();
     const id = newId();
     await push(a.cookie, [op("placement.create", id, booth())]);
@@ -116,7 +116,7 @@ describe("placements in sync", () => {
     expect((await push(a.cookie, [op("placement.restore", id, { id })])).data.results[0]).toMatchObject({ status: "applied", record: { deletedAt: null } });
   });
 
-  it("a page of big placements ends early, and every one still arrives once (D-063)", async () => {
+  it("a page of big placements ends early, and every one still arrives once (D-065)", async () => {
     const a = await makeStudio();
     const size = 590_000;
     const ids: string[] = [];
@@ -155,7 +155,7 @@ describe("placements in sync", () => {
   });
 });
 
-describe("a booth's images are studio files attached to it (D-061)", () => {
+describe("a booth's images are studio files attached to it (D-063)", () => {
   it("upload, attach to the placement, record the file id, and download on another device", async () => {
     const a = await makeStudio();
     const p = (await call("/v1/placements", { method: "POST", cookie: a.cookie, json: booth() })).data;

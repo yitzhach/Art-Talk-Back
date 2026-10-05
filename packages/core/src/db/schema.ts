@@ -370,7 +370,7 @@ export const assistantMessages = sqliteTable(
   ],
 );
 
-// Phase 5 (D-060): one scene per row, a booth or a wall. Real sizes in columns,
+// Phase 5 (D-062): one scene per row, a booth or a wall. Real sizes in columns,
 // positions in `scene` (in the app's `format`), images as studio files (`images`).
 export const placements = sqliteTable(
   "placements",

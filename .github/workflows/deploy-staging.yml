@@ -9,7 +9,7 @@ name: Deploy staging
 #   variables: AI_GATEWAY_URL (https://gateway.ai.cloudflare.com/v1/<account id>/<gateway>/anthropic)
 # Deploys studio-api-staging, then the Show Tracker (yitzhach/art-show-tracker, branch
 # `app_ref`) as studio-show-tracker-staging, then Booth Studio (yitzhach/booth-studio,
-# branch `booth_ref`) as studio-booth-studio-staging (D-065).
+# branch `booth_ref`) as studio-booth-studio-staging (D-067).
 # Production is not deployed from here (docs/phase-2.md, step 8).
 on:
   workflow_dispatch:
@@ -117,7 +117,7 @@ jobs:
       - name: Deploy studio-show-tracker-staging
         run: pnpm exec wrangler deploy --env staging -c "$GITHUB_WORKSPACE/.show-tracker/wrangler.toml"
       # Booth Studio lives in its own repo too (D-042). Its `staging` env is a new
-      # Worker, studio-booth-studio-staging, bound to studio-api-staging (D-065); its
+      # Worker, studio-booth-studio-staging, bound to studio-api-staging (D-067); its
       # top level is the live booth-studio, which only its own Git integration deploys.
       # A branch whose wrangler.jsonc has no staging Worker isn't deployed at all.
       - uses: actions/checkout@v4

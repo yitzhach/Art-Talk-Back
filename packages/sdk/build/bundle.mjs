@@ -1,7 +1,7 @@
 // Shared by bundle:classic and bundle:esm: one build of src/browser.ts, written
 // to --out, or with --check compared with what is already there. Apps live in
 // their own repos (D-042) and check the output in as a vendored file; their CI
-// and ours run --check so a stale copy fails (D-064).
+// and ours run --check so a stale copy fails (D-066).
 import { build } from "esbuild";
 import { readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";

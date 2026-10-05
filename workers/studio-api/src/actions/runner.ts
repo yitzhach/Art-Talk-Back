@@ -60,6 +60,14 @@ export interface ActionDef<I extends z.ZodType = z.ZodType, R = unknown> {
   apps?: readonly string[];
   /** Plumbing run only by studio-api's own routes: never a tool, never run by name. */
   internal?: true;
+  /**
+   * The confirm card's lines after "Action", when the generic field lines
+   * would say nothing useful (a booth edit is a list of ops). Throws like
+   * plan would, so a card that can't be done is never made.
+   */
+  card?: (ctx: ActionCtx, input: z.output<I>) => Promise<{ label: string; value: string }[]>;
+  /** The tool's JSON Schema, when it is authored elsewhere than `input` (D-070: Booth Studio's ops). */
+  toolSchema?: Record<string, unknown>;
   plan: (ctx: ActionCtx, input: z.output<I>) => Promise<Plan>;
   /**
    * Builds the response from the logged `after` snapshots, in write order.

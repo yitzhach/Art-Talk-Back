@@ -10,6 +10,7 @@ import { z } from "zod";
 import {
   type EntityDef, artworkEntity, clientEntity, getRecord, placementEntity, saleEntity, settingsEntity, showEntity,
 } from "../actions/records";
+import { boothSummary } from "../actions/booth";
 import type { Snapshot } from "../actions/runner";
 import type { Db } from "../env";
 import { type Permission, requirePermission } from "../auth/permissions";
@@ -148,6 +149,31 @@ mountRecordRoutes({
   entity: placementEntity, path: "placements", tag: "records", record: Placement.meta({ id: "Placement" }),
   input: PlacementInput, patch: PlacementPatch, maxLimit: 20,
 });
+
+// What is in a Booth Studio booth, small enough for a model or an agent: the
+// booth, its walls, each work and piece of furniture with its id and place
+// (D-070). The ops that change it run through POST /actions/placement.edit.
+const Item = z.record(z.string(), z.unknown());
+const BoothSummary = z.object({
+  id: z.string(), version: z.number().int(), format: z.string(), name: z.string(), units: z.literal("inches"),
+  frame: z.string().meta({ description: "How x, y and z are measured" }),
+  booth: Item, walls: z.array(Item), art: z.array(Item), furniture: z.array(Item), limits: Item,
+}).meta({ id: "BoothSummary" });
+
+recordRoutes.openapi(
+  createRoute({
+    method: "get", path: "/placements/{id}/summary", tags: ["records"],
+    summary: "What is in a Booth Studio booth: its walls, work and furniture with ids and positions",
+    description: "For the assistant's describe_booth tool and for agents. Never the images or the scene itself. 400 for a placement in another format.",
+    request: { params: PathId },
+    responses: { 200: json(BoothSummary), 400: errors[400], 401: errors[401], 403: errors[403], 404: errors[404] },
+  }),
+  async (c) => {
+    const actor = requireActor(c);
+    requirePermission(actor.role, "placements:read");
+    return send(c, await boothSummary(drizzle(c.env.DB), actor.studioId, c.req.valid("param").id));
+  },
+);
 
 recordRoutes.openapi(
   createRoute({

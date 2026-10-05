@@ -70,6 +70,9 @@ attempt("get", "/placements/{id}", () => call(`/v1/placements/${b.placement.id}`
 attempt("patch", "/placements/{id}", () => call(`/v1/placements/${b.placement.id}`, { method: "PATCH", cookie: A.cookie, headers: { "If-Match": "1" }, json: { name: "pwned" } }));
 attempt("delete", "/placements/{id}", () => call(`/v1/placements/${b.placement.id}`, { method: "DELETE", cookie: A.cookie, headers: { "If-Match": "1" } }));
 cases.push(["post", "/actions/placement.restore", () => call("/v1/actions/placement.restore", { method: "POST", cookie: A.cookie, json: { id: b.placement.id } })]);
+attempt("get", "/placements/{id}/summary", () => call(`/v1/placements/${b.placement.id}/summary`, { cookie: A.cookie }));
+cases.push(["post", "/actions/placement.edit", () => call("/v1/actions/placement.edit", { method: "POST", cookie: A.cookie,
+  json: { id: b.placement.id, version: 1, ops: [{ op: "rename", name: "pwned" }] } })]);
 cases.push(["get", "/files/{id}/download-url (B's placement image)", () => call(`/v1/files/${b.placementFile.id}/download-url`, { cookie: A.cookie })]);
 // Named actions with B's ids (these all go through POST /actions/{name}).
 cases.push(["post", "/actions/show.add_artwork", () => call("/v1/actions/show.add_artwork", { method: "POST", cookie: A.cookie, json: { showId: b.show.id, artworkId: b.artwork.id } })]);
@@ -169,6 +172,11 @@ describe("studio A can't reach studio B", () => {
     ["get", "/placements", async () => expect((await call("/v1/placements", { cookie: A.cookie })).data.items).toEqual([])],
     ["post", "/placements", async () => expect((await call("/v1/placements", { method: "POST", cookie: A.cookie,
       json: { name: "A's booth", format: "booth-studio/1" } })).data.studioId).toBe(A.studioId)],
+    ["post", "/actions/placement.build", async () => {
+      // A booth built by A is A's.
+      const made = (await call("/v1/actions/placement.build", { method: "POST", cookie: A.cookie, json: { name: "A's built booth" } })).data.result;
+      expect(made.studioId).toBe(A.studioId);
+    }],
     ["post", "/clients", async () => expect((await call("/v1/clients", { method: "POST", cookie: A.cookie, json: { name: "A's" } })).data.studioId).toBe(A.studioId)],
     ["get", "/assistant/proposals", async () => expect((await call("/v1/assistant/proposals", { cookie: A.cookie })).data.items).toEqual([])],
     ["get", "/search", async () => expect((await call("/v1/search?q=B's", { cookie: A.cookie })).data.items).toEqual([])],

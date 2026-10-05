@@ -9,6 +9,7 @@ import { createRoute } from "@hono/zod-openapi";
 import { and, desc, eq, gt, inArray, isNull, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import type { Context } from "hono";
+import type { SQLiteColumn } from "drizzle-orm/sqlite-core";
 import { z } from "zod";
 import { appendMessages, cardLines, nameOf, pendingEntity, propose, resolve } from "../actions/assistant";
 import { getEntity, getRecord } from "../actions/records";
@@ -78,7 +79,7 @@ assistantRoutes.openapi(
 /** Edits and deletes the model sends without a version get the current one (see the route's description). */
 async function withVersion(ctx: ActionCtx, def: ActionDef, input: Snapshot): Promise<Snapshot> {
   const [type, verb] = def.name.split(".") as [string, string];
-  if (!["update", "delete"].includes(verb) || input.version !== undefined) return input;
+  if (!["update", "delete", "edit"].includes(verb) || input.version !== undefined) return input;
   const entity = getEntity(type);
   if (!entity) return input;
   const id = type === "settings" ? ctx.actor.studioId : input.id;
@@ -217,7 +218,7 @@ assistantRoutes.openapi(
 const SEARCH_TOOL = {
   name: "search",
   action: null,
-  description: "Find shows, sales, artworks or clients by name, to get their ids. Use it before naming a record in any other tool. Several matches: ask the artist which one.",
+  description: "Find shows, sales, artworks, clients or booths (placements) by name, to get their ids. Use it before naming a record in any other tool. Several matches: ask the artist which one.",
   inputSchema: {
     type: "object",
     properties: {
@@ -229,6 +230,21 @@ const SEARCH_TOOL = {
   level: "auto" as Level,
 };
 
+/** Booth Studio's read tool: what is in a booth, with ids and positions (D-070). */
+const DESCRIBE_BOOTH_TOOL = {
+  name: "describe_booth",
+  action: null,
+  read: { path: "/placements/{id}/summary" },
+  description: "What is in a Booth Studio booth: its size and venue, its walls, each work (with its wall and position) and each piece of furniture, with their ids, in inches. Call it before placement_edit, and again after a change if you need the new positions.",
+  inputSchema: {
+    type: "object",
+    properties: { id: { type: "string", description: "The booth's id (from search, or the booth on screen)" } },
+    required: ["id"],
+  },
+  level: "auto" as Level,
+};
+const READ_TOOLS: Record<string, (typeof DESCRIBE_BOOTH_TOOL)[]> = { "booth-studio": [DESCRIBE_BOOTH_TOOL], studio: [DESCRIBE_BOOTH_TOOL] };
+
 const LEVEL_NOTE: Record<Level, string> = {
   auto: "",
   confirm: " The artist confirms this with one tap before anything is saved.",
@@ -237,10 +253,12 @@ const LEVEL_NOTE: Record<Level, string> = {
 };
 
 export function toolFor(def: ActionDef, level: Level) {
-  const schemaOut = z.toJSONSchema(def.input, { io: "input", unrepresentable: "any" }) as Snapshot;
+  const schemaOut = def.toolSchema
+    ? (structuredClone(def.toolSchema) as Snapshot)
+    : (z.toJSONSchema(def.input, { io: "input", unrepresentable: "any" }) as Snapshot);
   delete schemaOut.$schema;
   // Edits and deletes may leave out `version` (see /assistant/act).
-  if (/\.(update|delete)$/.test(def.name) && Array.isArray(schemaOut.required)) {
+  if (/\.(update|delete|edit)$/.test(def.name) && Array.isArray(schemaOut.required)) {
     schemaOut.required = (schemaOut.required as string[]).filter((f) => f !== "version");
   }
   return {
@@ -271,7 +289,8 @@ assistantRoutes.openapi(
       .filter(({ level }) => level !== "never")
       .sort((a, b) => a.d.name.localeCompare(b.d.name))
       .map(({ d, level }) => toolFor(d, level));
-    return send(c, { app, tools: [SEARCH_TOOL, ...tools] });
+    const reads = can(actor.role, "placements:read") ? READ_TOOLS[app] ?? [] : [];
+    return send(c, { app, tools: [SEARCH_TOOL, ...reads, ...tools] });
   },
 );
 
@@ -372,9 +391,11 @@ assistantRoutes.openapi(
 interface SearchDef {
   type: z.infer<typeof SearchType>;
   perm: Permission;
-  table: typeof schema.shows | typeof schema.sales | typeof schema.artworks | typeof schema.clients;
+  table: typeof schema.shows | typeof schema.sales | typeof schema.artworks | typeof schema.clients | typeof schema.placements;
   fields: string[]; // SQL columns searched
   detail: (r: Snapshot) => string;
+  /** Read only these columns: a placement's scene can be 600 KB, and a search needs none of it (D-069). */
+  columns?: Record<string, SQLiteColumn>;
 }
 
 const money = (cents: unknown) => (typeof cents === "number" ? `$${(cents / 100).toFixed(2)}` : "unpriced");
@@ -387,6 +408,13 @@ const SEARCHABLE: SearchDef[] = [
     detail: (r) => [r.inventoryCode, r.medium, r.status].filter(Boolean).join(" · ") },
   { type: "client", perm: "clients:read", table: schema.clients, fields: ["name", "email"],
     detail: (r) => [r.kind, r.email].filter(Boolean).join(" · ") },
+  { type: "placement", perm: "placements:read", table: schema.placements, fields: ["name"],
+    detail: (r) => [r.kind, r.width && r.depth ? `${r.width} × ${r.depth} ${r.sizeUnit}` : ""].filter(Boolean).join(" · "),
+    columns: {
+      id: schema.placements.id, version: schema.placements.version, name: schema.placements.name, kind: schema.placements.kind,
+      width: schema.placements.width, depth: schema.placements.depth, sizeUnit: schema.placements.sizeUnit,
+      updatedAt: schema.placements.updatedAt,
+    } },
 ];
 
 /** LIKE pattern for one word, with LIKE's own wildcards escaped. */
@@ -399,7 +427,7 @@ assistantRoutes.openapi(
     request: {
       query: z.object({
         q: z.string().trim().min(1).max(200),
-        types: z.string().optional().meta({ description: "Comma-separated: show,sale,artwork,client" }),
+        types: z.string().optional().meta({ description: "Comma-separated: show,sale,artwork,client,placement" }),
         limit: z.coerce.number().int().min(1).max(25).default(10),
       }),
     },
@@ -416,7 +444,7 @@ assistantRoutes.openapi(
       if (!wanted.has(s.type) || !can(actor.role, s.perm)) continue;
       const haystack = sql.raw(s.fields.map((f) => `coalesce(${f}, '')`).join(" || ' ' || "));
       const t = s.table as typeof schema.shows;
-      const rows = await db.select().from(s.table).where(and(
+      const rows = await (s.columns ? db.select(s.columns) : db.select()).from(s.table as typeof schema.shows).where(and(
         eq(t.studioId, actor.studioId), isNull(t.deletedAt),
         ...words.map((w) => sql`lower(${haystack}) LIKE ${pattern(w)} ESCAPE '\\'`),
       )).orderBy(desc(t.updatedAt)).limit(25) as Snapshot[];

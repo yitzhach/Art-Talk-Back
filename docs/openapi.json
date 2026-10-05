@@ -1069,6 +1069,75 @@
           "scene",
           "images"
         ]
+      },
+      "BoothSummary": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "version": {
+            "type": "integer"
+          },
+          "format": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "units": {
+            "type": "string",
+            "enum": [
+              "inches"
+            ]
+          },
+          "frame": {
+            "type": "string",
+            "description": "How x, y and z are measured"
+          },
+          "booth": {
+            "type": "object",
+            "additionalProperties": {}
+          },
+          "walls": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": {}
+            }
+          },
+          "art": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": {}
+            }
+          },
+          "furniture": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": {}
+            }
+          },
+          "limits": {
+            "type": "object",
+            "additionalProperties": {}
+          }
+        },
+        "required": [
+          "id",
+          "version",
+          "format",
+          "name",
+          "units",
+          "frame",
+          "booth",
+          "walls",
+          "art",
+          "furniture",
+          "limits"
+        ]
       }
     },
     "parameters": {}
@@ -4266,6 +4335,77 @@
         }
       }
     },
+    "/placements/{id}/summary": {
+      "get": {
+        "tags": [
+          "records"
+        ],
+        "summary": "What is in a Booth Studio booth: its walls, work and furniture with ids and positions",
+        "description": "For the assistant's describe_booth tool and for agents. Never the images or the scene itself. 400 for a placement in another format.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BoothSummary"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not allowed for your role",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (or in another studio)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/settings": {
       "get": {
         "tags": [
@@ -6884,6 +7024,17 @@
                               "always_confirm",
                               "never"
                             ]
+                          },
+                          "read": {
+                            "type": "object",
+                            "properties": {
+                              "path": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "path"
+                            ]
                           }
                         },
                         "required": [
@@ -7219,10 +7370,10 @@
           {
             "schema": {
               "type": "string",
-              "description": "Comma-separated: show,sale,artwork,client"
+              "description": "Comma-separated: show,sale,artwork,client,placement"
             },
             "required": false,
-            "description": "Comma-separated: show,sale,artwork,client",
+            "description": "Comma-separated: show,sale,artwork,client,placement",
             "name": "types",
             "in": "query"
           },
@@ -7257,7 +7408,8 @@
                               "show",
                               "sale",
                               "artwork",
-                              "client"
+                              "client",
+                              "placement"
                             ]
                           },
                           "id": {

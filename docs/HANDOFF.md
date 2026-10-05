@@ -101,6 +101,17 @@ Read this first, then `CLAUDE.md`, then `docs/phase-3.md` (assistant) or `docs/p
   in there with his email.
 - Booth Studio's CI (job `booth`) runs its 37 view suites and e2e checks on Chromium build 1194, the
   sandbox's: the pinned Playwright's own headless shell stops drawing under the suites' flags.
+- After shipping: booth-studio#11 (a rename made outside the app reaches the screen; a booth deleted
+  from the studio stays on the device instead of looping) and #12 (a CI test race).
+- **Booth actions (9b, D-070, Isaac's OK).** Booth Studio owns its scene logic (`src/scene-ops.js`);
+  `npm run bundle:scene` builds it and studio-api vendors the build as
+  `workers/studio-api/src/vendor/booth-scene.js` — never edit that file here; rebuild it in booth-studio
+  and copy it over on the branch of the same name (CI in both repos compares them). It gives
+  `placement.edit` (ops), `placement.build` (a new booth), `GET /placements/{id}/summary` and the
+  `describe_booth` read tool. Agents use the actions through `POST /actions/{name}`.
+- Where it goes next (`phase-5-booth.md` step 10, Isaac's aim): pictures in the chat (a photo or sketch
+  becomes a booth), show-floor ops (a show's map becomes the floor and its 3D walk-through), app
+  commands the panel runs ("export this as a PDF", "take me to lighting"), and agents outside the chat.
 - Left for Isaac: the `ci` ruleset entries (`booth-studio` here, `booth` there) and auto-merge on
   booth-studio; his first real use (booth-studio HANDOFF → Next); the first run of "Deploy
-  production assistant" (D-068), which stage 2 waits on.
+  production assistant" (D-068), which Booth Studio's panel (9c) waits on.

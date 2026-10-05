@@ -270,3 +270,6 @@ Isaac added the rule to CLAUDE.md himself (Shipping): Claude may merge its own p
 - Before migrating, it writes a D1 Time Travel bookmark and the live Worker version to the run summary, and won't migrate without the bookmark.
 - Undo: revert the pull request (redeploys itself), or the manual "Roll back production" workflow (`code`: `wrangler rollback`; `database`: `d1 time-travel restore` to a bookmark, Isaac's OK first).
 - Auto-merge needs a ruleset requiring CI on each default branch, or it merges at once. Recipe and setup clicks: `docs/SHIPPING.md`.
+
+### D-058 · Each turn tells the assistant how its cards ended · 2026-10-05 · default
+The artist answers a card by tapping, outside the conversation, so the stored thread still ends at "tap Confirm". On staging the model then told Isaac a confirmed sale wasn't saved. Each turn's context line now lists the five newest cards and their state (waiting, confirmed and saved, cancelled, expired), read from `GET /assistant/proposals?status=all` (additive). The thread stays append-only (D-053): the line is part of the new user message, not an edit of an old one.

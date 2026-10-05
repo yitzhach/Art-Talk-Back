@@ -5254,6 +5254,21 @@
           "assistant"
         ],
         "summary": "My confirm cards still waiting for a tap",
+        "description": "With status=all: my 20 newest cards whatever happened to them (confirmed, cancelled, expired), so the assistant knows which were saved.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "pending",
+                "all"
+              ]
+            },
+            "required": false,
+            "name": "status",
+            "in": "query"
+          }
+        ],
         "responses": {
           "200": {
             "description": "OK",

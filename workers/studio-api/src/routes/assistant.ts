@@ -92,14 +92,17 @@ async function withVersion(ctx: ActionCtx, def: ActionDef, input: Snapshot): Pro
 assistantRoutes.openapi(
   createRoute({
     method: "get", path: "/assistant/proposals", tags: ["assistant"], summary: "My confirm cards still waiting for a tap",
+    description: "With status=all: my 20 newest cards whatever happened to them (confirmed, cancelled, expired), so the assistant knows which were saved.",
+    request: { query: z.object({ status: z.enum(["pending", "all"]).optional() }) },
     responses: { 200: json(z.object({ items: z.array(Proposal) })), 401: errors[401] },
   }),
   async (c) => {
     const actor = requireActor(c);
     const t = schema.pendingActions;
+    const all = c.req.valid("query").status === "all";
     const items = await drizzle(c.env.DB).select().from(t).where(and(
-      eq(t.studioId, actor.studioId), eq(t.userId, actor.userId), eq(t.status, "pending"),
-      gt(t.expiresAt, nowIso()), isNull(t.deletedAt),
+      eq(t.studioId, actor.studioId), eq(t.userId, actor.userId), isNull(t.deletedAt),
+      ...(all ? [] : [eq(t.status, "pending"), gt(t.expiresAt, nowIso())]),
     )).orderBy(desc(t.id)).limit(20);
     return send(c, { items });
   },

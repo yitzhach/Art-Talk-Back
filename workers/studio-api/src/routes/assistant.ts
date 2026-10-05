@@ -3,10 +3,10 @@
 // (D-045): the assistant proposes, studio-api decides.
 import {
   ActRequest, ActResponse, AppendMessages, ConfirmResponse, PolicyEntry, PolicyUpdate, Proposal, SearchResponse,
-  SearchType, ThreadResponse, ToolsResponse, db as schema, newId,
+  Id, SearchType, ThreadResponse, ThreadSummary, ToolsResponse, db as schema, newId,
 } from "@studio/core";
 import { createRoute } from "@hono/zod-openapi";
-import { and, desc, eq, gt, isNull, sql } from "drizzle-orm";
+import { and, desc, eq, gt, inArray, isNull, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import type { Context } from "hono";
 import { z } from "zod";
@@ -277,24 +277,36 @@ assistantRoutes.openapi(
 
 // ------------------------------------------------------------ thread
 
-/** A conversation stays open this long after its last message, and up to this many messages (D-053). */
-const THREAD_QUIET_MS = 12 * 3600_000;
-const THREAD_MAX = 60;
+/**
+ * A conversation stays open this long after its last message, and up to this many
+ * stored messages (D-053; shortened in D-060: every turn re-sends the whole thread).
+ * A sale is about five stored messages.
+ */
+const THREAD_QUIET_MS = 4 * 3600_000;
+const THREAD_MAX = 40;
 
 assistantRoutes.openapi(
   createRoute({
     method: "get", path: "/assistant/thread", tags: ["assistant"],
     summary: "The current conversation, on any device",
-    description: "A new thread starts after 12 quiet hours or 60 messages; the messages come back exactly as stored, so the model sees an unedited history. With fresh=1: a new, empty thread (the panel's New conversation); it becomes current once its first turn is stored.",
-    request: { query: z.object({ fresh: z.enum(["1"]).optional() }) },
-    responses: { 200: json(ThreadResponse), 401: errors[401] },
+    description: "A new thread starts after 4 quiet hours or 40 messages; the messages come back exactly as stored, so the model sees an unedited history. With fresh=1: a new, empty thread (the panel's New conversation); it becomes current once its first turn is stored. With id: that past conversation of mine (continuing it makes it current again).",
+    request: { query: z.object({ fresh: z.enum(["1"]).optional(), id: Id.optional() }) },
+    responses: { 200: json(ThreadResponse), 401: errors[401], 404: errors[404] },
   }),
   async (c) => {
     const actor = requireActor(c);
     requirePermission(actor.role, "assistant:use");
-    if (c.req.valid("query").fresh) return send(c, { threadId: newId(), messages: [] });
+    const q = c.req.valid("query");
+    if (q.fresh) return send(c, { threadId: newId(), messages: [] });
     const t = schema.assistantMessages;
     const db = drizzle(c.env.DB);
+    if (q.id) {
+      const messages = await db.select({ id: t.id, threadId: t.threadId, role: t.role, content: t.content, app: t.app, createdAt: t.createdAt })
+        .from(t).where(and(eq(t.studioId, actor.studioId), eq(t.userId, actor.userId), eq(t.threadId, q.id), isNull(t.deletedAt)))
+        .orderBy(t.id).limit(400);
+      if (!messages.length) throw notFound("Conversation");
+      return send(c, { threadId: q.id, messages });
+    }
     const last = (await db.select({ threadId: t.threadId, createdAt: t.createdAt }).from(t)
       .where(and(eq(t.studioId, actor.studioId), eq(t.userId, actor.userId), isNull(t.deletedAt)))
       .orderBy(desc(t.id)).limit(1))[0];
@@ -305,6 +317,38 @@ assistantRoutes.openapi(
       if (messages.length <= THREAD_MAX) return send(c, { threadId: last.threadId, messages });
     }
     return send(c, { threadId: newId(), messages: [] });
+  },
+);
+
+/** The words the person typed first, without the context line, for a list of past chats. */
+function titleOf(content: unknown): string {
+  const blocks = Array.isArray(content) ? content : [{ type: "text", text: content }];
+  const text = blocks.map((b) => (b && typeof b === "object" && (b as { type?: unknown }).type === "text" ? String((b as { text?: unknown }).text ?? "") : ""))
+    .join(" ").replace(/^\[Context from the app[^\]]*\]\s*/, "").trim();
+  return text.length > 80 ? `${text.slice(0, 79)}…` : text;
+}
+
+assistantRoutes.openapi(
+  createRoute({
+    method: "get", path: "/assistant/threads", tags: ["assistant"],
+    summary: "My past conversations, newest first (20)",
+    responses: { 200: json(z.object({ items: z.array(ThreadSummary) })), 401: errors[401] },
+  }),
+  async (c) => {
+    const actor = requireActor(c);
+    requirePermission(actor.role, "assistant:use");
+    const t = schema.assistantMessages;
+    const db = drizzle(c.env.DB);
+    const mine = and(eq(t.studioId, actor.studioId), eq(t.userId, actor.userId), isNull(t.deletedAt));
+    const rows = await db.select({
+      threadId: t.threadId, firstId: sql<string>`min(${t.id})`, startedAt: sql<string>`min(${t.createdAt})`,
+      lastAt: sql<string>`max(${t.createdAt})`, messages: sql<number>`count(*)`,
+    }).from(t).where(mine).groupBy(t.threadId).orderBy(desc(sql`max(${t.id})`)).limit(20);
+    const firsts = rows.length
+      ? await db.select({ id: t.id, content: t.content }).from(t).where(and(mine, inArray(t.id, rows.map((r) => r.firstId))))
+      : [];
+    const byId = new Map(firsts.map((f) => [f.id, f.content]));
+    return send(c, { items: rows.map(({ firstId, ...r }) => ({ ...r, messages: Number(r.messages), title: titleOf(byId.get(firstId)) || "(no words)" })) });
   },
 );
 

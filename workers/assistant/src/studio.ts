@@ -28,7 +28,8 @@ export interface Studio {
   tools(app: string): Promise<Tool[]>;
   search(q: string, types?: string[]): Promise<SearchItem[]>;
   act(action: string, input: Record<string, unknown>, summary: string): Promise<ActResult>;
-  thread(fresh?: boolean): Promise<{ threadId: string; messages: StoredMessage[] }>;
+  /** The current conversation; a new empty one (fresh); or a past one by id. */
+  thread(fresh?: boolean, id?: string): Promise<{ threadId: string; messages: StoredMessage[] }>;
   /** My newest cards, any status: how each one ended. */
   cards(): Promise<CardState[]>;
   append(threadId: string, app: string | null, messages: StoredMessage[]): Promise<void>;
@@ -50,7 +51,7 @@ export function studioFor(env: Env, cookie: string): Studio {
     search: async (q, types) => (await call<{ items: SearchItem[] }>("GET",
       `/search?q=${encodeURIComponent(q)}${types?.length ? `&types=${encodeURIComponent(types.join(","))}` : ""}`)).items,
     act: (action, input, summary) => call<ActResult>("POST", "/assistant/act", { action, input, summary }),
-    thread: (fresh) => call("GET", fresh ? "/assistant/thread?fresh=1" : "/assistant/thread"),
+    thread: (fresh, id) => call("GET", fresh ? "/assistant/thread?fresh=1" : id ? `/assistant/thread?id=${encodeURIComponent(id)}` : "/assistant/thread"),
     cards: async () => (await call<{ items: CardState[] }>("GET", "/assistant/proposals?status=all")).items,
     append: async (threadId, app, messages) => { await call("POST", "/assistant/thread/messages", { threadId, app, messages }); },
   };

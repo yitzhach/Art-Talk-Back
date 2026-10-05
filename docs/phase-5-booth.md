@@ -83,7 +83,7 @@ is read, never changed.
     9b's actions:
     - [ ] 10a. Pictures in the chat: a photo, sketch or floor plan attached to a message; the model reads it
       and builds or changes a booth with `placement_build` / `placement_edit`.
-    - [ ] 10b. Show floors: ops for the show floor (`hall`: its size, booth blocks, aisles, numbers, shapes),
+    - [x] 10b. Show floors: ops for the show floor (`hall`: its size, booth blocks, aisles, numbers, shapes),
       so a show's map or spec becomes the floor and its 3D walk-through.
     - [ ] 10c. The app as a tool: app commands the panel runs on the device ("export this as a PDF", "take me
       to lighting", "record a walk-through"), from the app's own tool list (`src/toolsearch.js`).

@@ -70,6 +70,7 @@ const BOOTH_STYLES = {
   open: "Open floor"
 };
 const VENUES = { indoor: "Indoor hall", outdoor: "Outdoor fair" };
+const DEFAULT_DRAPE = "#465469";
 const SHOW_LIMITS = { size: [2, 12e3], pos: [-24e3, 48e3], floor: [120, 24e3] };
 const MAX_ITEMS = 2400;
 const inRange$1 = (n, [lo, hi]) => Number.isFinite(n) && n >= lo && n <= hi;
@@ -100,6 +101,135 @@ function validShow(h) {
   }
   return true;
 }
+function showItems(h) {
+  if (h.items) return h.items;
+  return hallLayout(h).map((b) => ({ id: "b" + b.number, kind: "booth", number: b.number, x: b.x + b.w / 2, y: b.y + b.d / 2, w: b.w, d: b.d, ...b.faces === "back" ? { rot: 180 } : {} }));
+}
+function floorOf(h) {
+  if (h.venue) return { kind: h.venue.kind, width: h.venue.width, depth: h.venue.depth };
+  const s = hallSize(h);
+  return { kind: "indoor", width: s.width, depth: s.depth };
+}
+function toFloor(h) {
+  if (!h.items) h.items = showItems(h).map((it) => ({ ...it }));
+  if (!h.venue) h.venue = floorOf(h);
+  return h;
+}
+function boxOf(it) {
+  const a = (it.rot || 0) % 180 * Math.PI / 180;
+  const c = Math.abs(Math.cos(a));
+  const s = Math.abs(Math.sin(a));
+  const hw = (it.w * c + it.d * s) / 2;
+  const hd = (it.w * s + it.d * c) / 2;
+  return { l: it.x - hw, r: it.x + hw, t: it.y - hd, b: it.y + hd };
+}
+function boundsOf(items) {
+  if (!items.length) return null;
+  const out = { l: Infinity, r: -Infinity, t: Infinity, b: -Infinity };
+  for (const it of items) {
+    const b = boxOf(it);
+    out.l = Math.min(out.l, b.l);
+    out.r = Math.max(out.r, b.r);
+    out.t = Math.min(out.t, b.t);
+    out.b = Math.max(out.b, b.b);
+  }
+  return out;
+}
+function newId$1(items, prefix = "s") {
+  const taken = new Set(items.map((i) => i.id));
+  let n = items.length + 1;
+  while (taken.has(prefix + n)) n++;
+  return prefix + n;
+}
+function nextNumber(items, start = 101) {
+  let top = start - 1;
+  for (const it of items) if (it.kind === "booth") top = Math.max(top, it.number);
+  return top + 1;
+}
+function boothBlock(items, { count, perRow, w, d, gap = 0, aisle = 120, backToBack = false, style, x = 0, y = 0, start = 101 }) {
+  const all = [...items];
+  const out = [];
+  perRow = Math.max(1, Math.min(perRow, count));
+  for (let i = 0; i < count; i++) {
+    const row = Math.floor(i / perRow);
+    const col = i % perRow;
+    const second = backToBack && row % 2 === 1;
+    const first = backToBack && !second;
+    const top = backToBack ? y + Math.floor(row / 2) * (2 * d + aisle) + (second ? d : 0) : y + row * (d + aisle);
+    const it = { id: newId$1(all), kind: "booth", number: nextNumber(all, start), x: x + col * (w + gap) + w / 2, y: top + d / 2, w, d };
+    if (first) it.rot = 180;
+    if (style && style !== "pipe") it.style = style;
+    all.push(it);
+    out.push(it);
+  }
+  return out;
+}
+const FLOOR_TEMPLATES = {
+  street: {
+    label: "Art fair street",
+    note: "Outdoors: two rows of twelve 10 × 10 canopy tents facing each other across a 20′ street, 2′ apart, an entrance at each end.",
+    build(start = 101) {
+      const items = [];
+      const x0 = (1920 - (12 * 120 + 11 * 24)) / 2;
+      items.push(...boothBlock(items, { count: 12, perRow: 12, w: 120, d: 120, gap: 24, style: "tent", x: x0, y: 60, start }));
+      for (const it of boothBlock(items, { count: 12, perRow: 12, w: 120, d: 120, gap: 24, style: "tent", x: x0, y: 420, start })) items.push({ ...it, rot: 180 });
+      items.push({ id: newId$1(items), kind: "aisle", x: 960, y: 300, w: 1704 + 96, d: 240 });
+      items.push({ id: newId$1(items), kind: "door", x: 12, y: 300, w: 192, d: 12, rot: 90 });
+      items.push({ id: newId$1(items), kind: "door", x: 1908, y: 300, w: 192, d: 12, rot: 90 });
+      items.push({ id: newId$1(items), kind: "label", x: 960, y: 24, w: 480, d: 36, text: "Artists' street" });
+      return { venue: { kind: "outdoor", width: 1920, depth: 600 }, items };
+    }
+  },
+  convention: {
+    label: "Convention hall, perimeter booths",
+    note: "Indoors, 150′ × 100′: 10 × 10 booths round three walls facing in, four island rows back to back in the middle, 10′ aisles, an entrance, an info desk, food and restrooms.",
+    build(start = 101) {
+      const items = [];
+      const add = (it) => (items.push({ id: newId$1(items), ...it }), items.at(-1));
+      const booth = (x, y, rot) => add({ kind: "booth", number: nextNumber(items, start), x, y, w: 120, d: 120, ...rot ? { rot } : {} });
+      for (let x = 180; x <= 1620; x += 120) booth(x, 60);
+      for (let y = 240; y <= 960; y += 120) booth(60, y, 270);
+      for (let y = 240; y <= 960; y += 120) booth(1740, y, 90);
+      items.push(...boothBlock(items, { count: 32, perRow: 8, w: 120, d: 120, aisle: 120, backToBack: true, x: 420, y: 300, start }));
+      add({ kind: "door", x: 900, y: 1194, w: 192, d: 12 });
+      add({ kind: "desk", x: 900, y: 1086, w: 96, d: 36 });
+      add({ kind: "food", x: 300, y: 1080, w: 240, d: 192 });
+      add({ kind: "restroom", x: 1560, y: 1110, w: 144, d: 120 });
+      return { venue: { kind: "indoor", width: 1800, depth: 1200 }, items };
+    }
+  },
+  pavilion: {
+    label: "Market under a pavilion",
+    note: "Outdoors, 80′ × 60′: a 60′ × 40′ pavilion tent over two back-to-back rows of six 8 × 10 booths, food trucks' pad and an entrance.",
+    build(start = 101) {
+      const items = [];
+      items.push({ id: newId$1(items), kind: "pavilion", x: 480, y: 300, w: 720, d: 480 });
+      items.push(...boothBlock(items, { count: 12, perRow: 6, w: 96, d: 120, backToBack: true, x: 192, y: 180, start }));
+      items.push({ id: newId$1(items), kind: "food", x: 480, y: 636, w: 480, d: 144, text: "Food trucks" });
+      items.push({ id: newId$1(items), kind: "door", x: 480, y: 714, w: 144, d: 12 });
+      return { venue: { kind: "outdoor", width: 960, depth: 720 }, items };
+    }
+  }
+};
+function offFloor(h) {
+  const f = floorOf(h);
+  return showItems(h).filter((it) => {
+    const b = boundsOf([it]);
+    return b.l < 0 || b.t < 0 || b.r > f.width || b.b > f.depth;
+  });
+}
+function growToFit(h, margin = 60) {
+  toFloor(h);
+  const box = boundsOf(h.items);
+  if (!box || !offFloor(h).length) return false;
+  const [, most] = SHOW_LIMITS.floor;
+  const dx = box.l < 0 ? Math.ceil(margin - box.l) : 0;
+  const dy = box.t < 0 ? Math.ceil(margin - box.t) : 0;
+  if (dx || dy) for (const it of h.items) it.x += dx, it.y += dy;
+  h.venue.width = Math.min(most, Math.max(h.venue.width, Math.ceil(box.r + dx + margin)));
+  h.venue.depth = Math.min(most, Math.max(h.venue.depth, Math.ceil(box.b + dy + margin)));
+  return true;
+}
 const STATUSES = {
   open: { label: "Open", color: "#e9eef3" },
   held: { label: "Held", color: "#ffe3a3" },
@@ -115,6 +245,9 @@ const HALL_LIMITS = {
   price: [0, 1e6]
 };
 const MAX_HALL_BOOTHS = 1200;
+function newHall() {
+  return { rows: 2, perRow: 8, boothWidth: 120, boothDepth: 120, aisle: 120, backToBack: true, start: 101, price: 0, booths: {} };
+}
 const inRange = (n, [lo, hi]) => Number.isFinite(n) && n >= lo && n <= hi;
 function validHall(h) {
   if (h === void 0) return true;
@@ -137,6 +270,40 @@ function validHall(h) {
   }
   return validShow(h);
 }
+function hallLayout(h) {
+  const out = [];
+  let y = h.aisle;
+  for (let row = 0; row < h.rows; row++) {
+    const second = h.backToBack && row % 2 === 1;
+    if (row > 0 && !second) y += h.aisle;
+    for (let col = 0; col < h.perRow; col++)
+      out.push({
+        number: h.start + row * h.perRow + col,
+        row: row + 1,
+        col: col + 1,
+        x: h.aisle + col * h.boothWidth,
+        y,
+        w: h.boothWidth,
+        d: h.boothDepth,
+        // A booth's open front is the side toward the entrance ("front") or
+        // toward the back of the hall ("back"). A lone row faces the aisle
+        // in front of it; in a back-to-back pair the first row faces the
+        // aisle behind it and the second the one in front, so the pair
+        // shares its back line. (Until 2026-09-25 the pair was the other way
+        // round — fronts meeting at the shared line — which only showed once
+        // the floor stood up in 3D.)
+        faces: h.backToBack && !second ? "back" : "front"
+      });
+    y += h.boothDepth;
+  }
+  return out;
+}
+function hallSize(h) {
+  const layout = hallLayout(h);
+  const bottom = Math.max(...layout.map((b) => b.y + b.d));
+  return { width: h.aisle * 2 + h.perRow * h.boothWidth, depth: bottom + h.aisle };
+}
+const boothOf = (h, number) => ({ status: "open", name: "", note: "", price: h.price, ...h.booths[number] || {} });
 const finite$2 = (value, min, max) => typeof value === "number" && Number.isFinite(value) && value >= min && value <= max;
 function normalizeImageEdits(value = {}) {
   value = value && typeof value === "object" ? value : {};
@@ -775,6 +942,29 @@ function quickStart({ show = "artfair", size = "10x10", furniture = [], name } =
   else p.name = `${fp.label} ${spec.venue === "artshow" ? "art show" : show === "tradeshow" ? "trade show" : "art fair"} booth`;
   return p;
 }
+const OWN = 0;
+function liveNumber(h) {
+  const n = h?.open ?? h?.mine;
+  return Number.isInteger(n) && n !== OWN ? n : void 0;
+}
+function setOpen(h, number) {
+  const mine = Number.isInteger(h.mine) ? h.mine : OWN;
+  if (number === mine) delete h.open;
+  else h.open = number;
+}
+function setMine(h, number) {
+  const live = liveNumber(h);
+  if (number === void 0) delete h.mine;
+  else h.mine = number;
+  const joins = live === void 0 && number !== void 0 && !h.designs?.[number];
+  setOpen(h, live ?? (joins ? number : OWN));
+}
+function deleteEffect(h, numbers) {
+  const live = liveNumber(h);
+  const drop = numbers.filter((n) => h.designs?.[n]);
+  const refuse = live !== void 0 && numbers.includes(live) && !!h.designs?.[OWN];
+  return { refuse, drop, orphan: live !== void 0 && numbers.includes(live) };
+}
 const HANG_LINE = 60;
 const sameWall = (list, a) => list.filter((b) => b.wall === a.wall && (b.face || "inside") === (a.face || "inside") && (b.booth || null) === (a.booth || null));
 function spaceEvenly(works, wall) {
@@ -944,7 +1134,34 @@ function describe(scene, images = []) {
       height: ped.height,
       ...ped.hidden ? { hidden: true } : {}
     })),
-    limits: { furniture: MAX_PEDESTALS, freeStandingWalls: MAX_PANELS, ops: MAX_OPS }
+    floor: p.hall ? floorSummary(p.hall) : null,
+    limits: { furniture: MAX_PEDESTALS, freeStandingWalls: MAX_PANELS, floorPieces: MAX_ITEMS, ops: MAX_OPS }
+  };
+}
+const FLOOR_LIST_MAX = 300;
+function floorSummary(h) {
+  const items = showItems(h);
+  const booths = items.filter((it) => it.kind === "booth");
+  const others = items.filter((it) => it.kind !== "booth");
+  const piece = (it) => ({ id: it.id, x: it.x, y: it.y, w: it.w, d: it.d, ...it.rot ? { rot: it.rot } : {} });
+  return {
+    frame: "Inches from the venue's back-left corner: x across, y toward the entrance; each piece by its centre; rot clockwise, a booth at rot 0 opens toward the entrance.",
+    venue: { ...floorOf(h), drape: h.venue?.drape || DEFAULT_DRAPE },
+    mine: h.mine ?? null,
+    counts: { booths: booths.length, other: others.length },
+    booths: booths.slice(0, FLOOR_LIST_MAX).map((it) => {
+      const b = boothOf(h, it.number);
+      return {
+        number: it.number,
+        ...piece(it),
+        ...it.style ? { style: it.style } : {},
+        status: b.status,
+        ...b.name ? { exhibitor: b.name } : {},
+        ...b.note ? { note: b.note } : {}
+      };
+    }),
+    pieces: others.slice(0, FLOOR_LIST_MAX).map((it) => ({ kind: it.kind, ...piece(it), ...it.text ? { text: it.text } : {} })),
+    ...booths.length > FLOOR_LIST_MAX || others.length > FLOOR_LIST_MAX ? { truncated: true } : {}
   };
 }
 const num = (description, extra = {}) => ({ type: "number", description, ...extra });
@@ -1065,7 +1282,106 @@ const OPS = [
       spacing: str("even (default) or keep", { enum: ["even", "keep"] })
     },
     ["wall"]
-  )
+  ),
+  // ---- the show floor
+  op(
+    "start_floor",
+    `Start the show floor: an empty venue of this size, or one of the floor templates (${Object.entries(FLOOR_TEMPLATES).map(([k, t]) => `${k}: ${t.label}`).join("; ")}). A floor that already has pieces is only replaced with replace: true; its exhibitors and "my booth" are kept by booth number.`,
+    {
+      venue: str("indoor or outdoor", { enum: Object.keys(VENUES) }),
+      width: num("Across, inches (120–24000)", { minimum: 120, maximum: 24e3 }),
+      depth: num("Back to entrance, inches (120–24000)", { minimum: 120, maximum: 24e3 }),
+      template: str("A floor template instead of an empty venue", { enum: Object.keys(FLOOR_TEMPLATES) }),
+      drape: str("Pipe-and-drape colour as #rrggbb", { pattern: "^#[0-9a-fA-F]{6}$" }),
+      replace: { type: "boolean", description: "Replace a floor that already has pieces" }
+    }
+  ),
+  op(
+    "set_floor",
+    "Change the venue: indoor or outdoor, its size, the drape colour. Pieces stay where they are.",
+    {
+      venue: str("indoor or outdoor", { enum: Object.keys(VENUES) }),
+      width: num("Inches", { minimum: 120, maximum: 24e3 }),
+      depth: num("Inches", { minimum: 120, maximum: 24e3 }),
+      drape: str("#rrggbb", { pattern: "^#[0-9a-fA-F]{6}$" })
+    }
+  ),
+  op(
+    "add_booths",
+    `Add a block of booths, numbered on from the floor's highest (or from start): count booths w × d, perRow to a row, gap between neighbours, rows aisle apart; backToBack pairs rows sharing a back line. x, y is the block's back-left corner. Styles: ${Object.keys(BOOTH_STYLES).join(", ")}.`,
+    {
+      count: num("How many booths", { minimum: 1, maximum: 600 }),
+      perRow: num("Booths in a row", { minimum: 1, maximum: 200 }),
+      w: num("Booth width, inches (default 120)", { minimum: 24, maximum: 12e3 }),
+      d: num("Booth depth, inches (default 120)", { minimum: 24, maximum: 12e3 }),
+      gap: num("Between neighbours in a row, inches (default 0)", { minimum: 0, maximum: 2400 }),
+      aisle: num("Between rows, inches (default 120)", { minimum: 0, maximum: 2400 }),
+      backToBack: { type: "boolean", description: "Rows in back-to-back pairs" },
+      style: str("How the booths are built", { enum: Object.keys(BOOTH_STYLES) }),
+      x: num("Block's left edge, inches from the venue's left"),
+      y: num("Block's back edge, inches from the venue's back"),
+      start: num("Lowest number to use; numbers carry on past the floor's highest booth", { minimum: 1, maximum: 99999 })
+    },
+    ["count", "x", "y"]
+  ),
+  op(
+    "add_floor_piece",
+    `Put one piece on the show floor, centred on x, y. Kinds: ${Object.entries(KINDS$1).map(([k, v]) => `${k} (${v.label}, ${v.w}×${v.d}″)`).join(", ")}. A booth gets the next number unless number is given.`,
+    {
+      kind: str("One of the kinds above", { enum: Object.keys(KINDS$1) }),
+      x: num("Centre across, inches"),
+      y: num("Centre toward the entrance, inches"),
+      w: num("Inches", { minimum: 2, maximum: 12e3 }),
+      d: num("Inches", { minimum: 2, maximum: 12e3 }),
+      rot: num("Degrees clockwise, 0–360", { minimum: 0, maximum: 360 }),
+      number: num("A booth's number", { minimum: 1, maximum: 99999 }),
+      style: str("A booth's style", { enum: Object.keys(BOOTH_STYLES) }),
+      text: str("A label's words, or a name for any piece", { maxLength: 120 }),
+      ref: REF
+    },
+    ["kind", "x", "y"]
+  ),
+  op(
+    "change_floor_piece",
+    'Move, turn, resize or restyle one piece of the show floor. piece is a booth number ("#105"), a piece id from describe_booth, or "@ref".',
+    {
+      piece: str('"#105" for booth 105, a piece id, or "@ref"'),
+      x: num("Inches"),
+      y: num("Inches"),
+      w: num("Inches", { minimum: 2, maximum: 12e3 }),
+      d: num("Inches", { minimum: 2, maximum: 12e3 }),
+      rot: num("Degrees clockwise", { minimum: 0, maximum: 360 }),
+      style: str("A booth's style", { enum: Object.keys(BOOTH_STYLES) }),
+      text: str("Words", { maxLength: 120 })
+    },
+    ["piece"]
+  ),
+  op(
+    "remove_floor_piece",
+    `Take one piece off the show floor. A booth's exhibitor, "my booth" mark and parked design go with it.`,
+    { piece: str('"#105", a piece id, or "@ref"') },
+    ["piece"]
+  ),
+  op(
+    "set_exhibitor",
+    `Who has a booth on the floor, and where its sale stands: ${Object.keys(STATUSES).join(", ")}.`,
+    {
+      number: num("The booth's number", { minimum: 1, maximum: 99999 }),
+      name: str("Exhibitor (empty to clear)", { maxLength: 120 }),
+      status: str("open, held or sold", { enum: Object.keys(STATUSES) }),
+      note: str("A note (empty to clear)", { maxLength: 300 }),
+      price: num("Booth price", { minimum: HALL_LIMITS.price[0], maximum: HALL_LIMITS.price[1] })
+    },
+    ["number"]
+  ),
+  op(
+    "mark_my_booth",
+    "Mark which floor booth is the artist's own (the 3D show stands it at the centre, in full). Leave number out to clear it.",
+    { number: num("The booth's number", { minimum: 1, maximum: 99999 }) }
+  ),
+  op("fit_floor", "Grow the venue (never shrink it) so every piece is on it, with a margin.", {
+    margin: num("Inches round the pieces (default 60)", { minimum: 0, maximum: 1200 })
+  })
 ];
 const OP_NAMES = OPS.map((o) => o.name);
 const isNum = (v) => typeof v === "number" && Number.isFinite(v);
@@ -1345,9 +1661,215 @@ function run(p, o, i, refs) {
       p.art = p.art.map((a) => ys[a.id] === void 0 ? a : constrain(p, { ...a, y: ys[a.id], ...xs[a.id] !== void 0 ? { x: xs[a.id] } : {} }));
       return `${wallLabel(p, key)}: ${works.length} work${works.length === 1 ? "" : "s"} centred ${inches(line)} off the floor${o.spacing === "keep" ? "" : ", evenly spaced"}`;
     }
+    case "start_floor":
+    case "set_floor":
+    case "add_booths":
+    case "add_floor_piece":
+    case "change_floor_piece":
+    case "remove_floor_piece":
+    case "set_exhibitor":
+    case "mark_my_booth":
+    case "fit_floor":
+      return runFloor(p, o, i, refs);
     default:
       throw new SceneOpError(`Op ${i + 1}: there is no op "${o.op}".`, i);
   }
+}
+const feetBy = (w, d) => `${inches(w)} × ${inches(d)}`;
+function floorOfP(p, i) {
+  if (!p.hall) throw new SceneOpError(`Op ${i + 1}: this project has no show floor yet; start one with start_floor.`, i);
+  return toFloor(p.hall);
+}
+function floorPiece(h, key, refs, i) {
+  const id = resolve(key, refs, i);
+  const hit = /^#\d+$/.test(id) ? h.items.find((it) => it.kind === "booth" && it.number === Number(id.slice(1))) : h.items.find((it) => it.id === id);
+  if (!hit) throw new SceneOpError(`Op ${i + 1}: the show floor has no ${/^#/.test(id) ? `booth ${id.slice(1)}` : `piece ${id}`}.`, i);
+  return hit;
+}
+const pieceName = (it) => it.kind === "booth" ? `Booth ${it.number}` : it.text ? `${KINDS$1[it.kind].label} “${it.text}”` : KINDS$1[it.kind].label;
+function roomFor(h, n, i) {
+  if (h.items.length + n > MAX_ITEMS) throw new SceneOpError(`Op ${i + 1}: a show floor holds at most ${MAX_ITEMS} pieces.`, i);
+}
+function checkPos(o, i) {
+  for (const k of ["x", "y"]) {
+    if (has(o, k) && (o[k] < SHOW_LIMITS.pos[0] || o[k] > SHOW_LIMITS.pos[1])) throw new SceneOpError(`Op ${i + 1}: ${k} is off any floor this app draws.`, i);
+  }
+}
+function runFloor(p, o, i, refs) {
+  switch (o.op) {
+    case "start_floor": {
+      const old = p.hall;
+      if (old && showItems(old).length && !o.replace) {
+        throw new SceneOpError(`Op ${i + 1}: this project already has a show floor; say replace: true to start it again.`, i);
+      }
+      if (!o.template && (!has(o, "width") || !has(o, "depth"))) throw new SceneOpError(`Op ${i + 1}: give width and depth, or a template.`, i);
+      const h = newHall();
+      if (o.template) {
+        const t = FLOOR_TEMPLATES[o.template].build(h.start);
+        h.venue = t.venue;
+        h.items = t.items;
+      } else {
+        h.venue = { kind: o.venue || "indoor", width: o.width, depth: o.depth };
+        h.items = [];
+      }
+      if (has(o, "venue")) h.venue.kind = o.venue;
+      if (has(o, "width")) h.venue.width = o.width;
+      if (has(o, "depth")) h.venue.depth = o.depth;
+      if (has(o, "drape")) h.venue.drape = o.drape.toLowerCase();
+      if (old) {
+        for (const k of ["booths", "mine", "open", "designs", "price", "start"]) if (old[k] !== void 0) h[k] = old[k];
+      }
+      p.hall = h;
+      const v = h.venue;
+      return `Start ${o.template ? `the ${FLOOR_TEMPLATES[o.template].label.toLowerCase()} floor` : "an empty floor"}: ${VENUES[v.kind].toLowerCase()}, ${feetBy(v.width, v.depth)}${h.items.length ? `, ${h.items.filter((x) => x.kind === "booth").length} booths` : ""}`;
+    }
+    case "set_floor": {
+      const h = floorOfP(p, i);
+      const said = [];
+      if (has(o, "venue")) {
+        h.venue.kind = o.venue;
+        said.push(VENUES[o.venue].toLowerCase());
+      }
+      if (has(o, "width")) h.venue.width = o.width;
+      if (has(o, "depth")) h.venue.depth = o.depth;
+      if (has(o, "width") || has(o, "depth")) said.push(feetBy(h.venue.width, h.venue.depth));
+      if (has(o, "drape")) {
+        h.venue.drape = o.drape.toLowerCase();
+        said.push(`drape ${h.venue.drape}`);
+      }
+      if (!said.length) throw new SceneOpError(`Op ${i + 1} (set_floor): say what to change.`, i);
+      return `Show floor: ${said.join(", ")}`;
+    }
+    case "add_booths": {
+      const h = floorOfP(p, i);
+      checkPos(o, i);
+      roomFor(h, o.count, i);
+      const start = o.start ?? nextNumber(h.items, h.start);
+      const block = boothBlock(h.items, {
+        count: o.count,
+        perRow: o.perRow ?? o.count,
+        w: o.w ?? 120,
+        d: o.d ?? 120,
+        gap: o.gap ?? 0,
+        aisle: o.aisle ?? 120,
+        backToBack: !!o.backToBack,
+        style: o.style,
+        x: o.x,
+        y: o.y,
+        start
+      });
+      const taken = new Set(h.items.filter((it) => it.kind === "booth").map((it) => it.number));
+      const clash = block.find((b) => taken.has(b.number));
+      if (clash) throw new SceneOpError(`Op ${i + 1}: booth ${clash.number} is already on the floor; start the numbers elsewhere.`, i);
+      h.items.push(...block);
+      const first = block[0].number, last = block.at(-1).number;
+      return `Add ${block.length} booth${block.length === 1 ? "" : "s"} ${feetBy(block[0].w, block[0].d)}${block.length > 1 ? `, numbered ${first}–${last}` : `, number ${first}`}, ${o.perRow && o.perRow < o.count ? `${o.perRow} to a row` : "in one row"}${o.backToBack ? ", back to back" : ""}`;
+    }
+    case "add_floor_piece": {
+      const h = floorOfP(p, i);
+      checkPos(o, i);
+      roomFor(h, 1, i);
+      const kind = KINDS$1[o.kind];
+      if (o.kind !== "booth" && (has(o, "number") || has(o, "style"))) throw new SceneOpError(`Op ${i + 1}: only a booth has a number or a style.`, i);
+      const it = { id: newId$1(h.items), kind: o.kind, x: o.x, y: o.y, w: o.w ?? kind.w, d: o.d ?? kind.d };
+      if (has(o, "rot") && o.rot % 360) it.rot = o.rot % 360;
+      if (o.kind === "booth") {
+        it.number = o.number ?? nextNumber(h.items, h.start);
+        if (h.items.some((x) => x.kind === "booth" && x.number === it.number)) throw new SceneOpError(`Op ${i + 1}: booth ${it.number} is already on the floor.`, i);
+        if (o.style && o.style !== "pipe") it.style = o.style;
+      }
+      if (o.text) it.text = o.text;
+      h.items.push(it);
+      remember(o, it.id, refs, i);
+      return `Add ${pieceName(it)} (${feetBy(it.w, it.d)}) at ${inches(it.x)} across, ${inches(it.y)} from the back`;
+    }
+    case "change_floor_piece": {
+      const h = floorOfP(p, i);
+      checkPos(o, i);
+      const it = floorPiece(h, o.piece, refs, i);
+      if (it.kind !== "booth" && has(o, "style")) throw new SceneOpError(`Op ${i + 1}: only a booth has a style.`, i);
+      const said = [];
+      if (has(o, "x")) it.x = o.x;
+      if (has(o, "y")) it.y = o.y;
+      if (has(o, "x") || has(o, "y")) said.push(`to ${inches(it.x)} across, ${inches(it.y)} from the back`);
+      if (has(o, "w")) it.w = o.w;
+      if (has(o, "d")) it.d = o.d;
+      if (has(o, "w") || has(o, "d")) said.push(feetBy(it.w, it.d));
+      if (has(o, "rot")) {
+        if (o.rot % 360) it.rot = o.rot % 360;
+        else delete it.rot;
+        said.push(`turned to ${o.rot % 360}°`);
+      }
+      if (has(o, "style")) {
+        if (o.style === "pipe") delete it.style;
+        else it.style = o.style;
+        said.push(BOOTH_STYLES[o.style].toLowerCase());
+      }
+      if (has(o, "text")) {
+        if (o.text) it.text = o.text;
+        else delete it.text;
+        said.push(o.text ? `“${o.text}”` : "no words");
+      }
+      if (!said.length) throw new SceneOpError(`Op ${i + 1} (change_floor_piece): say what to change.`, i);
+      return `${pieceName(it)}: ${said.join(", ")}`;
+    }
+    case "remove_floor_piece": {
+      const h = floorOfP(p, i);
+      const it = floorPiece(h, o.piece, refs, i);
+      if (it.kind === "booth") {
+        const n = it.number;
+        const effect = deleteEffect(h, [n]);
+        if (effect.refuse) throw new SceneOpError(`Op ${i + 1}: booth ${n} holds the design open in the app, and your own booth's design is parked; open another booth in the app first.`, i);
+        const live = liveNumber(h);
+        delete h.booths[n];
+        if (h.mine === n) delete h.mine;
+        if (h.designs) delete h.designs[n];
+        if (h.designs && !Object.keys(h.designs).length) delete h.designs;
+        if (effect.orphan) setOpen(h, OWN);
+        else if (live !== void 0) setOpen(h, live);
+      }
+      h.items = h.items.filter((x) => x.id !== it.id);
+      return `Remove ${pieceName(it)}`;
+    }
+    case "set_exhibitor": {
+      const h = floorOfP(p, i);
+      const n = o.number;
+      if (!h.items.some((it) => it.kind === "booth" && it.number === n)) throw new SceneOpError(`Op ${i + 1}: the show floor has no booth ${n}.`, i);
+      const b = { ...h.booths[n] || {} };
+      const said = [];
+      for (const k of ["name", "note"]) {
+        if (!has(o, k)) continue;
+        if (o[k].trim()) b[k] = o[k].trim();
+        else delete b[k];
+        said.push(k === "name" ? o[k].trim() ? quote(o[k].trim()) : "no exhibitor" : o[k].trim() ? `note ${quote(o[k].trim())}` : "no note");
+      }
+      if (has(o, "status")) {
+        b.status = o.status;
+        said.push(STATUSES[o.status].label.toLowerCase());
+      }
+      if (has(o, "price")) {
+        b.price = o.price;
+        said.push(`price ${o.price}`);
+      }
+      if (!said.length) throw new SceneOpError(`Op ${i + 1} (set_exhibitor): say what to change.`, i);
+      h.booths[n] = b;
+      return `Booth ${n}: ${said.join(", ")}`;
+    }
+    case "mark_my_booth": {
+      const h = floorOfP(p, i);
+      if (has(o, "number") && !h.items.some((it) => it.kind === "booth" && it.number === o.number)) {
+        throw new SceneOpError(`Op ${i + 1}: the show floor has no booth ${o.number}.`, i);
+      }
+      setMine(h, o.number);
+      return has(o, "number") ? `Booth ${o.number} is mine` : "No booth on the floor is marked as mine";
+    }
+    case "fit_floor": {
+      const h = floorOfP(p, i);
+      const grew = growToFit(h, o.margin ?? 60);
+      return grew ? `Grow the floor to ${feetBy(h.venue.width, h.venue.depth)} so every piece is on it` : "The floor already holds every piece";
+    }
+  }
+  throw new SceneOpError(`Op ${i + 1}: there is no op "${o.op}".`, i);
 }
 const BUILD_SCHEMA = {
   type: "object",
@@ -1371,6 +1893,7 @@ function build({ name, show = "artfair", size = "10x10", ops = [] } = {}) {
 }
 export {
   BUILD_SCHEMA,
+  FLOOR_LIST_MAX,
   FORMAT,
   MAX_OPS,
   OPS,

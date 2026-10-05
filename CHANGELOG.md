@@ -19,6 +19,7 @@
 - Stage 2, step 9b (Isaac's OK, D-070): booth actions run Booth Studio's own scene code, vendored as `workers/studio-api/src/vendor/booth-scene.js` (its `npm run bundle:scene` build; CI in both repos compares the copy byte for byte). `placement.edit` (a list of ops: size, venue, canopy, colour, furniture, free-standing walls, where each work hangs; confirm, with one card line per op in the app's words), `placement.build` (a new booth from a show, a size and ops; confirm), `GET /placements/{id}/summary` and the assistant's `describe_booth` read tool. Every result passes the app's `validateProject`; agents use the same actions through `POST /actions/{name}`.
 - Actions may give the confirm card's lines (`card`) and their tool's JSON Schema (`toolSchema`); `placement.edit` may leave out `version` like update and delete.
 - studio-assistant runs read tools by the route the tool names (`read.path`), so a new read tool needs no assistant code.
+- Step 10b: show-floor ops in Booth Studio's scene code (start_floor, set_floor, add_booths, add/change/remove floor pieces, set_exhibitor, mark_my_booth, fit_floor), so a show's map or spec becomes the floor; `GET /placements/{id}/summary` gains the floor (venue, my booth, booths by number with their exhibitor). New vendored `booth-scene.js`; no API shape changed.
 
 ### Assistant on staging (2026-10-05)
 - First live run on staging: a sale said in words became one card, and the tap saved it as the assistant.

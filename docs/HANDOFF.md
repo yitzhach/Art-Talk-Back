@@ -7,17 +7,13 @@ Read this first, then `CLAUDE.md`, then `docs/phase-3.md` (assistant) or `docs/p
 
 - **Phases 0–2 shipped.** Production `studio-api` is live (`studio-db-prod`, `iaa-files`). The Show
   Tracker syncs shows + sales through it, and Isaac's data is imported (iPhone + iMac verified).
-- **Booth Studio is the platform's second app (2026-10-05, D-061…D-067, `docs/phase-5-booth.md`).**
+- **Booth Studio is the platform's second app (2026-10-05, D-061…D-070, `docs/phase-5-booth.md`).**
   Isaac moved Booth Studio's part of Phase 5 (the `placements` scene format) ahead of Phase 4.
   `yitzhach/booth-studio` (Worker `booth-studio`, Vite) signs in with the studio's email code and
   syncs its booth projects as placements (migration 0006), images as studio files attached to them.
-  Built and tested: 208 tests here, the app's two-device run 37/37 against this API at both
-  compatibility dates. `studio-booth-studio-staging` was deployed for the first time (Isaac's OK)
-  from branch `claude/festive-curie-ohram8` by "Deploy staging" (`booth_ref`), bound to
-  `studio-api-staging`. The PRs: [Art-Talk-Back#17](https://github.com/yitzhach/Art-Talk-Back/pull/17)
-  merges **first** (production needs 0006 before the app's `main` uses it), then
-  [booth-studio#9](https://github.com/yitzhach/booth-studio/pull/9). See "Where Booth Studio's
-  work stands" below for what is merged and deployed.
+  All of it is in production: sign-in and sync (#17, booth-studio#9), search finds booths (9a),
+  booth actions on the app's own scene code (9b, D-070: `placement.edit`, `placement.build`,
+  `describe_booth`), and show-floor ops (10b). See "Where Booth Studio's work stands" below.
 - **Two repos per app (D-042), reconfirmed by Isaac 2026-10-03: don't propose merging them.** This one holds `studio-api`, `packages/core`, `packages/sdk` and
   `workers/assistant`. `yitzhach/art-show-tracker` is the app: Worker `art-show-tracker`, and a push
   to its `main` deploys it. A change across both repos uses the same branch name in each; CI tests
@@ -33,6 +29,12 @@ Read this first, then `CLAUDE.md`, then `docs/phase-3.md` (assistant) or `docs/p
   build after the merge passed, so it didn't matter.
   **Isaac's clicks still to do (each repo):** Allow auto-merge; the `ci` ruleset requiring CI;
   and the Cloudflare connector on claude.ai. Until the ruleset exists, don't turn on auto-merge.
+- **Where each chat panel is (Isaac asked, 2026-10-05).** Show Tracker: staging only (see "The
+  assistant on the Show Tracker's staging site"). Booth Studio: "Ask the assistant" (9c) is built and
+  shows only where its Worker has an `ASSISTANT` binding — `studio-booth-studio-staging` has one
+  (`studio-assistant-staging`); production has none until "Deploy production assistant" has run and the
+  binding line is added (booth-studio HANDOFF → Studio platform). Chats from Booth Studio get the
+  assistant's Booth Studio guide (`APP_GUIDES` in `workers/assistant/src/prompt.ts`).
 - **Phase 3 (assistant v0): live on staging only.** The key and the AI Gateway exist; another session
   ran it on staging on 2026-10-05 (D-058…D-060; `studio-assistant-staging` runs Haiku 4.5, and the
   Show Tracker's staging Worker carries the panel from app branch `claude/assistant-panel`). There is
@@ -64,12 +66,10 @@ less than half. Isaac picks the default after comparing costs in AI Gateway `stu
 connected; `ANTHROPIC_API_KEY` secret and `AI_GATEWAY_URL` variable set; gateway `studio` has
 authentication **off** (it was on at first and silently refused every call: no log entries).
 
-**CI is red on the default branch (2026-10-05, after #20):** job `booth-studio` fails at
-"workers/studio-api/src/vendor/booth-scene.js is this app's scene build (D-070)": the vendored copy
-doesn't match booth-studio's build. `check` and `show-tracker` pass. Because CI isn't green, "Deploy
-production API" was **skipped** for the latest default-branch commits: production `studio-api` is
-behind until this is fixed (rebuild in booth-studio, copy over on the same-named branch, per D-070).
-The `ci` ruleset requires only `check` and `show-tracker`, so merges aren't blocked.
+**CI on the default branch is green again (2026-10-05, 12:45):** after #20 its job `booth-studio` was red
+for about 90 minutes, because booth-studio's matching PR (#14) hadn't merged yet (the scene code ships
+as a pair; see "How to work"). Once it merged, the failed job was re-run, CI passed, and "Deploy
+production API" deployed the default branch: `studio-api` `a4310818`, with the show-floor ops (10b).
 
 **Still open for the assistant:** Isaac's 20+ requests in his own words for the eval set (gate 4);
 the first production deploy ("Deploy production assistant", D-068) and then merging app branch
@@ -122,6 +122,12 @@ the first production deploy ("Deploy production assistant", D-068) and then merg
 - "Deploy staging" redeploys everything staging has: pass the inputs it already runs with
   (`app_ref`, `assistant_model`; see the last run's log) so a Booth Studio deploy doesn't change the
   assistant someone else is testing.
+- **Booth Studio's scene code ships as a pair.** `workers/studio-api/src/vendor/booth-scene.js` is
+  booth-studio's build, compared byte for byte by CI in both repos. When `src/scene-ops.js` changes,
+  the two PRs (same branch name) are each green against the other; merge them back to back,
+  platform first. In between, this repo's default-branch CI compares with booth-studio's old `main`
+  and goes red, so "Deploy production API" is skipped: after the app's PR merges, re-run the failed
+  CI job and the deploy follows. (Found on 2026-10-05 with #20.)
 - On a GitHub runner, several pages drawing WebGL on the CPU can starve each other: Booth Studio's
   two-device test closes finished devices and waits for frames before clicking.
 
@@ -144,9 +150,15 @@ the first production deploy ("Deploy production assistant", D-068) and then merg
   and copy it over on the branch of the same name (CI in both repos compares them). It gives
   `placement.edit` (ops), `placement.build` (a new booth), `GET /placements/{id}/summary` and the
   `describe_booth` read tool. Agents use the actions through `POST /actions/{name}`.
-- Where it goes next (`phase-5-booth.md` step 10, Isaac's aim): pictures in the chat (a photo or sketch
-  becomes a booth), show-floor ops (a show's map becomes the floor and its 3D walk-through), app
-  commands the panel runs ("export this as a PDF", "take me to lighting"), and agents outside the chat.
-- Left for Isaac: the `ci` ruleset entries (`booth-studio` here, `booth` there) and auto-merge on
-  booth-studio; his first real use (booth-studio HANDOFF → Next); the first run of "Deploy
-  production assistant" (D-068), which Booth Studio's panel (9c) waits on.
+  Shipped: #19, then booth-studio#13; `studio-api` `6a37fa8f`.
+- **Show-floor ops (10b).** Nine floor ops in the same scene code (`start_floor`, `set_floor`,
+  `add_booths`, add/change/remove floor pieces, `set_exhibitor`, `mark_my_booth`, `fit_floor`), and the
+  summary gains the floor. Shipped: #20, then booth-studio#14; `studio-api` `a4310818`.
+- Where it goes next (`phase-5-booth.md` step 10, Isaac's aim): pictures in the chat (10a: a photo,
+  sketch or show map becomes a booth or a floor), app commands the panel runs (10c: "export this as a
+  PDF", "take me to lighting"), and agents outside the chat (10d). 10a and 10c need a chat panel,
+  so they follow 9c.
+- Left for Isaac: his first real use (booth-studio HANDOFF → Next); trying Booth Studio's chat on
+  staging; the first run of "Deploy production assistant" (D-068), after which Booth Studio's
+  production `ASSISTANT` binding is added. Optional: add `booth-studio` to this repo's `ci` ruleset
+  (today it requires `check` and `show-tracker`).

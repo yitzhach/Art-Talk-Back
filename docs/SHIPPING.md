@@ -11,6 +11,10 @@ spending money, deleting data or Workers, a new Worker's first deploy.
 2. Red CI → Claude fixes it. Green → Claude merges (or turns on auto-merge).
    A change across repos: the app merges first, then the platform (D-050, D-056).
    The platform pull request gets auto-merge only after the app's has merged.
+   Two exceptions: an app that needs a contract the platform doesn't have yet merges after the
+   platform (Booth Studio's sign-in, 0006); and Booth Studio's scene code (D-070), checked byte for
+   byte in both repos, ships as a pair merged back to back — then re-run whichever default-branch
+   CI went red in between (HANDOFF → "ships as a pair").
 3. Merging to the default branch deploys:
    - Platform: CI passes → "Deploy production API" runs by itself.
    - App: Cloudflare's Git integration builds the app's `main`.

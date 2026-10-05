@@ -67,7 +67,7 @@ is read, never changed.
        new code in the assistant.
      - [x] 9b-4. booth-studio two-device run: a booth built and edited through the API opens on screen,
        passes `validateProject`, and exports a backup today's app loads.
-   - [ ] 9c. Booth Studio: `<studio-assistant>` panel (the Show Tracker's, as an ES module), `/assistant/*`
+   - [x] 9c. Booth Studio (built; on staging; production waits for D-068's first run and one binding line): `<studio-assistant>` panel (the Show Tracker's, as an ES module), `/assistant/*`
      forwarded, `ASSISTANT` bindings (production `studio-assistant`, staging `studio-assistant-staging`),
      the open booth sent as the chat's record; a confirmed change reaches the screen through sync.
      What the app does with the placement tools it already gets (booth-studio#11): a rename by the `name`

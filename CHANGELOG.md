@@ -12,6 +12,9 @@
 - "Deploy staging" also deploys `studio-booth-studio-staging` (input `booth_ref`), only from a Booth Studio branch that has the staging Worker (D-067).
 - First deploy of `studio-booth-studio-staging` (version `090d194a`, Isaac's OK), with `studio-api-staging` and migration 0006 from this branch; tracker staging kept on `claude/assistant-panel`, the assistant on Haiku 4.5.
 - Decisions renumbered D-061…D-067: the default branch took D-059 and D-060 meanwhile.
+- Shipped: migration 0006 live on `studio-db-prod`, `studio-api` `2c706cd5` ("Deploy production API" after #17).
+- "Deploy production assistant": a manual button for `studio-assistant`, with a confirm word; never automatic (D-068).
+- Booth Studio's side merged (booth-studio#9, `04d694f`) and deployed by its Git integration: Booth Studio signs in and syncs through production `studio-api`.
 
 ### Assistant on staging (2026-10-05)
 - First live run on staging: a sale said in words became one card, and the tap saved it as the assistant.

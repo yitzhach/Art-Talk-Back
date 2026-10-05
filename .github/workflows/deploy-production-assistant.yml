@@ -1,0 +1,92 @@
+name: Deploy production assistant
+
+# By hand only: Actions tab -> "Deploy production assistant" -> Run workflow,
+# type studio-assistant to confirm (D-068). Never runs by itself: the first
+# production deploy of a new Worker, and the model spending it starts, are
+# Isaac's (CLAUDE.md -> Shipping). Later runs redeploy the same Worker.
+#
+# Deploys `studio-assistant` (workers/assistant, env.production) bound to the
+# production `studio-api`, sets its model key, and shares one ASSISTANT_KEY
+# between the two Workers (made here once and never shown, D-046), exactly as
+# "Deploy staging" does for staging. Needs the secrets and variables that
+# workflow uses: CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID, ANTHROPIC_API_KEY,
+# optional AI_GATEWAY_TOKEN; variable AI_GATEWAY_URL.
+# Undo: Cloudflare -> Workers & Pages -> studio-assistant -> Deployments ->
+# Rollback; nothing here touches the database.
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type studio-assistant to deploy the production assistant'
+        required: true
+      assistant_model:
+        description: "Model for studio-assistant (D-054: Sonnet 5.5 for v0)"
+        type: choice
+        default: claude-sonnet-5-5
+        options: [claude-sonnet-5-5, claude-haiku-4-5]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-production-assistant
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    if: ${{ inputs.confirm == 'studio-assistant' }}
+    defaults:
+      run:
+        working-directory: workers/assistant
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      AI_GATEWAY_TOKEN: ${{ secrets.AI_GATEWAY_TOKEN }}
+      AI_GATEWAY_URL: ${{ vars.AI_GATEWAY_URL }}
+      ASSISTANT_MODEL: ${{ inputs.assistant_model }}
+    steps:
+      - name: Check required secrets and variables
+        working-directory: .
+        run: |
+          missing=""
+          for v in CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID ANTHROPIC_API_KEY AI_GATEWAY_URL; do
+            [ -n "${!v}" ] || missing="$missing $v"
+          done
+          if [ -n "$missing" ]; then
+            echo "::error::Missing:$missing (see the header of this workflow)"
+            exit 1
+          fi
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+        working-directory: .
+      - run: pnpm typecheck
+        working-directory: .
+      - run: pnpm test
+        working-directory: .
+      - name: Note the live version first (for a rollback)
+        run: |
+          version=$(pnpm exec wrangler deployments list --env production --json 2>/dev/null | node -pe 'try { const d=JSON.parse(require("fs").readFileSync(0)); (d.at(-1)?.versions?.[0]?.version_id) ?? "none (first deploy)" } catch { "none (first deploy)" }')
+          echo "studio-assistant before this deploy: $version" | tee -a "$GITHUB_STEP_SUMMARY"
+      - name: Deploy studio-assistant
+        run: |
+          pnpm exec wrangler deploy --env production --var "AI_GATEWAY_URL:$AI_GATEWAY_URL" --var "ASSISTANT_MODEL:$ASSISTANT_MODEL"
+          echo "studio-assistant runs $ASSISTANT_MODEL" | tee -a "$GITHUB_STEP_SUMMARY"
+          printf '%s' "$ANTHROPIC_API_KEY" | pnpm exec wrangler secret put ANTHROPIC_API_KEY --env production
+          if [ -n "$AI_GATEWAY_TOKEN" ]; then printf '%s' "$AI_GATEWAY_TOKEN" | pnpm exec wrangler secret put AI_GATEWAY_TOKEN --env production; fi
+      - name: Share ASSISTANT_KEY between studio-api and studio-assistant (once)
+        working-directory: .
+        run: |
+          api=$(pnpm --dir workers/studio-api exec wrangler secret list --env production | grep -c '"ASSISTANT_KEY"' || true)
+          bot=$(pnpm --dir workers/assistant exec wrangler secret list --env production | grep -c '"ASSISTANT_KEY"' || true)
+          if [ "$api" = "1" ] && [ "$bot" = "1" ]; then echo "ASSISTANT_KEY already set on both"; exit 0; fi
+          key=$(openssl rand -hex 32)
+          printf '%s' "$key" | pnpm --dir workers/studio-api exec wrangler secret put ASSISTANT_KEY --env production
+          printf '%s' "$key" | pnpm --dir workers/assistant exec wrangler secret put ASSISTANT_KEY --env production

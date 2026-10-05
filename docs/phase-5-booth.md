@@ -26,7 +26,7 @@ is read, never changed.
    entity + create/update/delete/restore actions (`apps: ["booth-studio"]`); `/v1/placements` routes;
    placements in sync push/pull; `file.attach` to a placement; pull's byte budget (D-063);
    tests: records, sync, files, tenancy; `docs/openapi.json` regenerated.
-3. [ ] SDK: `bundle:esm` (same source, ES module, `--check`) for Vite apps (D-064). The classic bundle's
+3. [x] SDK: `bundle:esm` (same source, ES module, `--check`) for Vite apps (D-064). The classic bundle's
    output must not change: the Show Tracker's copy is checked against it.
 4. [ ] App Worker: service binding `API` → `studio-api`, `/v1/*` in `run_worker_first` and forwarded
    in `worker/index.js`; `env.staging` → `studio-booth-studio-staging` bound to `studio-api-staging`,

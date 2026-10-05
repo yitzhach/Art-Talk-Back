@@ -7,6 +7,7 @@
 - Migration 0006 `placements` (a booth or wall scene: real size, `scene` JSON in the app's `format`, `images` manifest; capped so a logged write fits a D1 row, D-060) and `/v1/placements`.
 - Placement actions tagged `apps: ["booth-studio"]`; placements sync (push and pull); `file.attach` accepts a placement (D-061).
 - Pull ends a page early once its placements pass 8 MB (D-063).
+- `bundle:esm`: the SDK as one ES module for apps with a bundler, with `--check` (D-064). The classic bundle's output is unchanged.
 
 ### Assistant on staging (2026-10-05)
 - First live run on staging: a sale said in words became one card, and the tap saved it as the assistant.

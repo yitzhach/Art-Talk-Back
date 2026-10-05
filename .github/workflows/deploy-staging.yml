@@ -16,6 +16,11 @@ on:
       app_ref:
         description: "art-show-tracker branch to deploy as studio-show-tracker-staging"
         default: main
+      assistant_model:
+        description: "Model for studio-assistant-staging (to compare models on staging)"
+        type: choice
+        default: claude-sonnet-5-5
+        options: [claude-sonnet-5-5, claude-haiku-4-5]
 
 permissions:
   contents: read
@@ -40,6 +45,7 @@ jobs:
       ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
       AI_GATEWAY_TOKEN: ${{ secrets.AI_GATEWAY_TOKEN }}
       AI_GATEWAY_URL: ${{ vars.AI_GATEWAY_URL }}
+      ASSISTANT_MODEL: ${{ inputs.assistant_model || 'claude-sonnet-5-5' }}
     steps:
       - name: Check required secrets and variables
         working-directory: .
@@ -86,7 +92,8 @@ jobs:
         if: env.ANTHROPIC_API_KEY != ''
         working-directory: workers/assistant
         run: |
-          pnpm exec wrangler deploy --env staging --var "AI_GATEWAY_URL:$AI_GATEWAY_URL"
+          pnpm exec wrangler deploy --env staging --var "AI_GATEWAY_URL:$AI_GATEWAY_URL" --var "ASSISTANT_MODEL:$ASSISTANT_MODEL"
+          echo "studio-assistant-staging runs $ASSISTANT_MODEL" | tee -a "$GITHUB_STEP_SUMMARY"
           printf '%s' "$ANTHROPIC_API_KEY" | pnpm exec wrangler secret put ANTHROPIC_API_KEY --env staging
           if [ -n "$AI_GATEWAY_TOKEN" ]; then printf '%s' "$AI_GATEWAY_TOKEN" | pnpm exec wrangler secret put AI_GATEWAY_TOKEN --env staging; fi
       - name: Share ASSISTANT_KEY between studio-api-staging and studio-assistant-staging (once)

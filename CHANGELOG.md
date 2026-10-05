@@ -7,6 +7,7 @@
 - Fix: the assistant is told how its newest cards ended (`GET /assistant/proposals?status=all`), so it no longer says a confirmed sale "isn't saved yet" (D-058).
 - A sale's card says "Price each"; `GET /assistant/thread?fresh=1` starts a new conversation (the panel's New conversation button).
 - Suggested replies: the model ends a question with `[[replies: …]]`; the assistant Worker holds that line back and sends a `replies` event (the panel shows buttons; Tab fills one).
+- "Deploy staging" takes an `assistant_model` choice (Sonnet 5.5 or Haiku 4.5) to compare models on staging.
 
 ### Shipping without clicks (D-057)
 - "Deploy production API" runs by itself after CI passes on the default branch, and saves a database bookmark + Worker version to its run summary first.

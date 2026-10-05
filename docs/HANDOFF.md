@@ -54,7 +54,7 @@ Read this first, then `CLAUDE.md`, then `docs/phase-3.md` (assistant) or `docs/p
 - Booth Studio's (from its repo): `npm test`, `npm run build`, then
   `STUDIO_PLATFORM=../Art-Talk-Back BOOTH_TEST_CHROMIUM=/opt/pw-browsers/chromium node tests/two-devices.mjs`
   (`BOOTH_COMPAT_DATE=2026-08-15` for the platform's date; `E2E_LOG=<file>` keeps wrangler's log on a failure).
-- Next decision is D-070. **Fetch the default branch before taking a number**: two sessions worked
+- Next decision is D-071. **Fetch the default branch before taking a number**: two sessions worked
   here on 2026-10-05 and both took D-059/D-060; this branch's were renumbered. One `CHANGELOG.md`
   line per item.
 

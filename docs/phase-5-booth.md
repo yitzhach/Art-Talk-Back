@@ -22,7 +22,7 @@ is read, never changed.
 ## Steps
 
 1. [x] Plan (this file), decisions D-059…D-065, the owner's approvals recorded in each repo.
-2. [ ] Platform: migration `0006_placements.sql` + Drizzle mirror; `Placement*` Zod shapes with the size caps;
+2. [x] Platform: migration `0006_placements.sql` + Drizzle mirror; `Placement*` Zod shapes with the size caps;
    entity + create/update/delete/restore actions (`apps: ["booth-studio"]`); `/v1/placements` routes;
    placements in sync push/pull; `file.attach` to a placement; pull's byte budget (D-063);
    tests: records, sync, files, tenancy; `docs/openapi.json` regenerated.

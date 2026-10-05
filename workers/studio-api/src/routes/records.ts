@@ -1,12 +1,15 @@
 import {
-  Artwork, ArtworkInput, ArtworkPatch, ArtworkStatus, Client, ClientInput, ClientPatch, Settings, SettingsPatch,
-  Sale, SaleInput, SalePatch, Show, ShowDetail, ShowInput, ShowPatch, ShowStatus, db as schema,
+  Artwork, ArtworkInput, ArtworkPatch, ArtworkStatus, Client, ClientInput, ClientPatch, Placement, PlacementInput,
+  PlacementPatch, Settings, SettingsPatch, Sale, SaleInput, SalePatch, Show, ShowDetail, ShowInput, ShowPatch, ShowStatus,
+  db as schema,
 } from "@studio/core";
 import { createRoute } from "@hono/zod-openapi";
 import { and, desc, eq, isNull, lt } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { z } from "zod";
-import { type EntityDef, artworkEntity, clientEntity, getRecord, saleEntity, settingsEntity, showEntity } from "../actions/records";
+import {
+  type EntityDef, artworkEntity, clientEntity, getRecord, placementEntity, saleEntity, settingsEntity, showEntity,
+} from "../actions/records";
 import type { Snapshot } from "../actions/runner";
 import type { Db } from "../env";
 import { type Permission, requirePermission } from "../auth/permissions";
@@ -23,18 +26,27 @@ interface RecordRoutesDef {
   input: z.ZodType;
   patch: z.ZodType;
   filters?: z.ZodObject;
+  /** Largest page a list may ask for (default PageQuery's 200): big records get a smaller one. */
+  maxLimit?: number;
   /** GET /{id} returns this instead of the bare record (e.g. a show with its artworks). */
   detail?: { schema: z.ZodType; load: (db: Db, studioId: string, row: Snapshot) => Promise<Snapshot> };
 }
 
-function mountRecordRoutes({ entity: e, path, tag, record, input, patch, filters, detail }: RecordRoutesDef) {
+function mountRecordRoutes({ entity: e, path, tag, record, input, patch, filters, detail, maxLimit }: RecordRoutesDef) {
   const Page = z.object({ items: z.array(record), nextCursor: z.string().nullable() });
   const noun = e.type;
 
   recordRoutes.openapi(
     createRoute({
       method: "get", path: `/${path}`, tags: [tag], summary: `List ${path}`,
-      request: { query: filters ? PageQuery.extend(filters.shape) : PageQuery },
+      request: {
+        query: (() => {
+          const page = maxLimit
+            ? PageQuery.extend({ limit: z.coerce.number().int().min(1).max(maxLimit).default(Math.min(50, maxLimit)) })
+            : PageQuery;
+          return filters ? page.extend(filters.shape) : page;
+        })(),
+      },
       responses: { 200: json(Page), 401: errors[401], 403: errors[403] },
     }),
     async (c) => {
@@ -129,6 +141,12 @@ mountRecordRoutes({
 mountRecordRoutes({
   entity: saleEntity, path: "sales", tag: "records", record: Sale.meta({ id: "Sale" }),
   input: SaleInput, patch: SalePatch,
+});
+
+// A placement carries its whole scene (up to PLACEMENT_SCENE_MAX), so a list page is small.
+mountRecordRoutes({
+  entity: placementEntity, path: "placements", tag: "records", record: Placement.meta({ id: "Placement" }),
+  input: PlacementInput, patch: PlacementPatch, maxLimit: 20,
 });
 
 recordRoutes.openapi(

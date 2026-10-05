@@ -370,6 +370,32 @@ export const assistantMessages = sqliteTable(
   ],
 );
 
+// Phase 5 (D-060): one scene per row, a booth or a wall. Real sizes in columns,
+// positions in `scene` (in the app's `format`), images as studio files (`images`).
+export const placements = sqliteTable(
+  "placements",
+  {
+    id: text("id").primaryKey(),
+    studioId: text("studio_id").notNull().references(() => studios.id),
+    kind: text("kind", { enum: ["booth", "wall"] }).notNull().default("booth"),
+    name: text("name").notNull(),
+    format: text("format").notNull(),
+    width: real("width"),
+    depth: real("depth"),
+    height: real("height"),
+    sizeUnit: text("size_unit", { enum: ["in", "cm"] }).notNull().default("in"),
+    scene: text("scene", { mode: "json" }).$type<Record<string, unknown>>().notNull().default(sql`'{}'`),
+    images: text("images", { mode: "json" }).$type<Record<string, unknown>[]>().notNull().default(sql`'[]'`),
+    ...recordColumns(),
+  },
+  (t) => [
+    index("placements_studio_updated").on(t.studioId, t.updatedAt),
+    index("placements_studio_kind").on(t.studioId, t.kind),
+    actorCheck("placements_actor"),
+    metaCheck("placements_meta"),
+  ],
+);
+
 export type ArtworkRow = typeof artworks.$inferSelect;
 export type ClientRow = typeof clients.$inferSelect;
 export type FileRow = typeof files.$inferSelect;
@@ -377,3 +403,4 @@ export type SettingsRow = typeof studioSettings.$inferSelect;
 export type ShowRow = typeof shows.$inferSelect;
 export type ShowArtworkRow = typeof showArtworks.$inferSelect;
 export type ActivityRow = typeof activityLog.$inferSelect;
+export type PlacementRow = typeof placements.$inferSelect;

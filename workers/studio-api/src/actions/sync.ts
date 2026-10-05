@@ -21,15 +21,22 @@ const SYNCABLE = new Set([
   "client.create", "client.update", "client.delete", "client.restore",
   "show.create", "show.update", "show.delete", "show.restore",
   "sale.create", "sale.update", "sale.delete", "sale.restore",
+  "placement.create", "placement.update", "placement.delete", "placement.restore",
   "settings.update",
   "show.add_artwork", "show.remove_artwork", "artwork.mark_sold",
 ]);
 
 /** Record types a device keeps a copy of. */
-export const SYNCED_TYPES = ["artwork", "client", "show", "show_artwork", "sale", "settings", "file"] as const;
+export const SYNCED_TYPES = ["artwork", "client", "show", "show_artwork", "sale", "settings", "file", "placement"] as const;
 
 /** Ids per query when pull reads records back (D1 allows 100 bound parameters). */
 const PULL_CHUNK = 50;
+
+/**
+ * Where a pull page ends early because of placements (D-063): each can carry
+ * a scene of up to PLACEMENT_SCENE_MAX, so 200 of them would be ~140 MB.
+ */
+export const PULL_PAGE_BYTES = 8_000_000;
 
 /** Bookkeeping that changes on every write and says nothing about what the user changed. */
 const BOOKKEEPING = new Set(["version", "updatedAt"]);
@@ -154,7 +161,35 @@ export async function pullChanges(env: Env, actor: Actor, since: number, limit: 
       WHERE studio_id = ? AND seq > ? AND entity_type IN (${types})
       GROUP BY entity_type, entity_id ORDER BY seq LIMIT ?`,
   ).bind(actor.studioId, since, ...SYNCED_TYPES, limit + 1).all<{ entity_type: string; entity_id: string; seq: number }>();
-  const page = rows.results.slice(0, limit);
+  let page = rows.results.slice(0, limit);
+  let more = rows.results.length > limit;
+
+  // Placements are measured before they're read, and the page ends once it
+  // passes PULL_PAGE_BYTES (always keeping at least one change), D-063.
+  const placementIds = page.filter((r) => r.entity_type === "placement").map((r) => r.entity_id);
+  if (placementIds.length) {
+    const bytes = new Map<string, number>();
+    for (let i = 0; i < placementIds.length; i += PULL_CHUNK) {
+      const ids = placementIds.slice(i, i + PULL_CHUNK);
+      const sized = await env.DB.prepare(
+        `SELECT id, length(scene) + length(images) + length(meta) AS bytes FROM placements
+          WHERE studio_id = ? AND id IN (${ids.map(() => "?").join(",")})`,
+      ).bind(actor.studioId, ...ids).all<{ id: string; bytes: number }>();
+      for (const r of sized.results) bytes.set(r.id, r.bytes);
+    }
+    let total = 0;
+    for (let i = 0; i < page.length; i++) {
+      const r = page[i]!;
+      if (r.entity_type !== "placement") continue;
+      total += bytes.get(r.entity_id) ?? 0;
+      if (total > PULL_PAGE_BYTES && i > 0) {
+        page = page.slice(0, i);
+        more = true;
+        break;
+      }
+    }
+  }
+
   // One query per record type (in chunks), not one per record: a Worker on the
   // free plan may run 50 D1 queries per request (D-050).
   const db = drizzle(env.DB);
@@ -174,5 +209,5 @@ export async function pullChanges(env: Env, actor: Actor, since: number, limit: 
     const row = found.get(`${r.entity_type}:${r.entity_id}`);
     if (row) changes.push({ entityType: r.entity_type, entityId: r.entity_id, record: outward(getEntity(r.entity_type)!, row) });
   }
-  return { changes, cursor: String(page.at(-1)?.seq ?? since), hasMore: rows.results.length > limit };
+  return { changes, cursor: String(page.at(-1)?.seq ?? since), hasMore: more };
 }

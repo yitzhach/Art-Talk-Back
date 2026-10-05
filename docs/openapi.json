@@ -6105,7 +6105,20 @@
           "assistant"
         ],
         "summary": "The current conversation, on any device",
-        "description": "A new thread starts after 12 quiet hours or 60 messages; the messages come back exactly as stored, so the model sees an unedited history.",
+        "description": "A new thread starts after 12 quiet hours or 60 messages; the messages come back exactly as stored, so the model sees an unedited history. With fresh=1: a new, empty thread (the panel's New conversation); it becomes current once its first turn is stored.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "1"
+              ]
+            },
+            "required": false,
+            "name": "fresh",
+            "in": "query"
+          }
+        ],
         "responses": {
           "200": {
             "description": "OK",

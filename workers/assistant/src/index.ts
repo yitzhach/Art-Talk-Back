@@ -6,7 +6,7 @@ import { type Model, anthropicModel, modelSettings } from "./model";
 import { StudioError, studioFor } from "./studio";
 import { type TurnEvent, type TurnInput, runTurn } from "./turn";
 
-interface ChatBody { message?: unknown; app?: unknown; today?: unknown; page?: unknown; record?: unknown }
+interface ChatBody { fresh?: unknown; message?: unknown; app?: unknown; today?: unknown; page?: unknown; record?: unknown }
 
 const json = (status: number, code: string, message: string) =>
   Response.json({ error: { code, message } }, { status });
@@ -20,7 +20,7 @@ function parse(body: ChatBody): TurnInput | string {
   const r = body.record as { type?: unknown; id?: unknown; label?: unknown } | undefined;
   const record = r && typeof r.type === "string" && typeof r.id === "string" && typeof r.label === "string"
     ? { type: r.type.slice(0, 30), id: r.id.slice(0, 40), label: r.label.slice(0, 200) } : undefined;
-  return { app, message, today, page, record };
+  return { app, message, today, page, record, fresh: body.fresh === true };
 }
 
 /** Builds the Worker; tests pass their own model. */

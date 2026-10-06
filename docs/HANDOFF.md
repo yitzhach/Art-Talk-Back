@@ -32,15 +32,14 @@ Read this first, then `CLAUDE.md`, then `docs/phase-3.md` (assistant) or `docs/p
 - **Where each chat panel is (Isaac asked, 2026-10-05).** Show Tracker: staging only (see "The
   assistant on the Show Tracker's staging site"). Booth Studio: "Ask the assistant" (9c) is built and
   shows only where its Worker has an `ASSISTANT` binding — `studio-booth-studio-staging` has one
-  (`studio-assistant-staging`); production has none until "Deploy production assistant" has run and the
-  binding line is added (booth-studio HANDOFF → Studio platform). Chats from Booth Studio get the
+  (`studio-assistant-staging`), and production has `studio-assistant` since 2026-10-06
+  (booth-studio#16, live on the phone too; Isaac confirmed). Chats from Booth Studio get the
   assistant's Booth Studio guide (`APP_GUIDES` in `workers/assistant/src/prompt.ts`).
 - **Phase 3 (assistant v0): live on staging only.** The key and the AI Gateway exist; another session
   ran it on staging on 2026-10-05 (D-058…D-060; `studio-assistant-staging` runs Haiku 4.5, and the
-  Show Tracker's staging Worker carries the panel from app branch `claude/assistant-panel`). There is
-  **no production `studio-assistant`**: its first deploy is Isaac's, by the manual button "Deploy
-  production assistant" (D-068: Actions → Run workflow → type `studio-assistant`). Booth Studio's
-  assistant panel (stage 2 of `phase-5-booth.md`) waits on that.
+  Show Tracker's staging Worker carries the panel from app branch `claude/assistant-panel`). **Production
+  `studio-assistant` exists since 2026-10-06**: "Deploy production assistant" (D-068) run 1 green,
+  Isaac's OK, Sonnet 5.5. Booth Studio's production panel followed (booth-studio#16).
 
 ## The assistant on the Show Tracker's staging site
 
@@ -72,8 +71,8 @@ as a pair; see "How to work"). Once it merged, the failed job was re-run, CI pas
 production API" deployed the default branch: `studio-api` `a4310818`, with the show-floor ops (10b).
 
 **Still open for the assistant:** Isaac's 20+ requests in his own words for the eval set (gate 4);
-the first production deploy ("Deploy production assistant", D-068) and then merging app branch
-`claude/assistant-panel` into the app's `main` (never before `studio-assistant` exists in production).
+merging app branch `claude/assistant-panel` into the Show Tracker's `main` (production
+`studio-assistant` now exists, 2026-10-06, so nothing on this side blocks it).
 
 ## How to work
 
@@ -159,6 +158,6 @@ the first production deploy ("Deploy production assistant", D-068) and then merg
   PDF", "take me to lighting"), and agents outside the chat (10d). 10a and 10c need a chat panel,
   so they follow 9c.
 - Left for Isaac: his first real use (booth-studio HANDOFF → Next); trying Booth Studio's chat on
-  staging; the first run of "Deploy production assistant" (D-068), after which Booth Studio's
-  production `ASSISTANT` binding is added. Optional: add `booth-studio` to this repo's `ci` ruleset
+  staging. Done 2026-10-06: "Deploy production assistant" (D-068) and Booth Studio's production
+  `ASSISTANT` binding (booth-studio#16). Optional: add `booth-studio` to this repo's `ci` ruleset
   (today it requires `check` and `show-tracker`).

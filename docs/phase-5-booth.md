@@ -45,7 +45,7 @@ is read, never changed.
    `studio-db-prod` (`studio-api` `2c706cd5`; restore bookmark
    `00000009-00000000-000050fb-e57b76aabaee651ce8ee99f88fda66df`). Then booth-studio#9 merged
    (`04d694f` on its `main`), which Cloudflare's Git integration deployed to `booth-studio`.
-9. [ ] Stage 2: the assistant panel. Built on a branch and tried on staging; it reaches Booth Studio's
+9. [x] Stage 2: the assistant panel (in production 2026-10-06: "Deploy production assistant" run 1, booth-studio#16). Built on a branch and tried on staging; it reaches Booth Studio's
    `main` only after "Deploy production assistant" has run once (Isaac, D-068), because production's
    `ASSISTANT` binding needs `studio-assistant` to exist. The platform's parts (9a, 9b) ship before
    that (D-070): agents can use them without the assistant.
@@ -123,7 +123,7 @@ The platform's merge is safe alone: nothing calls the new routes until the app s
 |---|---|---|---|
 | 1 | booth-studio repo: Allow auto-merge + `ci` ruleset requiring `booth` (SHIPPING.md setup) | Auto-merge without required checks merges at once | — |
 | 2 | Art-Talk-Back `ci` ruleset: add `booth-studio` | The API can't merge past a broken Booth Studio | — |
-| 3 | First **production** deploy of `studio-assistant` (stage 2): Actions → **Deploy production assistant** → Run workflow → type `studio-assistant` → Run (D-068) | A new Worker's first production deploy is Isaac's | Pay per use (model) |
+| 3 | ~~First **production** deploy of `studio-assistant` (stage 2): Actions → **Deploy production assistant** → Run workflow → type `studio-assistant` → Run (D-068)~~ Done 2026-10-06 (Isaac's OK) | A new Worker's first production deploy is Isaac's | Pay per use (model) |
 | 4 | Share links on staging: an R2 bucket `booth-studio-shares-staging` | Only if he wants share links testable on staging (D-067) | Free tier |
 | 5 | ~~Scene-level booth actions in studio-api (step 9b)~~ Approved 2026-10-05 (D-070) | The assistant can then build a booth and move, hang or resize one piece in it; studio-api runs Booth Studio's own scene code | — |
 

@@ -4,13 +4,14 @@ import {
   db as schema,
 } from "@studio/core";
 import { createRoute } from "@hono/zod-openapi";
-import { and, desc, eq, isNull, lt } from "drizzle-orm";
+import { and, desc, eq, inArray, isNull, lt, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { z } from "zod";
 import {
   type EntityDef, artworkEntity, clientEntity, getRecord, placementEntity, saleEntity, settingsEntity, showEntity,
 } from "../actions/records";
 import { boothSummary } from "../actions/booth";
+import { HttpError } from "../lib/errors";
 import type { Snapshot } from "../actions/runner";
 import type { Db } from "../env";
 import { type Permission, requirePermission } from "../auth/permissions";
@@ -123,6 +124,65 @@ mountRecordRoutes({
   entity: clientEntity, path: "clients", tag: "records", record: Client.meta({ id: "Client" }),
   input: ClientInput, patch: ClientPatch,
 });
+
+// Shows by date, for "what do I need to apply to this week?" (D-076): the
+// assistant's find_shows tool. The Show Tracker keeps its apply-by date in
+// meta (D-038), so this reads it there; a value that isn't YYYY-MM-DD never
+// matches a date range. Registered before /shows/{id} so "dates" isn't an id.
+const ShowDateItem = z.object({
+  id: z.string(), version: z.number().int(), name: z.string(), venue: z.string().nullable(), city: z.string().nullable(),
+  status: ShowStatus, trackerStatus: z.string().nullable(), applyBy: z.string().nullable(),
+  startsOn: z.string().nullable(), endsOn: z.string().nullable(), url: z.string().nullable(),
+  feeCents: z.number().int().nullable(), juryFeeCents: z.number().int().nullable(), currency: z.string(),
+}).meta({ id: "ShowDateItem" });
+const IsoDay = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "YYYY-MM-DD");
+const DAY_GLOB = "[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]";
+
+recordRoutes.openapi(
+  createRoute({
+    method: "get", path: "/shows/dates", tags: ["records"],
+    summary: "Shows by apply-by or start date, soonest first",
+    description: "For the assistant's find_shows tool and for agents. `by` picks the date (applyBy is the Show Tracker's, from meta); `from` and `to` are inclusive. Shows the tracker hides are left out. Without a range, shows with no date come last.",
+    request: {
+      query: z.object({
+        by: z.enum(["applyBy", "startsOn"]).default("applyBy"),
+        from: IsoDay.optional(),
+        to: IsoDay.optional(),
+        status: z.string().regex(/^[a-z]+(,[a-z]+)*$/).optional().meta({ description: "Comma-separated: planned,applied,accepted,declined,done,cancelled" }),
+        limit: z.coerce.number().int().min(1).max(50).default(25),
+      }),
+    },
+    responses: { 200: json(z.object({ items: z.array(ShowDateItem) })), 400: errors[400], 401: errors[401], 403: errors[403] },
+  }),
+  async (c) => {
+    const actor = requireActor(c);
+    requirePermission(actor.role, "shows:read");
+    const q = c.req.valid("query");
+    const statuses = q.status ? q.status.split(",") : [];
+    const bad = statuses.find((v) => !ShowStatus.safeParse(v).success);
+    if (bad) throw new HttpError("bad_request", `Unknown status "${bad}".`, { allowed: ShowStatus.options });
+    const t = schema.shows;
+    const day = q.by === "applyBy" ? sql`json_extract(${t.meta}, '$.applyBy')` : sql`${t.startsOn}`;
+    const where = [eq(t.studioId, actor.studioId), isNull(t.deletedAt), sql`coalesce(json_extract(${t.meta}, '$.hidden'), 0) = 0`];
+    if (statuses.length) where.push(inArray(t.status, statuses as never[]));
+    if (q.from || q.to) where.push(sql`${day} GLOB ${DAY_GLOB}`);
+    if (q.from) where.push(sql`${day} >= ${q.from}`);
+    if (q.to) where.push(sql`${day} <= ${q.to}`);
+    const rows = await drizzle(c.env.DB).select().from(t).where(and(...where))
+      .orderBy(sql`${day} IS NULL`, sql`${day}`, t.name).limit(q.limit);
+    const text = (v: unknown) => (typeof v === "string" && v ? v : null);
+    const cents = (v: unknown) => (typeof v === "number" && Number.isInteger(v) ? v : null);
+    const items = rows.map((r) => {
+      const m = (r.meta ?? {}) as Record<string, unknown>;
+      return {
+        id: r.id, version: r.version, name: r.name, venue: r.venue, city: r.city, status: r.status,
+        trackerStatus: text(m.trackerStatus), applyBy: text(m.applyBy), startsOn: r.startsOn, endsOn: r.endsOn,
+        url: text(m.url), feeCents: r.feeCents, juryFeeCents: cents(m.juryFeeCents), currency: r.currency,
+      };
+    });
+    return send(c, { items });
+  },
+);
 
 mountRecordRoutes({
   entity: showEntity, path: "shows", tag: "records", record: Show.meta({ id: "Show" }),

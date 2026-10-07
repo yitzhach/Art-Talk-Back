@@ -21,6 +21,9 @@ When you end with a question the artist can answer in a few words, add their lik
  * is frozen text too, so every app's prompt caches on its own.
  */
 export const APP_GUIDES: Record<string, string> = {
+  "show-tracker": `In the Show Tracker the artist keeps the shows they might do, apply to and do, with each show's apply-by date, dates, fees and sales.
+- Questions across shows by date ("what do I need to apply to this week?", "what's coming up in March?") are find_shows; work the dates out from today in the context line. For one show's details (its deadline, fees, notes, link), get_show after search.
+- When the answer is several shows, list them one per line, soonest first: the name, the date that matters ("apply by Oct 10"), and its application link when it has one. That is the one time a list is right without being asked. None found: say so, and that only shows saved in the tracker with an apply-by date can be found this way.`,
   "booth-studio": `In Booth Studio the artist plans their show booth, and the show's floor, in 3D. "This booth" is the one on screen: its id is in the context line.
 - Booth Studio saves by itself on the device after every change; there is no Save button. Signed in to the studio, each change also goes to the studio within seconds. If the context line says the booth isn't in the studio yet, or anything else about its sync, tell the artist that in plain words with the taps it gives, instead of saying the booth doesn't exist. A backup file is Export → Keep your work → Download project backup.
 - When a control isn't in the app's map, suggest typing a word for it into "Find a tool" at the top of the screen.

@@ -243,7 +243,46 @@ const DESCRIBE_BOOTH_TOOL = {
   },
   level: "auto" as Level,
 };
-const READ_TOOLS: Record<string, (typeof DESCRIBE_BOOTH_TOOL)[]> = { "booth-studio": [DESCRIBE_BOOTH_TOOL], studio: [DESCRIBE_BOOTH_TOOL] };
+
+/** The Show Tracker's read tools (D-076): shows by date, and everything about one show. */
+const FIND_SHOWS_TOOL = {
+  name: "find_shows",
+  action: null,
+  read: { path: "/shows/dates" },
+  description: "List shows by date, soonest first: what to apply to soon (by applyBy), or what is coming up (by startsOn). Each has its id, status, the tracker's own status word, apply-by and show dates, city, fees and application link (url). \"What do I need to apply to this week?\" is by applyBy, from today to 7 days on, status planned. Use it for any question about dates or deadlines across shows; search finds a show by name.",
+  inputSchema: {
+    type: "object",
+    properties: {
+      by: { type: "string", enum: ["applyBy", "startsOn"], description: "Which date: the application deadline (default) or the show's first day" },
+      from: { type: "string", description: "First date, YYYY-MM-DD, inclusive" },
+      to: { type: "string", description: "Last date, YYYY-MM-DD, inclusive" },
+      status: { type: "string", description: "Comma-separated, any of planned (interested, not applied yet), applied (or waitlisted), accepted, declined, done, cancelled" },
+      limit: { type: "integer", minimum: 1, maximum: 50, description: "Default 25" },
+    },
+  },
+  level: "auto" as Level,
+};
+const GET_SHOW_TOOL = {
+  name: "get_show",
+  action: null,
+  read: { path: "/shows/{id}" },
+  description: "Everything saved about one show: dates, venue, city, booth, fees, status, notes, and in meta the tracker's own fields (applyBy, url, rating, juryFeeCents, grossSalesCents, trackerStatus). Use it to answer a question about a show, and before show_update for its version.",
+  inputSchema: {
+    type: "object",
+    properties: { id: { type: "string", description: "The show's id (from search or find_shows)" } },
+    required: ["id"],
+  },
+  level: "auto" as Level,
+};
+interface ReadTool { name: string; action: null; read: { path: string }; description: string; inputSchema: Record<string, unknown>; level: Level }
+const READ_TOOLS: Record<string, { tool: ReadTool; perm: Permission }[]> = {
+  "booth-studio": [{ tool: DESCRIBE_BOOTH_TOOL, perm: "placements:read" }],
+  "show-tracker": [{ tool: FIND_SHOWS_TOOL, perm: "shows:read" }, { tool: GET_SHOW_TOOL, perm: "shows:read" }],
+  studio: [
+    { tool: DESCRIBE_BOOTH_TOOL, perm: "placements:read" },
+    { tool: FIND_SHOWS_TOOL, perm: "shows:read" }, { tool: GET_SHOW_TOOL, perm: "shows:read" },
+  ],
+};
 
 const LEVEL_NOTE: Record<Level, string> = {
   auto: "",
@@ -289,7 +328,7 @@ assistantRoutes.openapi(
       .filter(({ level }) => level !== "never")
       .sort((a, b) => a.d.name.localeCompare(b.d.name))
       .map(({ d, level }) => toolFor(d, level));
-    const reads = can(actor.role, "placements:read") ? READ_TOOLS[app] ?? [] : [];
+    const reads = (READ_TOOLS[app] ?? []).filter((r) => can(actor.role, r.perm)).map((r) => r.tool);
     return send(c, { app, tools: [SEARCH_TOOL, ...reads, ...tools] });
   },
 );

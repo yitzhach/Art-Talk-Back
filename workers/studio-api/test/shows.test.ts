@@ -93,3 +93,46 @@ describe("artwork.mark_sold", () => {
     expect(await rowCount("SELECT COUNT(*) AS n FROM activity_log WHERE undone_at IS NOT NULL AND studio_id = ?", a.studioId)).toBe(0);
   });
 });
+
+describe("shows by date, for find_shows (D-076)", () => {
+  async function seed() {
+    const a = await makeStudio();
+    const add = (json: Record<string, unknown>) => call("/v1/shows", { method: "POST", cookie: a.cookie, json }).then((r) => r.data);
+    await add({ name: "Mount Dora", startsOn: "2026-11-07", feeCents: 45000, meta: { applyBy: "2026-10-12", url: "https://example.test/md", juryFeeCents: 3500, trackerStatus: "interested" } });
+    await add({ name: "Naples", startsOn: "2027-01-10", meta: { applyBy: "2026-10-09" } });
+    await add({ name: "Applied already", status: "applied", meta: { applyBy: "2026-10-10" } });
+    await add({ name: "Hidden one", meta: { applyBy: "2026-10-10", hidden: true } });
+    await add({ name: "Loose date", meta: { applyBy: "mid October" } });
+    await add({ name: "No dates" });
+    return a;
+  }
+  const names = (r: { data: { items: { name: string }[] } }) => r.data.items.map((s) => s.name);
+
+  it("the week's apply-by dates, soonest first, by status; hidden and unparseable dates left out", async () => {
+    const a = await seed();
+    const week = await call("/v1/shows/dates?by=applyBy&from=2026-10-07&to=2026-10-14&status=planned", { cookie: a.cookie });
+    expect(week.status).toBe(200);
+    expect(names(week)).toEqual(["Naples", "Mount Dora"]);
+    expect(week.data.items[1]).toMatchObject({
+      applyBy: "2026-10-12", startsOn: "2026-11-07", url: "https://example.test/md", feeCents: 45000, juryFeeCents: 3500,
+      trackerStatus: "interested", status: "planned", version: 1,
+    });
+    expect(names(await call("/v1/shows/dates?from=2026-10-07&to=2026-10-14&status=planned,applied", { cookie: a.cookie })))
+      .toEqual(["Naples", "Applied already", "Mount Dora"]);
+  });
+
+  it("by start date; without a range every visible show comes back, undated last", async () => {
+    const a = await seed();
+    expect(names(await call("/v1/shows/dates?by=startsOn&from=2026-11-01", { cookie: a.cookie }))).toEqual(["Mount Dora", "Naples"]);
+    const all = names(await call("/v1/shows/dates", { cookie: a.cookie }));
+    expect(all.slice(0, 3)).toEqual(["Naples", "Applied already", "Mount Dora"]);
+    expect(all).toHaveLength(5);
+    expect(all).not.toContain("Hidden one");
+  });
+
+  it("refuses an unknown status or a date that isn't YYYY-MM-DD", async () => {
+    const a = await makeStudio();
+    expect((await call("/v1/shows/dates?status=interested", { cookie: a.cookie })).status).toBe(400);
+    expect((await call("/v1/shows/dates?from=10/7", { cookie: a.cookie })).status).toBe(400);
+  });
+});

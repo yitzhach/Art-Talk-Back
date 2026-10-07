@@ -1,42 +1,25 @@
 # Prompt for the next session
 
-Paste this into a new chat:
+Paste this into a new chat (repos: Art-Talk-Back, booth-studio, art-show-tracker):
 
-> Repos: yitzhach/Art-Talk-Back (the platform) and yitzhach/booth-studio (the app); read
-> yitzhach/art-show-tracker only as a reference. Keep them separate (D-042). Read
-> Art-Talk-Back `docs/HANDOFF.md` first, then `docs/phase-5-booth.md`, and booth-studio's
-> `CLAUDE.md` and `HANDOFF.md` → Studio platform. Read other files only when a step needs them.
+> Read Art-Talk-Back `docs/HANDOFF.md` first, then booth-studio `HANDOFF.md` → Now and Next.
+> CLAUDE.md in each repo loads on its own. Keep the repos separate (D-042). Art-Talk-Back's default
+> branch is `claude/next-steps-y4vrwv` (no `main`); the apps' is `main`, and merging there deploys.
+> Read other files only when a step needs them.
 >
-> 0. This repo's default branch is `claude/next-steps-y4vrwv` — there is no `main`. Read files from
->    it (https://github.com/yitzhach/Art-Talk-Back/blob/claude/next-steps-y4vrwv/docs/HANDOFF.md).
->    booth-studio's is `main`. Loose ends from 2026-10-07: if booth-studio#19 (the assistant's app
->    map, D-072) isn't merged, merge it once its `booth` check is green; then ask Isaac to approve a
->    "Deploy production assistant" run so production gets D-072.
-> 1. State on 2026-10-07: in production are studio sign-in and sync for both apps, booth search
->    and booth actions on the app's own scene code (9a, 9b, D-070), show-floor ops (10b), the
->    assistant (`studio-assistant`, Sonnet 5.5) with its chat in Booth Studio (bottom right, above
->    the phone tab bar) and on every Show Tracker page but the embed (bottom left), and pictures in
->    Booth Studio's chat (10a, D-071). Staging matches, with the assistant on Haiku 4.5. Check
->    nothing is red on either default branch and `workers/studio-api/src/vendor/booth-scene.js`
->    matches booth-studio's `npm run bundle:scene`.
-> 2. First, Isaac's list for Booth Studio's assistant panel on a phone (2026-10-07; booth-studio
->    HANDOFF → Next, item 0): Backspace swallowed in the chat box (cause found), dark mode with the
->    app, the floating button covering other buttons, a second assistant button at the top, and a
->    movable pop-up panel so what's under it stays visible. App-only (booth-studio); ask him whether
->    the Show Tracker's panel gets the same. Also give the Show Tracker its own `appMap` (D-072).
-> 3. Ask Isaac how the chats went, pictures included (a booth photo, a sketch, a show map), and fix
->    what he finds. Ask for his 20+ requests in his own words for the eval set (phase-3 gate 4).
+> 0. State on 2026-10-07: everything from that day is merged — app map (D-072/D-073), figures (D-074),
+>    "take me to …" in both apps (D-075; booth-studio#24, art-show-tracker#7). Check nothing is red on
+>    any default branch. Ask Isaac whether he has run "Deploy production assistant" since D-072; until
+>    he does, production's assistant lacks the map intro and `open_in_app`.
+> 1. Ask Isaac how the chats went on his phone (panel fixes, pictures, take-me-to) and fix what he finds.
+> 2. Render with AI (booth-studio `src/ai-render.js`, `provider = null`): waits on Isaac picking an
+>    image service and OK'ing the spend. If he has, plan a studio Worker route that holds the key
+>    (never the app) and plug it in as `provider`. Server-side work is his call first.
+> 3. Then `phase-5-booth.md` step 10: 10c's commands that run something ("export this as a PDF"),
+>    then 10d (agents outside the chat).
 > 4. His GitHub clicks, if not done: booth-studio Allow auto-merge + `ci` ruleset requiring `booth`;
->    Art-Talk-Back `ci` ruleset adds `booth-studio` (phase-5-booth.md, Needs Isaac's OK 1–2).
-> 5. Then step 10 of `phase-5-booth.md`: 10c app commands the panel runs ("export this as a PDF",
->    "take me to lighting", from booth-studio `src/toolsearch.js`), then 10d agents outside the chat
->    (the same actions through the API, and an MCP server). A new scene op is written in
->    booth-studio's `src/scene-ops.js` first, its bundle copied here on the branch of the same name,
->    and the two PRs merged back to back, platform first.
-> 6. A change to `workers/assistant` reaches production only by "Deploy production assistant"
->    (D-068): ask Isaac each time; "Deploy staging" (keep `assistant_model` on Haiku 4.5) is yours.
+>    Art-Talk-Back ruleset adds `booth-studio`.
 >
-> Isaac isn't technical: give him clicks, not commands, all in one list. Use the `backend-builder`
-> skill for every Art-Talk-Back change. Next decision is D-073 (fetch the default branch first:
-> another session may have taken it). Add a `CHANGELOG.md` line per item; report each item as
-> Changed / Verified / Left.
+> Isaac isn't technical: give him clicks, not commands, in one list. `backend-builder` skill for every
+> Art-Talk-Back change; next decision is D-076 (fetch first). A `CHANGELOG.md` line per platform item.
+> Shipping as each CLAUDE.md says: merge your own PRs once CI is green.

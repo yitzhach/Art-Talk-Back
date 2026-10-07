@@ -3,6 +3,7 @@
 ## Unreleased
 
 ### Phase 5 · Booth Studio's part (D-061)
+- Handoff: "take me to …" is in both apps (art-show-tracker#7 joins booth-studio#24); Render with AI waits on a provider; next-session prompt rewritten.
 - Plan, gate and "Needs Isaac's OK" in `docs/phase-5-booth.md`; decisions D-061…D-067.
 - Migration 0006 `placements` (a booth or wall scene: real size, `scene` JSON in the app's `format`, `images` manifest; capped so a logged write fits a D1 row, D-062) and `/v1/placements`.
 - Placement actions tagged `apps: ["booth-studio"]`; placements sync (push and pull); `file.attach` accepts a placement (D-063).

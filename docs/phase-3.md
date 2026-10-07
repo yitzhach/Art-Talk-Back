@@ -34,7 +34,7 @@ D-045…D-047, D-052…D-056.
 - [x] ~~Move the registry to `packages/core`~~: studio-api serves the tools instead (D-052)
 - [x] Tools generated from the registry (`ActionDef.input` Zod → JSON schema), filtered per app by an `app` tag on each action
 - [x] Models (v0: Sonnet 5.5 only, D-054): Haiku 4.5 routes and handles simple requests, Sonnet 5.5 plans (spec defaults), both through AI Gateway; the model ids live in config
-- [x] `<studio-assistant>` web component: a plain classic script in the app (`tracker/studio-assistant.js`), on the ledger and Money pages; the app Worker forwards `/assistant/*` on the same origin (D-039). App branch `claude/assistant-panel`, not on `main` until `studio-assistant` is deployed
+- [x] `<studio-assistant>` web component: a plain classic script in the app (`tracker/studio-assistant.js`), on the ledger and Money pages; the app Worker forwards `/assistant/*` on the same origin (D-039). On the app's `main` since 2026-10-06 (art-show-tracker#3), after production `studio-assistant`
 - [x] Confirm and Undo cards in the component, and buttons when a name matches several records
 - [x] Eval set + runner, replay in CI (`pnpm test`), live by the manual "Assistant eval (live)" workflow (D-047). The 6 cases are placeholders until Isaac's requests
 
@@ -69,4 +69,4 @@ Each step: unit tests + one API test before moving on (backend-builder skill).
 | 1 | **Anthropic API key** as Worker secret (staging first) | The assistant calls Claude through AI Gateway | Pay per use; Haiku for most requests keeps it low. A cap goes on the gateway |
 | 2 | **AI Gateway** named `studio` on the Cloudflare account | Logging, caching, model switch by config | Free |
 | 3 | **20+ requests in your own words**, the way you'd say them at a show | The eval set must be real phrasing, not invented | — |
-| 4 | Deploy `studio-assistant` (staging, then production) and the app change to `art-show-tracker` `main` | A new Worker, and a change to your live tool | Free tier |
+| 4 | ~~Deploy `studio-assistant` (staging, then production) and the app change to `art-show-tracker` `main`~~ Done 2026-10-06 (D-068, art-show-tracker#3) | A new Worker, and a change to your live tool | Free tier |

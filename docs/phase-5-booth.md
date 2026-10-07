@@ -83,6 +83,13 @@ is read, never changed.
     9b's actions:
     - [ ] 10a. Pictures in the chat: a photo, sketch or floor plan attached to a message; the model reads it
       and builds or changes a booth with `placement_build` / `placement_edit`.
+      Plan (D-071): the panel gets a picture button (camera or library); the app shrinks the picture to 1568 px
+      JPEG and sends it with the message. The assistant Worker passes it to the model for that turn and stores
+      a note in its place. Prompt: read sizes written on it, assume a 10 by 10 when none, say what was read.
+      No studio-api change, so either repo can merge first; the production assistant needs a "Deploy
+      production assistant" run (Isaac's) before pictures work there. Gate: assistant tests (the model gets
+      the image block, the thread keeps only the note, bad pictures are refused) and booth-studio's view test
+      (attach, preview, remove, send with the message, shrunk to 1568 px).
     - [x] 10b. Show floors: ops for the show floor (`hall`: its size, booth blocks, aisles, numbers, shapes),
       so a show's map or spec becomes the floor and its 3D walk-through.
     - [ ] 10c. The app as a tool: app commands the panel runs on the device ("export this as a PDF", "take me

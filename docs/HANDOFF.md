@@ -54,6 +54,18 @@ Read this first, then `CLAUDE.md`, then `docs/phase-3.md` (assistant) or `docs/p
   booth was only on his device, made before he signed in). Booth Studio now sends `appMap` (its
   tool-search index of every tab, bar and button) into the system prompt, and a sync `note` on the
   booth in the context line. Needs "Deploy production assistant" to reach production.
+- **"Take me to …" in both apps (2026-10-07, D-075, step 10c).** The assistant's `open_in_app` tool is
+  offered when the app sends `commands: ["open"]`; it emits an `open` event and the app shows the place
+  without pressing anything. Booth Studio (booth-studio#24) opens the tab and highlights the control
+  through its tool index. The Show Tracker (art-show-tracker#7) opens a menu page, or scrolls to, focuses
+  and outlines a control on the page (on the next page too, after it loads). Both apps are merged and
+  deployed. **D-072, D-073 and D-075 reach production only with Isaac's "Deploy production assistant"
+  run; until then production's assistant has neither the app map's intro change nor `open_in_app`.**
+- **Render with AI (Booth Studio) is a socket with nothing plugged in.** `provider = null` in booth-studio
+  `src/ai-render.js`; the button says no provider is set up, and "Download AI render pack" (beauty,
+  depth, mask, protect passes plus the scene in words) is what works. A real provider needs an image
+  model (Claude doesn't make images) whose key lives in a studio Worker route, never in the app — a new
+  route and spending, both Isaac's call. He was told this on 2026-10-07 and hasn't chosen a service.
 - **The chat on a phone (Isaac asked again, 2026-10-07).** Booth Studio: bottom right, above the
   inspector's tab bar (it used to sit on the tab bar; booth-studio `claude/handoff-pictures-live`
   moves it up). Show Tracker: bottom left. Both show only while signed in to the studio — signed out
@@ -170,10 +182,9 @@ Isaac's first use of the Show Tracker chat in production (merged 2026-10-06, art
 - **Show-floor ops (10b).** Nine floor ops in the same scene code (`start_floor`, `set_floor`,
   `add_booths`, add/change/remove floor pieces, `set_exhibitor`, `mark_my_booth`, `fit_floor`), and the
   summary gains the floor. Shipped: #20, then booth-studio#14; `studio-api` `a4310818`.
-- Where it goes next (`phase-5-booth.md` step 10, Isaac's aim): pictures in the chat (10a: a photo,
-  sketch or show map becomes a booth or a floor), app commands the panel runs (10c: "export this as a
-  PDF", "take me to lighting"), and agents outside the chat (10d). 10a and 10c need a chat panel,
-  so they follow 9c.
+- Where it goes next (`phase-5-booth.md` step 10, Isaac's aim): 10a (pictures) and 10c's "take me to"
+  are done; left are 10c's commands that *run* something ("export this as a PDF") and agents outside
+  the chat (10d).
 - Left for Isaac: his first real use (booth-studio HANDOFF → Next); trying Booth Studio's chat on
   staging. Done 2026-10-06: "Deploy production assistant" (D-068) and Booth Studio's production
   `ASSISTANT` binding (booth-studio#16). Optional: add `booth-studio` to this repo's `ci` ruleset

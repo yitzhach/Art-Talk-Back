@@ -117,6 +117,19 @@ describe("booth actions", () => {
     expect(refused.data.error.message).toMatch(/hidden .* but not removed/);
   });
 
+  it("people: a 7′ man looking left, through the booth's own ops (Isaac, 2026-10-07)", async () => {
+    const a = await makeStudio();
+    const p = (await call("/v1/placements", { method: "POST", cookie: a.cookie, json: syncedBooth() })).data;
+    const res = await act(a.cookie, "placement.edit", { id: p.id, ops: [{ op: "add_person", kind: "man", height: 84, looks: "left" }] });
+    expect(res.status).toBe(200);
+    expect(res.data.proposal.details.find((d: any) => d.label === "Change 1").value).toBe("Add a man, 7′ tall, looking left, 2′ 6″ left of centre, 1′ 6″ toward the front");
+    expect((await call(`/v1/assistant/proposals/${res.data.proposal.id}/confirm`, { method: "POST", cookie: a.cookie })).status).toBe(200);
+    const now = (await call(`/v1/placements/${p.id}`, { cookie: a.cookie })).data;
+    expect(now.scene.booth.people).toEqual([expect.objectContaining({ kind: "man", height: 84, rotation: -90 })]);
+    const summary = (await call(`/v1/placements/${p.id}/summary`, { cookie: a.cookie })).data;
+    expect(summary.people).toEqual([expect.objectContaining({ kind: "man", height: 84, looks: "left" })]);
+  });
+
   it("build: a new booth from a show, a size and ops, ready for Booth Studio to open", async () => {
     const a = await makeStudio();
     const res = await act(a.cookie, "placement.build", {

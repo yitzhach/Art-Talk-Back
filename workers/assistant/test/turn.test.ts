@@ -3,7 +3,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { Server } from "../../../packages/sdk/test/server";
 import { makeHandler } from "../src/index";
 import { modelSettings } from "../src/model";
-import { APP_GUIDES, SYSTEM } from "../src/prompt";
+import { APP_GUIDES, MAP_INTRO, SYSTEM } from "../src/prompt";
 import { PICTURE_NOTE } from "../src/turn";
 import { api, assistantEnv, chat, lastResult, message, ownerCookie, scripted, startStudio, text, toolUse } from "./harness";
 
@@ -328,5 +328,26 @@ describe("pictures in the chat (10a, D-071)", () => {
     expect((await send(Array(4).fill({ mediaType: "image/png", data: PNG }))).status).toBe(400);
     expect((await send([{ mediaType: "image/png", data: "not base64!" }])).status).toBe(400);
     expect((await send([{ mediaType: "image/png", data: "A".repeat(2_000_001) }])).status).toBe(400);
+  });
+});
+
+describe("the app's map of its screens, and the booth's sync state (D-072)", () => {
+  it("the map goes in the system prompt after the app's guide; the sync note goes in the context line", async () => {
+    const MAP = "Export · Keep your work: Download project backup, Open project backup, Studio account & sync";
+    const { model, requests } = scripted([() => message([text("Export tab → Keep your work → Download project backup.")])]);
+    const handler = makeHandler(() => model);
+    await chat(handler, assistantEnv(server), cookie, {
+      app: "booth-studio", fresh: true, message: "how do I save a backup?", appMap: MAP,
+      record: { type: "placement", id: "01J00000000000000000000BTH", label: "Spring booth", note: "not in the studio yet: it waits for Import my existing projects" },
+    });
+    expect(requests[0]!.system).toBe(`${SYSTEM}\n\n${APP_GUIDES["booth-studio"]}\n\n${MAP_INTRO}\n<app_map>\n${MAP}\n</app_map>\n\nIf asked which AI model you are: claude-sonnet-5-5, made by Anthropic.`);
+    const said = (requests[0]!.messages.at(-1)!.content as any[]).at(-1).text;
+    expect(said).toContain('on screen: placement "Spring booth" (id 01J00000000000000000000BTH), not in the studio yet: it waits for Import my existing projects;');
+  });
+
+  it("no map, no change: the prompt is exactly as before", async () => {
+    const { model, requests } = scripted([() => message([text("OK.")])]);
+    await chat(makeHandler(() => model), assistantEnv(server), cookie, { app: "booth-studio", fresh: true, message: "hi", appMap: "   " });
+    expect(requests[0]!.system).not.toContain("<app_map>");
   });
 });

@@ -49,6 +49,11 @@ Read this first, then `CLAUDE.md`, then `docs/phase-3.md` (assistant) or `docs/p
   since "Deploy production assistant" run 2 (2026-10-07, Isaac's OK, Sonnet 5.5) and on staging
   ("Deploy staging" run 18, Haiku 4.5). How well the model reads a real sketch is untested: Isaac's
   phone is the test.
+- **The assistant knows where everything is (2026-10-07, D-072).** Isaac's screenshot: asked how to
+  save, it said it couldn't see the app's buttons, and it called his "Spring booth" missing (the
+  booth was only on his device, made before he signed in). Booth Studio now sends `appMap` (its
+  tool-search index of every tab, bar and button) into the system prompt, and a sync `note` on the
+  booth in the context line. Needs "Deploy production assistant" to reach production.
 - **The chat on a phone (Isaac asked again, 2026-10-07).** Booth Studio: bottom right, above the
   inspector's tab bar (it used to sit on the tab bar; booth-studio `claude/handoff-pictures-live`
   moves it up). Show Tracker: bottom left. Both show only while signed in to the studio — signed out

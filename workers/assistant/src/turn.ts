@@ -25,13 +25,15 @@ export interface TurnInput {
   message: string;
   today: string; // YYYY-MM-DD in the artist's time zone
   page?: string | undefined;
-  record?: { type: string; id: string; label: string } | undefined;
+  record?: { type: string; id: string; label: string; note?: string } | undefined;
   /** The artist tapped New conversation: start an empty thread. */
   fresh?: boolean | undefined;
   /** Continue this past conversation (from the panel's Past chats). */
   threadId?: string | undefined;
   /** Pictures attached to this message (D-071): the model sees them; the thread keeps a note. */
   images?: { mediaType: "image/jpeg" | "image/png" | "image/webp" | "image/gif"; data: string }[] | undefined;
+  /** The app's map of its own screens, "where: names" per line (D-072); goes in the system prompt, so it caches. */
+  appMap?: string | undefined;
 }
 
 /**
@@ -133,7 +135,7 @@ export async function runTurn(
         ...deps.settings,
         model: deps.settings.model ?? "claude-sonnet-5-5",
         max_tokens: 16000,
-        system: systemFor(deps.settings.model ?? "claude-sonnet-5-5", input.app),
+        system: systemFor(deps.settings.model ?? "claude-sonnet-5-5", input.app, input.appMap),
         tools: modelTools(tools),
         // Caches the stable prefix (tools, system, earlier turns) across the loop.
         cache_control: { type: "ephemeral" },

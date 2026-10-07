@@ -22,6 +22,7 @@
 - Shipped 2026-10-07: the Show Tracker's chat is on every page but the embed (catalogue, calendar, contacts, jury and map too; art-show-tracker#4, Isaac asked). It sends only the typed text and the page title, so contacts stay on the device.
 - Step 10a (D-071): the assistant takes up to three pictures with a message (a photo, sketch or show map); the model reads them that turn and the thread keeps a note in their place. Prompt: say what was read; take sizes from the picture, else a 10 by 10.
 - Shipped 2026-10-07: 10a pictures (#28, booth-studio#17), staging run 18, "Deploy production assistant" run 2. Booth Studio's chat button moved above the phone tab bar.
+- D-072: the app's map of its screens (`appMap`) goes in the assistant's system prompt, and the booth's sync state in the context line; Booth Studio's guide says it saves by itself. Isaac's "it can't see the buttons".
 - Actions may give the confirm card's lines (`card`) and their tool's JSON Schema (`toolSchema`); `placement.edit` may leave out `version` like update and delete.
 - studio-assistant runs read tools by the route the tool names (`read.path`), so a new read tool needs no assistant code.
 - Step 9c: Booth Studio's chat panel ("Ask the assistant", booth-studio), shown only where its Worker binds an assistant (staging now); chats from Booth Studio get the assistant's Booth Studio guide (`APP_GUIDES`: the booth on screen, describe before editing, one placement_edit per request, inches and frames, laying out a show). The Show Tracker's prompt is unchanged.

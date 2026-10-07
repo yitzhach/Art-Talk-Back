@@ -7,6 +7,11 @@ Paste this into a new chat:
 > Art-Talk-Back `docs/HANDOFF.md` first, then `docs/phase-5-booth.md`, and booth-studio's
 > `CLAUDE.md` and `HANDOFF.md` → Studio platform. Read other files only when a step needs them.
 >
+> 0. This repo's default branch is `claude/next-steps-y4vrwv` — there is no `main`. Read files from
+>    it (https://github.com/yitzhach/Art-Talk-Back/blob/claude/next-steps-y4vrwv/docs/HANDOFF.md).
+>    booth-studio's is `main`. Loose ends from 2026-10-07: if booth-studio#19 (the assistant's app
+>    map, D-072) isn't merged, merge it once its `booth` check is green; then ask Isaac to approve a
+>    "Deploy production assistant" run so production gets D-072.
 > 1. State on 2026-10-07: in production are studio sign-in and sync for both apps, booth search
 >    and booth actions on the app's own scene code (9a, 9b, D-070), show-floor ops (10b), the
 >    assistant (`studio-assistant`, Sonnet 5.5) with its chat in Booth Studio (bottom right, above

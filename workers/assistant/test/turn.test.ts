@@ -345,6 +345,26 @@ describe("the app's map of its screens, and the booth's sync state (D-072)", () 
     expect(said).toContain('on screen: placement "Spring booth" (id 01J00000000000000000000BTH), not in the studio yet: it waits for Import my existing projects;');
   });
 
+  it("open_in_app: offered only to an app that can run it; shows a place, writes nothing (D-075)", async () => {
+    const { model, requests } = scripted([
+      () => message([toolUse("open_in_app", { place: "Layout · People for scale", control: "Add man" })]),
+      () => message([text("It's open: tap Add man.")]),
+    ]);
+    const out = await chat(makeHandler(() => model), assistantEnv(server), cookie, {
+      app: "booth-studio", fresh: true, message: "take me to the tool to add a man", appMap: "Layout · People for scale: Add man", commands: ["open", "explode"],
+    });
+    expect(requests[0]!.tools!.map((t: any) => t.name)).toContain("open_in_app");
+    expect(out.events.map((e: any) => e.type)).toEqual(["open", "text", "end"]);
+    expect(out.events[0]).toEqual({ type: "open", place: "Layout · People for scale", control: "Add man" });
+    const told = (requests[1]!.messages.at(-1)!.content as any[])[0];
+    expect(told).toMatchObject({ type: "tool_result" });
+    expect(String(told.content)).toMatch(/Nothing was changed/);
+    // An app that doesn't say it can (the Show Tracker today) never gets the tool.
+    const plain = scripted([() => message([text("OK.")])]);
+    await chat(makeHandler(() => plain.model), assistantEnv(server), cookie, { app: "show-tracker", fresh: true, message: "open the calendar" });
+    expect(plain.requests[0]!.tools!.map((t: any) => t.name)).not.toContain("open_in_app");
+  });
+
   it("no map, no change: the prompt is exactly as before", async () => {
     const { model, requests } = scripted([() => message([text("OK.")])]);
     await chat(makeHandler(() => model), assistantEnv(server), cookie, { app: "booth-studio", fresh: true, message: "hi", appMap: "   " });

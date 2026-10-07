@@ -319,3 +319,6 @@ Isaac asked Booth Studio's assistant how to save a booth and it said it couldn't
 
 ### D-073 · The app map's intro is the same for every app · 2026-10-07 · default
 The Show Tracker now sends `appMap` too (D-072): the menu's pages, then the controls on the page open, by their own labels. `MAP_INTRO` had told the model to suggest Booth Studio's "Find a tool" box when something wasn't in the map, which the Show Tracker doesn't have. That line moved into Booth Studio's guide; the intro now only says to say so. Assistant Worker only: production gets it with the next "Deploy production assistant".
+
+### D-074 · The assistant adds and changes figures for scale · 2026-10-07 · Isaac
+Isaac asked Booth Studio's assistant for "a second man, looking to the left, 7 feet tall", and it said the app has no person figure. The scene ops now include add_person, change_person and remove_person (booth-studio `src/scene-ops.js`, vendored here as before, D-070): kind, place, height (48–84″), facing as `looks` (left, right, front, back, seen from the entrance) or exact degrees, raised off the floor, hidden. `describe_booth` lists the figures. The figures' kinds and limits moved to booth-studio `src/people-kinds.js` so the bundle never loads three. Ships as a pair, platform first.

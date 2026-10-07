@@ -45,7 +45,7 @@ Read this first, then `CLAUDE.md`, then `docs/phase-3.md` (assistant) or `docs/p
 ## The assistant on the Show Tracker's staging site
 
 **Working on staging (2026-10-05):** Isaac uses the panel at
-`studio-show-tracker-staging.bobdylan2000.workers.dev` (ledger and Money pages; other pages once staging is redeployed from the app's main). Since
+`studio-show-tracker-staging.bobdylan2000.workers.dev` (every page but the embed since the 2026-10-07 "Deploy staging" run 17 from the app's main; assistant on Haiku 4.5). Since
 2026-10-06 the live art-show-tracker has the same panel (art-show-tracker#3). A "missing button" report that day was the wrong address.
 
 **What the panel does on staging (all tested: app `build/assistant-tests.cjs` 43/43, 188 here):**

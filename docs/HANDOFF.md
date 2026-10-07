@@ -30,7 +30,7 @@ Read this first, then `CLAUDE.md`, then `docs/phase-3.md` (assistant) or `docs/p
   **Isaac's clicks still to do (each repo):** Allow auto-merge; the `ci` ruleset requiring CI;
   and the Cloudflare connector on claude.ai. Until the ruleset exists, don't turn on auto-merge.
 - **Where each chat panel is (Isaac asked, 2026-10-05).** Show Tracker: in production since
-  2026-10-06 (art-show-tracker#3, ledger and Money pages), and on staging. Booth Studio: "Ask the assistant" (9c) is built and
+  2026-10-06 (art-show-tracker#3), on every page but the embed since 2026-10-07 (#4), and on staging. Booth Studio: "Ask the assistant" (9c) is built and
   shows only where its Worker has an `ASSISTANT` binding — `studio-booth-studio-staging` has one
   (`studio-assistant-staging`), and production has `studio-assistant` since 2026-10-06
   (booth-studio#16, live on the phone too; Isaac confirmed). Chats from Booth Studio get the
@@ -45,7 +45,7 @@ Read this first, then `CLAUDE.md`, then `docs/phase-3.md` (assistant) or `docs/p
 ## The assistant on the Show Tracker's staging site
 
 **Working on staging (2026-10-05):** Isaac uses the panel at
-`studio-show-tracker-staging.bobdylan2000.workers.dev` (ledger and Money pages only). Since
+`studio-show-tracker-staging.bobdylan2000.workers.dev` (ledger and Money pages; other pages once staging is redeployed from the app's main). Since
 2026-10-06 the live art-show-tracker has the same panel (art-show-tracker#3). A "missing button" report that day was the wrong address.
 
 **What the panel does on staging (all tested: app `build/assistant-tests.cjs` 43/43, 188 here):**

@@ -249,7 +249,7 @@ const FIND_SHOWS_TOOL = {
   name: "find_shows",
   action: null,
   read: { path: "/shows/dates" },
-  description: "List shows by date, soonest first: what to apply to soon (by applyBy), or what is coming up (by startsOn). Each has its id, status, the tracker's own status word, apply-by and show dates, city, fees and application link (url). \"What do I need to apply to this week?\" is by applyBy, from today to 7 days on, status planned. Use it for any question about dates or deadlines across shows; search finds a show by name.",
+  description: "List the artist's own shows (their ledger, not the catalogue) by date, soonest first: what to apply to soon (by applyBy), or what is coming up (by startsOn). Each has its id, status, the tracker's own status word, apply-by and show dates, city, fees and application link (url). \"What do I need to apply to this week?\" is by applyBy, from today to 7 days on, status planned. Use it for any question about dates or deadlines across shows; search finds a show by name.",
   inputSchema: {
     type: "object",
     properties: {

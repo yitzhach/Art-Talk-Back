@@ -3,7 +3,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { Server } from "../../../packages/sdk/test/server";
 import { makeHandler } from "../src/index";
 import { modelSettings } from "../src/model";
-import { APP_GUIDES, MAP_INTRO, SYSTEM } from "../src/prompt";
+import { APP_GUIDES, DATA_INTRO, MAP_INTRO, SYSTEM } from "../src/prompt";
 import { PICTURE_NOTE } from "../src/turn";
 import { api, assistantEnv, chat, lastResult, message, ownerCookie, scripted, startStudio, text, toolUse } from "./harness";
 
@@ -400,5 +400,21 @@ describe("questions across shows by date (D-076)", () => {
     });
     expect(out.status).toBe(200);
     expect(out.events.at(-1)).toMatchObject({ type: "end" });
+  });
+});
+
+describe("the app's own data (D-077)", () => {
+  it("the catalogue's deadlines go in the system prompt after the map, capped, and only when sent", async () => {
+    const DATA = "Catalogue shows with an apply-by date from 2027-03-20 to 2027-05-04 (catalogue id | name | place | apply by | show dates | link | marks):\ncat-1 | Mount Dora | Mount Dora, FL | 2027-03-24 | 2027-11-07 | https://example.test | hearted";
+    const { model, requests } = scripted([() => message([text("Mount Dora: apply by Mar 24")])]);
+    await chat(makeHandler(() => model), assistantEnv(server), cookie, {
+      app: "show-tracker", fresh: true, message: "what do I need to apply to this week?", appMap: "Pages: Browse", appData: DATA + "x".repeat(30000),
+    });
+    const sys = requests[0]!.system as string;
+    expect(sys).toContain(`${MAP_INTRO}\n<app_map>\nPages: Browse\n</app_map>\n\n${DATA_INTRO}\n<app_data>\n${DATA}`);
+    expect(sys.match(/<app_data>\n([\s\S]*)\n<\/app_data>/)![1]).toHaveLength(20000);
+    const { model: m2, requests: r2 } = scripted([() => message([text("ok")])]);
+    await chat(makeHandler(() => m2), assistantEnv(server), cookie, { app: "show-tracker", message: "hi", appData: "   " });
+    expect(r2[0]!.system).not.toContain("<app_data>");
   });
 });

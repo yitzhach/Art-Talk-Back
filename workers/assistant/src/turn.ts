@@ -36,6 +36,8 @@ export interface TurnInput {
   images?: { mediaType: "image/jpeg" | "image/png" | "image/webp" | "image/gif"; data: string }[] | undefined;
   /** The app's map of its own screens, "where: names" per line (D-072); goes in the system prompt, so it caches. */
   appMap?: string | undefined;
+  /** Reference data the app holds and studio-api doesn't, e.g. the Show Tracker's catalogue deadlines (D-077); system prompt too. */
+  appData?: string | undefined;
   /** What the app can do on the device when asked (D-075); "open" shows a place from its map. */
   commands?: string[] | undefined;
 }
@@ -157,7 +159,7 @@ export async function runTurn(
         ...deps.settings,
         model: deps.settings.model ?? "claude-sonnet-5-5",
         max_tokens: 16000,
-        system: systemFor(deps.settings.model ?? "claude-sonnet-5-5", input.app, input.appMap),
+        system: systemFor(deps.settings.model ?? "claude-sonnet-5-5", input.app, input.appMap, input.appData),
         tools: input.commands?.includes("open") ? [...modelTools(tools), OPEN_TOOL] : modelTools(tools),
         // Caches the stable prefix (tools, system, earlier turns) across the loop.
         cache_control: { type: "ephemeral" },

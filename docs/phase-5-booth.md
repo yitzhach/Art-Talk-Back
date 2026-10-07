@@ -81,7 +81,7 @@ is read, never changed.
 10. [ ] Where this goes (Isaac, 2026-10-05): an artist or an AI agent can make and change booths and show
     floors by asking, from words, a photo or a show's map, and can drive the app itself. In order, each on
     9b's actions:
-    - [ ] 10a. Pictures in the chat: a photo, sketch or floor plan attached to a message; the model reads it
+    - [x] 10a. Pictures in the chat: a photo, sketch or floor plan attached to a message; the model reads it
       and builds or changes a booth with `placement_build` / `placement_edit`.
       Plan (D-071): the panel gets a picture button (camera or library); the app shrinks the picture to 1568 px
       JPEG and sends it with the message. The assistant Worker passes it to the model for that turn and stores

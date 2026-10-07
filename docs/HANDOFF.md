@@ -1,4 +1,4 @@
-# Handoff — 2026-10-05
+# Handoff — 2026-10-07
 
 Read this first, then `CLAUDE.md`, then `docs/phase-3.md` (assistant) or `docs/phase-5-booth.md`
 (Booth Studio), whichever your task is.
@@ -45,8 +45,14 @@ Read this first, then `CLAUDE.md`, then `docs/phase-3.md` (assistant) or `docs/p
 - **10a, pictures in the chat (2026-10-07, D-071).** `POST /assistant/chat` takes up to three pictures
   (`images`) with a message; the model sees them that turn only and the stored thread keeps a note
   (`PICTURE_NOTE`). Booth Studio's panel has the 📷 button (booth-studio, `src/studio-assistant.js`).
-  Assistant Worker only, no studio-api change. Production needs "Deploy production assistant" again
-  (Isaac's button) before the model gets the pictures; staging gets them with "Deploy staging".
+  Assistant Worker only, no studio-api change. Merged as #28 + booth-studio#17; live in production
+  since "Deploy production assistant" run 2 (2026-10-07, Isaac's OK, Sonnet 5.5) and on staging
+  ("Deploy staging" run 18, Haiku 4.5). How well the model reads a real sketch is untested: Isaac's
+  phone is the test.
+- **The chat on a phone (Isaac asked again, 2026-10-07).** Booth Studio: bottom right, above the
+  inspector's tab bar (it used to sit on the tab bar; booth-studio `claude/handoff-pictures-live`
+  moves it up). Show Tracker: bottom left. Both show only while signed in to the studio — signed out
+  there is no button, which is the usual answer to "I don't see it".
 
 ## The assistant on the Show Tracker's staging site
 

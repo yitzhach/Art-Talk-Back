@@ -30,7 +30,17 @@ export interface TurnInput {
   fresh?: boolean | undefined;
   /** Continue this past conversation (from the panel's Past chats). */
   threadId?: string | undefined;
+  /** Pictures attached to this message (D-071): the model sees them; the thread keeps a note. */
+  images?: { mediaType: "image/jpeg" | "image/png" | "image/webp" | "image/gif"; data: string }[] | undefined;
 }
+
+/**
+ * What the stored thread keeps in place of a picture (D-071): a picture in
+ * every later request would cost its tokens each turn and could outgrow a
+ * stored row, so later turns have this note and the reply that read it.
+ */
+export const PICTURE_NOTE = (mediaType: string) =>
+  `[The artist attached a picture here (${mediaType}). Pictures aren't kept: later turns see only this note and what you said about it.]`;
 
 /** Each action tool also takes the line for its confirm card; studio-api never sees it in the input. */
 const CARD_FIELD = "card_summary";
@@ -101,9 +111,11 @@ export async function runTurn(
   const byName = new Map(tools.map((t) => [t.name, t]));
   // Exactly the role and content that were stored: nothing added, nothing edited.
   const history = thread.messages.map(({ role, content }) => ({ role, content }) as MessageParam);
+  const said = { type: "text" as const, text: `${contextLine({ ...input, cards: cardOutcomes(cards) })}\n\n${input.message}` };
+  const images = input.images ?? [];
   const turn: MessageParam[] = [{
     role: "user",
-    content: [{ type: "text", text: `${contextLine({ ...input, cards: cardOutcomes(cards) })}\n\n${input.message}` }],
+    content: [...images.map((i) => ({ type: "image" as const, source: { type: "base64" as const, media_type: i.mediaType, data: i.data } })), said],
   }];
 
   let end: TurnEvent = { type: "end", reason: "step_limit" };
@@ -160,7 +172,11 @@ export async function runTurn(
     emit({ type: "end", reason: "error", message: err instanceof Error ? err.message : String(err) });
     throw err;
   }
-  await studio.append(thread.threadId, input.app, turn as { role: "user" | "assistant"; content: unknown }[]);
+  // The thread keeps a note where each picture was, never the picture (D-071).
+  const stored = images.length
+    ? [{ role: "user" as const, content: [...images.map((i) => ({ type: "text" as const, text: PICTURE_NOTE(i.mediaType) })), said] }, ...turn.slice(1)]
+    : turn;
+  await studio.append(thread.threadId, input.app, stored as { role: "user" | "assistant"; content: unknown }[]);
   emit(end);
 }
 

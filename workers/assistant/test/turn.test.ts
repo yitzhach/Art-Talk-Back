@@ -4,6 +4,7 @@ import type { Server } from "../../../packages/sdk/test/server";
 import { makeHandler } from "../src/index";
 import { modelSettings } from "../src/model";
 import { APP_GUIDES, SYSTEM } from "../src/prompt";
+import { PICTURE_NOTE } from "../src/turn";
 import { api, assistantEnv, chat, lastResult, message, ownerCookie, scripted, startStudio, text, toolUse } from "./harness";
 
 let server: Server;
@@ -271,5 +272,61 @@ describe("Booth Studio: the assistant reads a booth and proposes a change in the
     const out = await chat(makeHandler(() => model), assistantEnv(server), cookie, { app: "booth-studio", message: "what's in my booth?" });
     expect(out.status).toBe(200);
     expect(requests).toHaveLength(3);
+  });
+});
+
+describe("pictures in the chat (10a, D-071)", () => {
+  // A 1×1 PNG: the scripted model never decodes it, only the request shape matters.
+  const PNG = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==";
+
+  it("a sketch becomes a new booth on one card; the model sees the picture, the thread keeps only a note", async () => {
+    const { model, requests } = scripted([
+      (req) => {
+        const first = req.messages.at(-1)!.content as any[];
+        expect(first[0]).toEqual({ type: "image", source: { type: "base64", media_type: "image/png", data: PNG } });
+        expect(first[1].type).toBe("text");
+        expect(first[1].text).toMatch(/make this booth$/);
+        return message([text("A 10 by 10 with a table across the back."), toolUse("placement_build", {
+          name: "Sketched booth", show: "artfair", size: "10x10", ops: [{ op: "add_furniture", kind: "table6", x: 0, z: -30 }],
+          card_summary: "New 10×10 booth from your sketch, table across the back",
+        })]);
+      },
+    ]);
+    const out = await chat(makeHandler(() => model), assistantEnv(server), cookie, {
+      app: "booth-studio", message: "make this booth", fresh: true, images: [{ mediaType: "image/png", data: PNG }],
+    });
+    expect(out.events.map((e: any) => e.type)).toEqual(["text", "card", "end"]);
+    expect(requests).toHaveLength(1);
+    // Nothing is built until the tap.
+    expect(await server.DB.prepare("SELECT count(*) AS n FROM placements WHERE name = ?").bind("Sketched booth").first("n")).toBe(0);
+
+    const stored = JSON.stringify((await api(server, cookie, "GET", "/assistant/thread")).data.messages);
+    expect(stored).not.toContain(PNG);
+    expect(stored).toContain(PICTURE_NOTE("image/png"));
+    expect(stored).toContain("make this booth");
+  });
+
+  it("a picture on its own is a message; the next turn sees the note, not the picture", async () => {
+    const { model, requests } = scripted([
+      () => message([text("It's a show map with two rows of booths. Which is yours?")]),
+      () => message([text("Got it.")]),
+    ]);
+    const handler = makeHandler(() => model);
+    await chat(handler, assistantEnv(server), cookie, { app: "booth-studio", message: "", fresh: true, images: [{ mediaType: "image/jpeg", data: PNG }] });
+    expect((requests[0]!.messages.at(-1)!.content as any[])[1].text).toMatch(/\(picture attached\)$/);
+    await chat(handler, assistantEnv(server), cookie, { app: "booth-studio", message: "number 12" });
+    const history = JSON.stringify(requests[1]!.messages);
+    expect(history).not.toContain(PNG);
+    expect(history).toContain(PICTURE_NOTE("image/jpeg"));
+  });
+
+  it("refuses what the model can't take, before anything runs", async () => {
+    const { model } = scripted([]);
+    const handler = makeHandler(() => model);
+    const send = (images: unknown) => chat(handler, assistantEnv(server), cookie, { message: "this one", images });
+    expect((await send([{ mediaType: "application/pdf", data: PNG }])).status).toBe(400);
+    expect((await send(Array(4).fill({ mediaType: "image/png", data: PNG }))).status).toBe(400);
+    expect((await send([{ mediaType: "image/png", data: "not base64!" }])).status).toBe(400);
+    expect((await send([{ mediaType: "image/png", data: "A".repeat(2_000_001) }])).status).toBe(400);
   });
 });

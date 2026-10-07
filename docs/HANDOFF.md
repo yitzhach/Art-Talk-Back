@@ -42,6 +42,12 @@ Read this first, then `CLAUDE.md`, then `docs/phase-3.md` (assistant) or `docs/p
   Isaac's OK, Sonnet 5.5. Booth Studio's production panel followed (booth-studio#16), then the Show Tracker's
   (art-show-tracker#3, `d937aba` on its `main`; its CI fix: a test waited for a stale "OK.").
 
+- **10a, pictures in the chat (2026-10-07, D-071).** `POST /assistant/chat` takes up to three pictures
+  (`images`) with a message; the model sees them that turn only and the stored thread keeps a note
+  (`PICTURE_NOTE`). Booth Studio's panel has the 📷 button (booth-studio, `src/studio-assistant.js`).
+  Assistant Worker only, no studio-api change. Production needs "Deploy production assistant" again
+  (Isaac's button) before the model gets the pictures; staging gets them with "Deploy staging".
+
 ## The assistant on the Show Tracker's staging site
 
 **Working on staging (2026-10-05):** Isaac uses the panel at

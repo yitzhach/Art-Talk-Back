@@ -94,6 +94,8 @@ is read, never changed.
       so a show's map or spec becomes the floor and its 3D walk-through.
     - [ ] 10c. The app as a tool: app commands the panel runs on the device ("export this as a PDF", "take me
       to lighting", "record a walk-through"), from the app's own tool list (`src/toolsearch.js`).
+      First part done (D-075): "take me to …" opens the tab and shows the control (`open_in_app`). Running a
+      command for the artist ("export this as a PDF") is still to do: it presses a button, so it needs a card.
     - [ ] 10d. Agents outside the chat: the same actions through the studio API (and an MCP server), so an
       agent can work on booths without the app open.
 

@@ -18,6 +18,8 @@ export type TurnEvent =
   | { type: "card"; proposal: Record<string, unknown> }
   | { type: "replies"; items: string[] }
   | { type: "done"; action: string; record: Record<string, unknown>; activityIds: string[] }
+  /** The app shows a place on screen (D-075): a tab, section or control from its map. Nothing changes. */
+  | { type: "open"; place: string; control?: string }
   | { type: "end"; reason: "end_turn" | "refusal" | "max_tokens" | "step_limit" | "error"; message?: string };
 
 export interface TurnInput {
@@ -34,7 +36,27 @@ export interface TurnInput {
   images?: { mediaType: "image/jpeg" | "image/png" | "image/webp" | "image/gif"; data: string }[] | undefined;
   /** The app's map of its own screens, "where: names" per line (D-072); goes in the system prompt, so it caches. */
   appMap?: string | undefined;
+  /** What the app can do on the device when asked (D-075); "open" shows a place from its map. */
+  commands?: string[] | undefined;
 }
+
+/**
+ * Not a studio tool: the app runs it on the device (D-075). It only shows a
+ * place, so nothing goes to studio-api and there is no card.
+ */
+export const OPEN_TOOL: Anthropic.Beta.Messages.BetaTool = {
+  name: "open_in_app",
+  description: "Show the artist a place in the app on their screen: open its tab, scroll to the section and highlight the control, without pressing anything or changing the booth. Use it when they ask to be taken to, shown or given a tool (\"take me to lighting\", \"open the layout tab\", \"where's Add man?\"), then say what to tap. place and control are copied exactly from the app's map.",
+  input_schema: {
+    type: "object",
+    properties: {
+      place: { type: "string", description: "The part before the colon in the map, e.g. \"Layout · People for scale\"", maxLength: 200 },
+      control: { type: "string", description: "Optional: one of the names listed after it, e.g. \"Add man\"", maxLength: 200 },
+    },
+    required: ["place"],
+    additionalProperties: false,
+  },
+};
 
 /**
  * What the stored thread keeps in place of a picture (D-071): a picture in
@@ -136,7 +158,7 @@ export async function runTurn(
         model: deps.settings.model ?? "claude-sonnet-5-5",
         max_tokens: 16000,
         system: systemFor(deps.settings.model ?? "claude-sonnet-5-5", input.app, input.appMap),
-        tools: modelTools(tools),
+        tools: input.commands?.includes("open") ? [...modelTools(tools), OPEN_TOOL] : modelTools(tools),
         // Caches the stable prefix (tools, system, earlier turns) across the loop.
         cache_control: { type: "ephemeral" },
         messages: [...history, ...turn],
@@ -159,7 +181,9 @@ export async function runTurn(
           results.push({ type: "tool_result", tool_use_id: use.id, is_error: true, content: "Cut off before the input was complete; not run." });
           continue;
         }
-        const ran = await runTool(studio, byName.get(use.name), use, emit);
+        const ran = use.name === OPEN_TOOL.name && input.commands?.includes("open")
+          ? { result: openInApp(use, emit) }
+          : await runTool(studio, byName.get(use.name), use, emit);
         if (ran.card) cards++;
         results.push(ran.result);
       }
@@ -180,6 +204,15 @@ export async function runTurn(
     : turn;
   await studio.append(thread.threadId, input.app, stored as { role: "user" | "assistant"; content: unknown }[]);
   emit(end);
+}
+
+function openInApp(use: Anthropic.Beta.Messages.BetaToolUseBlock, emit: (e: TurnEvent) => void): ToolResult {
+  const input = (use.input ?? {}) as Record<string, unknown>;
+  const place = typeof input.place === "string" ? input.place.trim().slice(0, 200) : "";
+  if (!place) return result(use, "Give the place, copied from the app's map.", true);
+  const control = typeof input.control === "string" && input.control.trim() ? input.control.trim().slice(0, 200) : undefined;
+  emit({ type: "open", place, ...(control ? { control } : {}) });
+  return result(use, "The app is showing it on the artist's screen. Nothing was changed: tell them what to tap there.");
 }
 
 const result = (use: { id: string }, content: unknown, isError = false): ToolResult => ({

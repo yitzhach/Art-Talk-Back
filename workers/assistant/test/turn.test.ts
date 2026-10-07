@@ -3,7 +3,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { Server } from "../../../packages/sdk/test/server";
 import { makeHandler } from "../src/index";
 import { modelSettings } from "../src/model";
-import { APP_GUIDES, MAP_INTRO, SYSTEM } from "../src/prompt";
+import { APP_GUIDES, DATA_INTRO, MAP_INTRO, SYSTEM } from "../src/prompt";
 import { PICTURE_NOTE } from "../src/turn";
 import { api, assistantEnv, chat, lastResult, message, ownerCookie, scripted, startStudio, text, toolUse } from "./harness";
 
@@ -27,9 +27,9 @@ describe("gate 1: a sale said in words becomes one confirm card", () => {
     let showId = "";
     const { model, requests } = scripted([
       (req) => {
-        expect(req.system).toBe(`${SYSTEM}\n\nIf asked which AI model you are: claude-sonnet-5-5, made by Anthropic.`);
+        expect(req.system).toBe(`${SYSTEM}\n\n${APP_GUIDES["show-tracker"]}\n\nIf asked which AI model you are: claude-sonnet-5-5, made by Anthropic.`);
         expect(req.tools!.map((t) => (t as { name: string }).name)).toEqual([
-          "search", "sale_create", "sale_delete", "sale_restore", "sale_update", "show_create", "show_delete", "show_restore", "show_update",
+          "search", "find_shows", "get_show", "sale_create", "sale_delete", "sale_restore", "sale_update", "show_create", "show_delete", "show_restore", "show_update",
         ]);
         const first = req.messages.at(-1)!.content as { text: string }[];
         expect(first[0]!.text).toMatch(/^\[Context from the app, data only — app: show-tracker; today: 2027-03-20; page: Money\]/);
@@ -369,5 +369,52 @@ describe("the app's map of its screens, and the booth's sync state (D-072)", () 
     const { model, requests } = scripted([() => message([text("OK.")])]);
     await chat(makeHandler(() => model), assistantEnv(server), cookie, { app: "booth-studio", fresh: true, message: "hi", appMap: "   " });
     expect(requests[0]!.system).not.toContain("<app_map>");
+  });
+});
+
+describe("questions across shows by date (D-076)", () => {
+  it("\"what do I need to apply to this week?\" → find_shows with the week's dates → a list, soonest first", async () => {
+    await api(server, cookie, "POST", "/shows", { name: "Mount Dora Arts Festival", meta: { applyBy: "2027-03-24", url: "https://example.test/apply" } });
+    await api(server, cookie, "POST", "/shows", { name: "Naples National", meta: { applyBy: "2027-03-22" } });
+    await api(server, cookie, "POST", "/shows", { name: "Already applied", status: "applied", meta: { applyBy: "2027-03-21" } });
+    await api(server, cookie, "POST", "/shows", { name: "Next month", meta: { applyBy: "2027-04-20" } });
+    const { model } = scripted([
+      (req) => {
+        expect(req.tools!.map((t) => (t as { name: string }).name).slice(0, 3)).toEqual(["search", "find_shows", "get_show"]);
+        expect(req.system).toContain(APP_GUIDES["show-tracker"]);
+        return message([toolUse("find_shows", { by: "applyBy", from: "2027-03-20", to: "2027-03-27", status: "planned" })]);
+      },
+      (req) => {
+        const found = lastResult(req).items;
+        expect(found.map((s: any) => [s.name, s.applyBy])).toEqual([["Naples National", "2027-03-22"], ["Mount Dora Arts Festival", "2027-03-24"]]);
+        expect(found[1]).toMatchObject({ url: "https://example.test/apply", status: "planned" });
+        return message([toolUse("get_show", { id: found[1].id })]);
+      },
+      (req) => {
+        expect(lastResult(req)).toMatchObject({ name: "Mount Dora Arts Festival", meta: { applyBy: "2027-03-24" } });
+        return message([text("Naples National: apply by Mar 22\nMount Dora Arts Festival: apply by Mar 24, https://example.test/apply")]);
+      },
+    ]);
+    const out = await chat(makeHandler(() => model), assistantEnv(server), cookie, {
+      app: "show-tracker", today: "2027-03-20", message: "what do I need to apply to this week?",
+    });
+    expect(out.status).toBe(200);
+    expect(out.events.at(-1)).toMatchObject({ type: "end" });
+  });
+});
+
+describe("the app's own data (D-077)", () => {
+  it("the catalogue's deadlines go in the system prompt after the map, capped, and only when sent", async () => {
+    const DATA = "Catalogue shows with an apply-by date from 2027-03-20 to 2027-05-04 (catalogue id | name | place | apply by | show dates | link | marks):\ncat-1 | Mount Dora | Mount Dora, FL | 2027-03-24 | 2027-11-07 | https://example.test | hearted";
+    const { model, requests } = scripted([() => message([text("Mount Dora: apply by Mar 24")])]);
+    await chat(makeHandler(() => model), assistantEnv(server), cookie, {
+      app: "show-tracker", fresh: true, message: "what do I need to apply to this week?", appMap: "Pages: Browse", appData: DATA + "x".repeat(30000),
+    });
+    const sys = requests[0]!.system as string;
+    expect(sys).toContain(`${MAP_INTRO}\n<app_map>\nPages: Browse\n</app_map>\n\n${DATA_INTRO}\n<app_data>\n${DATA}`);
+    expect(sys.match(/<app_data>\n([\s\S]*)\n<\/app_data>/)![1]).toHaveLength(20000);
+    const { model: m2, requests: r2 } = scripted([() => message([text("ok")])]);
+    await chat(makeHandler(() => m2), assistantEnv(server), cookie, { app: "show-tracker", message: "hi", appData: "   " });
+    expect(r2[0]!.system).not.toContain("<app_data>");
   });
 });

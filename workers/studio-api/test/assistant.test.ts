@@ -211,7 +211,7 @@ describe("tools per app (gate 3)", () => {
     const a = await makeStudio();
     const res = await call("/v1/assistant/tools?app=show-tracker", { cookie: a.cookie, headers: ASSISTANT });
     expect(res.data.tools.map((t: any) => t.name)).toEqual([
-      "search", "sale_create", "sale_delete", "sale_restore", "sale_update", "show_create", "show_delete", "show_restore", "show_update",
+      "search", "find_shows", "get_show", "sale_create", "sale_delete", "sale_restore", "sale_update", "show_create", "show_delete", "show_restore", "show_update",
     ]);
     for (const t of res.data.tools) {
       expect(t.name).toMatch(/^[a-zA-Z0-9_-]{1,64}$/);

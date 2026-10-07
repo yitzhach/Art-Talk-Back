@@ -6,7 +6,7 @@ import { type Model, anthropicModel, modelSettings } from "./model";
 import { StudioError, studioFor } from "./studio";
 import { type TurnEvent, type TurnInput, runTurn } from "./turn";
 
-interface ChatBody { threadId?: unknown; fresh?: unknown; message?: unknown; app?: unknown; today?: unknown; page?: unknown; record?: unknown; images?: unknown; appMap?: unknown; commands?: unknown }
+interface ChatBody { threadId?: unknown; fresh?: unknown; message?: unknown; app?: unknown; today?: unknown; page?: unknown; record?: unknown; images?: unknown; appMap?: unknown; appData?: unknown; commands?: unknown }
 
 /** Pictures the app attaches to one message (D-071): the app shrinks them first. */
 const IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"] as const;
@@ -47,10 +47,11 @@ function parse(body: ChatBody): TurnInput | string {
     ? { type: r.type.slice(0, 30), id: r.id.slice(0, 40), label: r.label.slice(0, 200), ...(typeof r.note === "string" && r.note ? { note: r.note.slice(0, 300) } : {}) } : undefined;
   // The app's own list of its tabs, bars and buttons (D-072): data, kept short.
   const appMap = typeof body.appMap === "string" && body.appMap.trim() ? body.appMap.slice(0, 15000) : undefined;
+  const appData = typeof body.appData === "string" && body.appData.trim() ? body.appData.slice(0, 20000) : undefined;
   const threadId = typeof body.threadId === "string" && /^[0-9A-HJKMNP-TV-Z]{26}$/i.test(body.threadId) ? body.threadId : undefined;
   // What the app runs on the device when asked (D-075); only names it knows.
   const commands = Array.isArray(body.commands) ? body.commands.filter((c): c is string => c === "open") : undefined;
-  return { app, message, today, page, record, fresh: body.fresh === true, threadId, images, appMap, ...(commands?.length ? { commands } : {}) };
+  return { app, message, today, page, record, fresh: body.fresh === true, threadId, images, appMap, appData, ...(commands?.length ? { commands } : {}) };
 }
 
 /** Builds the Worker; tests pass their own model. */

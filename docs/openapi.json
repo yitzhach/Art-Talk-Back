@@ -328,6 +328,104 @@
           "notifySms"
         ]
       },
+      "ShowDateItem": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "version": {
+            "type": "integer"
+          },
+          "name": {
+            "type": "string"
+          },
+          "venue": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "city": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "planned",
+              "applied",
+              "accepted",
+              "declined",
+              "done",
+              "cancelled"
+            ]
+          },
+          "trackerStatus": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "applyBy": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "startsOn": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "endsOn": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "url": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "feeCents": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "juryFeeCents": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "currency": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "version",
+          "name",
+          "venue",
+          "city",
+          "status",
+          "trackerStatus",
+          "applyBy",
+          "startsOn",
+          "endsOn",
+          "url",
+          "feeCents",
+          "juryFeeCents",
+          "currency"
+        ]
+      },
       "Show": {
         "type": "object",
         "properties": {
@@ -2608,6 +2706,123 @@
           },
           "409": {
             "description": "The record changed since you loaded it",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/shows/dates": {
+      "get": {
+        "tags": [
+          "records"
+        ],
+        "summary": "Shows by apply-by or start date, soonest first",
+        "description": "For the assistant's find_shows tool and for agents. `by` picks the date (applyBy is the Show Tracker's, from meta); `from` and `to` are inclusive. Shows the tracker hides are left out. Without a range, shows with no date come last.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "applyBy",
+                "startsOn"
+              ],
+              "default": "applyBy"
+            },
+            "required": false,
+            "name": "by",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+            },
+            "required": false,
+            "name": "from",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+            },
+            "required": false,
+            "name": "to",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-z]+(,[a-z]+)*$",
+              "description": "Comma-separated: planned,applied,accepted,declined,done,cancelled"
+            },
+            "required": false,
+            "description": "Comma-separated: planned,applied,accepted,declined,done,cancelled",
+            "name": "status",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "default": 25
+            },
+            "required": false,
+            "name": "limit",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/ShowDateItem"
+                      }
+                    }
+                  },
+                  "required": [
+                    "items"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not allowed for your role",
             "content": {
               "application/json": {
                 "schema": {

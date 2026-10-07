@@ -179,6 +179,11 @@ describe("studio A can't reach studio B", () => {
     }],
     ["post", "/clients", async () => expect((await call("/v1/clients", { method: "POST", cookie: A.cookie, json: { name: "A's" } })).data.studioId).toBe(A.studioId)],
     ["get", "/assistant/proposals", async () => expect((await call("/v1/assistant/proposals", { cookie: A.cookie })).data.items).toEqual([])],
+    ["get", "/shows/dates", async () => {
+      // B's undated show is never in A's list, dated or not.
+      expect((await call("/v1/shows/dates", { cookie: A.cookie })).data.items.map((s: any) => s.id)).not.toContain(b.show.id);
+      expect((await call("/v1/shows/dates?by=startsOn", { cookie: A.cookie })).data.items.map((s: any) => s.id)).not.toContain(b.show.id);
+    }],
     ["get", "/search", async () => expect((await call("/v1/search?q=B's", { cookie: A.cookie })).data.items).toEqual([])],
     ["get", "/assistant/tools", async () => {
       // B set show.create to confirm; A's tools still say auto.

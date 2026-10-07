@@ -23,6 +23,8 @@
 - Step 10a (D-071): the assistant takes up to three pictures with a message (a photo, sketch or show map); the model reads them that turn and the thread keeps a note in their place. Prompt: say what was read; take sizes from the picture, else a 10 by 10.
 - Shipped 2026-10-07: 10a pictures (#28, booth-studio#17), staging run 18, "Deploy production assistant" run 2. Booth Studio's chat button moved above the phone tab bar.
 - D-072: the app's map of its screens (`appMap`) goes in the assistant's system prompt, and the booth's sync state in the context line; Booth Studio's guide says it saves by itself. Isaac's "it can't see the buttons".
+- D-073: the app map's intro no longer names Booth Studio's "Find a tool" (moved to its guide), so the Show Tracker can send its own map (art-show-tracker, same branch).
+- Assistant panels on a phone (Isaac's list, 2026-10-07; app repos only): Backspace and other keys typed in the chat no longer reach the page's shortcuts; dark with the app; a header button and a phone icon; a pop-up that drags, resizes and shrinks (booth-studio#20, art-show-tracker same branch).
 - D-074: figures for scale through the booth ops (`add_person`, `change_person`, `remove_person`) and in `describe_booth`; Booth Studio's guide names them. Isaac's "a second man, looking left, 7 feet tall" (booth-studio `claude/people-ops`).
 - Actions may give the confirm card's lines (`card`) and their tool's JSON Schema (`toolSchema`); `placement.edit` may leave out `version` like update and delete.
 - studio-assistant runs read tools by the route the tool names (`read.path`), so a new read tool needs no assistant code.

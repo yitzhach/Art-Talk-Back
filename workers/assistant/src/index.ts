@@ -6,7 +6,7 @@ import { type Model, anthropicModel, modelSettings } from "./model";
 import { StudioError, studioFor } from "./studio";
 import { type TurnEvent, type TurnInput, runTurn } from "./turn";
 
-interface ChatBody { threadId?: unknown; fresh?: unknown; message?: unknown; app?: unknown; today?: unknown; page?: unknown; record?: unknown; images?: unknown }
+interface ChatBody { threadId?: unknown; fresh?: unknown; message?: unknown; app?: unknown; today?: unknown; page?: unknown; record?: unknown; images?: unknown; appMap?: unknown }
 
 /** Pictures the app attaches to one message (D-071): the app shrinks them first. */
 const IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"] as const;
@@ -42,11 +42,13 @@ function parse(body: ChatBody): TurnInput | string {
   const app = typeof body.app === "string" && /^[a-z0-9-]{1,40}$/.test(body.app) ? body.app : "studio";
   const today = typeof body.today === "string" && /^\d{4}-\d{2}-\d{2}$/.test(body.today) ? body.today : new Date().toISOString().slice(0, 10);
   const page = typeof body.page === "string" ? body.page.slice(0, 80) : undefined;
-  const r = body.record as { type?: unknown; id?: unknown; label?: unknown } | undefined;
+  const r = body.record as { type?: unknown; id?: unknown; label?: unknown; note?: unknown } | undefined;
   const record = r && typeof r.type === "string" && typeof r.id === "string" && typeof r.label === "string"
-    ? { type: r.type.slice(0, 30), id: r.id.slice(0, 40), label: r.label.slice(0, 200) } : undefined;
+    ? { type: r.type.slice(0, 30), id: r.id.slice(0, 40), label: r.label.slice(0, 200), ...(typeof r.note === "string" && r.note ? { note: r.note.slice(0, 300) } : {}) } : undefined;
+  // The app's own list of its tabs, bars and buttons (D-072): data, kept short.
+  const appMap = typeof body.appMap === "string" && body.appMap.trim() ? body.appMap.slice(0, 15000) : undefined;
   const threadId = typeof body.threadId === "string" && /^[0-9A-HJKMNP-TV-Z]{26}$/i.test(body.threadId) ? body.threadId : undefined;
-  return { app, message, today, page, record, fresh: body.fresh === true, threadId, images };
+  return { app, message, today, page, record, fresh: body.fresh === true, threadId, images, appMap };
 }
 
 /** Builds the Worker; tests pass their own model. */

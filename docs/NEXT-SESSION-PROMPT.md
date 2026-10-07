@@ -27,6 +27,6 @@ Paste this into a new chat:
 >    (D-068): ask Isaac each time; "Deploy staging" (keep `assistant_model` on Haiku 4.5) is yours.
 >
 > Isaac isn't technical: give him clicks, not commands, all in one list. Use the `backend-builder`
-> skill for every Art-Talk-Back change. Next decision is D-072 (fetch the default branch first:
+> skill for every Art-Talk-Back change. Next decision is D-073 (fetch the default branch first:
 > another session may have taken it). Add a `CHANGELOG.md` line per item; report each item as
 > Changed / Verified / Left.

@@ -29,23 +29,24 @@ Read this first, then `CLAUDE.md`, then `docs/phase-3.md` (assistant) or `docs/p
   build after the merge passed, so it didn't matter.
   **Isaac's clicks still to do (each repo):** Allow auto-merge; the `ci` ruleset requiring CI;
   and the Cloudflare connector on claude.ai. Until the ruleset exists, don't turn on auto-merge.
-- **Where each chat panel is (Isaac asked, 2026-10-05).** Show Tracker: staging only (see "The
-  assistant on the Show Tracker's staging site"). Booth Studio: "Ask the assistant" (9c) is built and
+- **Where each chat panel is (Isaac asked, 2026-10-05).** Show Tracker: in production since
+  2026-10-06 (art-show-tracker#3, ledger and Money pages), and on staging. Booth Studio: "Ask the assistant" (9c) is built and
   shows only where its Worker has an `ASSISTANT` binding — `studio-booth-studio-staging` has one
   (`studio-assistant-staging`), and production has `studio-assistant` since 2026-10-06
   (booth-studio#16, live on the phone too; Isaac confirmed). Chats from Booth Studio get the
   assistant's Booth Studio guide (`APP_GUIDES` in `workers/assistant/src/prompt.ts`).
-- **Phase 3 (assistant v0): live on staging only.** The key and the AI Gateway exist; another session
+- **Phase 3 (assistant v0): live in production since 2026-10-06.** The key and the AI Gateway exist; another session
   ran it on staging on 2026-10-05 (D-058…D-060; `studio-assistant-staging` runs Haiku 4.5, and the
   Show Tracker's staging Worker carries the panel from app branch `claude/assistant-panel`). **Production
   `studio-assistant` exists since 2026-10-06**: "Deploy production assistant" (D-068) run 1 green,
-  Isaac's OK, Sonnet 5.5. Booth Studio's production panel followed (booth-studio#16).
+  Isaac's OK, Sonnet 5.5. Booth Studio's production panel followed (booth-studio#16), then the Show Tracker's
+  (art-show-tracker#3, `d937aba` on its `main`; its CI fix: a test waited for a stale "OK.").
 
 ## The assistant on the Show Tracker's staging site
 
 **Working on staging (2026-10-05):** Isaac uses the panel at
-`studio-show-tracker-staging.bobdylan2000.workers.dev` (ledger and Money pages only; the live
-art-show-tracker has no panel yet). A "missing button" report that day was the wrong address.
+`studio-show-tracker-staging.bobdylan2000.workers.dev` (ledger and Money pages only). Since
+2026-10-06 the live art-show-tracker has the same panel (art-show-tracker#3). A "missing button" report that day was the wrong address.
 
 **What the panel does on staging (all tested: app `build/assistant-tests.cjs` 43/43, 188 here):**
 confirm card → Confirm → Saved → Undo (gate 1 done by Isaac on staging, sale stored as
@@ -71,8 +72,7 @@ as a pair; see "How to work"). Once it merged, the failed job was re-run, CI pas
 production API" deployed the default branch: `studio-api` `a4310818`, with the show-floor ops (10b).
 
 **Still open for the assistant:** Isaac's 20+ requests in his own words for the eval set (gate 4);
-merging app branch `claude/assistant-panel` into the Show Tracker's `main` (production
-`studio-assistant` now exists, 2026-10-06, so nothing on this side blocks it).
+Isaac's first use of the Show Tracker chat in production (merged 2026-10-06, art-show-tracker#3).
 
 ## How to work
 

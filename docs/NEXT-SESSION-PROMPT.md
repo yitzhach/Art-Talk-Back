@@ -13,10 +13,10 @@ Paste this into a new chat:
 >    is red on either default branch, `studio-api`'s live version is the one "Deploy production
 >    API" last deployed, and `workers/studio-api/src/vendor/booth-scene.js` matches
 >    booth-studio's `npm run bundle:scene`.
-> 2. The chat: the Show Tracker's is on its staging site only; Booth Studio's ("Ask the
+> 2. The chat: both are in production since 2026-10-06 — the Show Tracker's
+>    (art-show-tracker#3) and Booth Studio's ("Ask the
 >    assistant", 9c) is in production since 2026-10-06 ("Deploy production assistant" run 1,
->    booth-studio#16). The tracker's panel branch can now reach its `main` (the tracker repo's
->    work). Ask him how the Booth Studio chat went on staging and fix what he finds.
+>    booth-studio#16). Ask him how the Booth Studio chat went on staging and fix what he finds.
 > 3. Walk him through his first real use of Booth Studio's sign-in, in clicks: on
 >    `studio-booth-studio-staging`, sign in, Import my existing projects, open the booth on his
 >    phone; then production. Record what he says in booth-studio HANDOFF → Next.

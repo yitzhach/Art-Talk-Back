@@ -20,6 +20,8 @@ export type TurnEvent =
   | { type: "done"; action: string; record: Record<string, unknown>; activityIds: string[] }
   /** The app shows a place on screen (D-075): a tab, section or control from its map. Nothing changes. */
   | { type: "open"; place: string; control?: string }
+  /** The app runs one of its own actions on the device, after the artist confirms its card (D-079). */
+  | { type: "device"; id: string; name: string; input: Record<string, unknown>; summary: string }
   | { type: "end"; reason: "end_turn" | "refusal" | "max_tokens" | "step_limit" | "error"; message?: string };
 
 export interface TurnInput {
@@ -40,6 +42,16 @@ export interface TurnInput {
   appData?: string | undefined;
   /** What the app can do on the device when asked (D-075); "open" shows a place from its map. */
   commands?: string[] | undefined;
+  /** Actions the app runs on the device itself, each behind a confirm card (D-079). */
+  deviceActions?: DeviceAction[] | undefined;
+  /** How the newest device cards ended, from the app: one plain line each (D-079). */
+  deviceOutcomes?: string[] | undefined;
+}
+
+export interface DeviceAction {
+  name: string;
+  description: string;
+  inputSchema: Record<string, unknown>;
 }
 
 /**
@@ -137,7 +149,12 @@ export async function runTurn(
   const byName = new Map(tools.map((t) => [t.name, t]));
   // Exactly the role and content that were stored: nothing added, nothing edited.
   const history = thread.messages.map(({ role, content }) => ({ role, content }) as MessageParam);
-  const said = { type: "text" as const, text: `${contextLine({ ...input, cards: cardOutcomes(cards) })}\n\n${input.message}` };
+  // A device action never shadows a studio tool or open_in_app: those win.
+  const device = new Map((input.deviceActions ?? []).filter((d) => !byName.has(d.name) && d.name !== OPEN_TOOL.name).map((d) => [d.name, d]));
+  const deviceTools: Anthropic.Beta.Messages.BetaTool[] = [...device.values()].map((d) => modelTools([{
+    name: d.name, description: `${d.description} (Runs in the app on this device after the artist taps Confirm.)`, inputSchema: d.inputSchema, action: d.name,
+  } as Tool])[0]!);
+  const said = { type: "text" as const, text: `${contextLine({ ...input, cards: [...cardOutcomes(cards), ...(input.deviceOutcomes ?? [])] })}\n\n${input.message}` };
   const images = input.images ?? [];
   const turn: MessageParam[] = [{
     role: "user",
@@ -160,7 +177,7 @@ export async function runTurn(
         model: deps.settings.model ?? "claude-sonnet-5-5",
         max_tokens: 16000,
         system: systemFor(deps.settings.model ?? "claude-sonnet-5-5", input.app, input.appMap, input.appData),
-        tools: input.commands?.includes("open") ? [...modelTools(tools), OPEN_TOOL] : modelTools(tools),
+        tools: [...modelTools(tools), ...(input.commands?.includes("open") ? [OPEN_TOOL] : []), ...deviceTools],
         // Caches the stable prefix (tools, system, earlier turns) across the loop.
         cache_control: { type: "ephemeral" },
         messages: [...history, ...turn],
@@ -185,7 +202,9 @@ export async function runTurn(
         }
         const ran = use.name === OPEN_TOOL.name && input.commands?.includes("open")
           ? { result: openInApp(use, emit) }
-          : await runTool(studio, byName.get(use.name), use, emit);
+          : device.has(use.name)
+            ? deviceCard(use, emit)
+            : await runTool(studio, byName.get(use.name), use, emit);
         if (ran.card) cards++;
         results.push(ran.result);
       }
@@ -215,6 +234,21 @@ function openInApp(use: Anthropic.Beta.Messages.BetaToolUseBlock, emit: (e: Turn
   const control = typeof input.control === "string" && input.control.trim() ? input.control.trim().slice(0, 200) : undefined;
   emit({ type: "open", place, ...(control ? { control } : {}) });
   return result(use, "The app is showing it on the artist's screen. Nothing was changed: tell them what to tap there.");
+}
+
+/**
+ * A device action leaves a card on the artist's screen and the app runs it on
+ * Confirm (D-079). Nothing reaches studio-api: the app's records live on the
+ * device. The app reports how it ended on the next turn (deviceOutcomes).
+ */
+function deviceCard(use: Anthropic.Beta.Messages.BetaToolUseBlock, emit: (e: TurnEvent) => void): { result: ToolResult; card: true } {
+  const { [CARD_FIELD]: summary, ...input } = (use.input ?? {}) as Record<string, unknown>;
+  const line = String(summary || use.name).slice(0, 300);
+  emit({ type: "device", id: use.id, name: use.name, input, summary: line });
+  return { card: true, result: result(use, {
+    saved: false, card: use.id,
+    note: "A confirm card is on the artist's screen. The app does this on their device when they tap Confirm; nothing is done until then.",
+  }) };
 }
 
 const result = (use: { id: string }, content: unknown, isError = false): ToolResult => ({

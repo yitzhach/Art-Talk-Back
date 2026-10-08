@@ -151,6 +151,8 @@ export const Me = z.object({
     clientId: z.string().nullable(),
   })),
   activeStudioId: z.string().nullable(),
+  /** D-080: whether this person has set a password (sign-in by code always works). */
+  hasPassword: z.boolean().optional(),
 });
 
 // ------------------------------------------------------------------- shows

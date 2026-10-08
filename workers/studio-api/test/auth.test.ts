@@ -129,3 +129,53 @@ describe("sign in by email code", () => {
     expect(res.data).toEqual({ error: { code: "unauthenticated", message: "Sign in first" } });
   });
 });
+
+describe("an optional password (D-080)", () => {
+  const byCode = async (email: string) => {
+    await call("/v1/auth/code", { method: "POST", json: { email } });
+    const res = await call("/v1/auth/verify", { method: "POST", json: { email, code: mail.codes[email] } });
+    return cookieFrom(res.headers);
+  };
+  const login = (email: string, password: string) => call("/v1/auth/password/login", { method: "POST", json: { email, password } });
+
+  it("is set once signed in, then signs in instead of a code; the code still works", async () => {
+    const cookie = await byCode("pw@example.test");
+    expect((await call("/v1/me", { cookie })).data.hasPassword).toBe(false);
+    expect((await call("/v1/auth/password", { method: "PUT", cookie, json: { password: "short" } })).status).toBe(400);
+    expect((await call("/v1/auth/password", { method: "PUT", cookie, json: { password: "harbour mural 2026" } })).status).toBe(204);
+    expect((await call("/v1/me", { cookie })).data.hasPassword).toBe(true);
+    expect(await rowCount("SELECT COUNT(*) AS n FROM users WHERE password_hash LIKE '%harbour%'")).toBe(0);
+
+    const ok = await login("PW@example.test", "harbour mural 2026");
+    expect(ok.status).toBe(200);
+    expect((await call("/v1/me", { cookie: cookieFrom(ok.headers) })).data.user.email).toBe("pw@example.test");
+    expect((await byCode("pw@example.test")).length).toBeGreaterThan(20);
+  });
+
+  it("gives one answer for a wrong password, no password, or no account", async () => {
+    await byCode("nopw@example.test");
+    const answers = await Promise.all([login("pw@example.test", "wrong wrong wrong"), login("nopw@example.test", "anything at all"), login("ghost@example.test", "anything at all")]);
+    expect(answers.map((r) => r.status)).toEqual([400, 400, 400]);
+    expect(new Set(answers.map((r) => r.data.error.message)).size).toBe(1);
+  });
+
+  it("locks password sign-in for 15 minutes after 5 wrong in a row", async () => {
+    const cookie = await byCode("lock@example.test");
+    await call("/v1/auth/password", { method: "PUT", cookie, json: { password: "the right one here" } });
+    for (let i = 0; i < 5; i++) expect((await login("lock@example.test", "not the right one")).status).toBe(400);
+    const locked = await login("lock@example.test", "the right one here");
+    expect(locked.status).toBe(429);
+    expect(locked.data.error.code).toBe("rate_limited");
+  });
+
+  it("can be removed; needs a session; a new one signs other sessions out", async () => {
+    expect((await call("/v1/auth/password", { method: "PUT", json: { password: "no session here" } })).status).toBe(401);
+    const one = await byCode("rm@example.test");
+    const two = await byCode("rm@example.test");
+    await call("/v1/auth/password", { method: "PUT", cookie: one, json: { password: "first password!" } });
+    expect((await call("/v1/me", { cookie: two })).status).toBe(401);
+    expect((await call("/v1/me", { cookie: one })).status).toBe(200);
+    expect((await call("/v1/auth/password", { method: "DELETE", cookie: one })).status).toBe(204);
+    expect((await login("rm@example.test", "first password!")).status).toBe(400);
+  });
+});

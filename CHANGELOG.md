@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+### Sign-in · optional password (D-080)
+- Migration 0007 (`users.password_hash`, failures, lock); `POST /auth/password/login`, `PUT`/`DELETE /auth/password`; `Me.hasPassword`. The emailed code always still works.
+
 ### Phase 6 · Artist OS joins the platform (D-078)
 - Plan in `docs/phase-6-fineartos.md`; D-078 (sign-in + assistant, Isaac), D-079 (device actions, records stay on the device in v1).
 - Assistant: `deviceActions` / `deviceOutcomes` on `POST /assistant/chat` — app-declared tools that become a `device` card the app runs; Artist OS guide (`fineartos`).

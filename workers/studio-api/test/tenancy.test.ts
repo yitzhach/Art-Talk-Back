@@ -227,10 +227,11 @@ describe("studio A can't reach studio B", () => {
   }
 
   it("covers every route in the API", async () => {
-    // Not studio-scoped: sign-in (no studio yet), /me (the caller's own memberships),
+    // Not studio-scoped: sign-in (no studio yet), /me and the password (the caller's own account),
     // the signed content links (the signature names one file), and the spec itself.
     const exempt = new Set([
       "post /auth/code", "post /auth/verify", "post /auth/logout", "get /me",
+      "post /auth/password/login", "put /auth/password", "delete /auth/password",
       "put /files/{id}/content", "get /files/{id}/content",
     ]);
     const doc = (await call("/v1/openapi.json")).data;

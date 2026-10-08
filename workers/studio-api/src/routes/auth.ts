@@ -8,7 +8,7 @@ import {
 } from "../auth/session";
 import { cookie } from "../auth/access";
 import type { AppEnv, Env } from "../env";
-import { safeEqual, sha256, sixDigitCode } from "../lib/crypto";
+import { checkPassword, hashPassword, safeEqual, sha256, sixDigitCode } from "../lib/crypto";
 import { HttpError } from "../lib/errors";
 import { inSeconds, nowIso } from "../lib/time";
 import { ErrorBody, body, errors, json, newApp, send } from "./common";
@@ -73,15 +73,85 @@ authRoutes.openapi(
       throw new HttpError("bad_request", "That code is not right.");
     }
     await c.env.DB.prepare("DELETE FROM login_codes WHERE email = ?").bind(email).run();
+    return signIn(c, email);
+  },
+);
 
+const PASSWORD_TRIES = 5; // in a row, then 15 minutes off (D-080)
+const PASSWORD_LOCK = 15 * 60;
+const Password = z.string().min(10, "Use at least 10 characters.").max(200);
+
+authRoutes.openapi(
+  createRoute({
+    method: "post", path: "/auth/password/login", tags: ["auth"], security: [], summary: "Sign in with email and password (D-080)",
+    request: { body: body(z.object({ email: Email, password: z.string().min(1).max(200) })) },
+    responses: { 200: json(Me, "Signed in; sets the session cookie"), 400: errors[400], 429: err429("Too many wrong passwords: 15 minutes off; the emailed code still works") },
+  }),
+  async (c) => {
+    const { email, password } = c.req.valid("json");
+    const user = await c.env.DB.prepare(
+      "SELECT id, password_hash, password_failures, password_locked_until FROM users WHERE email = ? AND deleted_at IS NULL",
+    ).bind(email).first<{ id: string; password_hash: string | null; password_failures: number; password_locked_until: string | null }>();
+    if (user?.password_locked_until && user.password_locked_until > nowIso()) {
+      throw new HttpError("rate_limited", "Too many wrong passwords. Try again in 15 minutes, or sign in with an emailed code.");
+    }
+    // One answer for an unknown address, no password set, or a wrong one, so addresses can't be probed.
+    if (!(await checkPassword(password, user?.password_hash ?? null))) {
+      if (user?.password_hash) {
+        const lock = user.password_failures + 1 >= PASSWORD_TRIES;
+        await c.env.DB.prepare(
+          "UPDATE users SET password_failures = CASE WHEN ? THEN 0 ELSE password_failures + 1 END, password_locked_until = CASE WHEN ? THEN ? ELSE password_locked_until END WHERE id = ?",
+        ).bind(lock ? 1 : 0, lock ? 1 : 0, inSeconds(PASSWORD_LOCK), user.id).run();
+      }
+      throw new HttpError("bad_request", "That email and password don't match. You can always sign in with an emailed code.");
+    }
+    await c.env.DB.prepare("UPDATE users SET password_failures = 0, password_locked_until = NULL WHERE id = ?").bind(user!.id).run();
+    return signIn(c, email);
+  },
+);
+
+authRoutes.openapi(
+  createRoute({
+    method: "put", path: "/auth/password", tags: ["auth"], summary: "Set or change your password (D-080)",
+    request: { body: body(z.object({ password: Password })) },
+    responses: { 204: { description: "Password set; other sessions are signed out" }, 400: errors[400], 401: errors[401] },
+  }),
+  async (c) => {
+    const auth = requireAuth(c);
+    if (!auth.sessionId) throw new HttpError("bad_request", "Sign in with a code to set a password");
+    const { password } = c.req.valid("json");
+    await c.env.DB.batch([
+      c.env.DB.prepare("UPDATE users SET password_hash = ?, password_failures = 0, password_locked_until = NULL, updated_at = ? WHERE id = ?")
+        .bind(await hashPassword(password), nowIso(), auth.userId),
+      // A new password ends every other session, this one kept.
+      c.env.DB.prepare("DELETE FROM sessions WHERE user_id = ? AND id != ?").bind(auth.userId, auth.sessionId),
+    ]);
+    return c.body(null, 204);
+  },
+);
+
+authRoutes.openapi(
+  createRoute({
+    method: "delete", path: "/auth/password", tags: ["auth"], summary: "Remove your password; sign in by code only (D-080)",
+    responses: { 204: { description: "Password removed" }, 401: errors[401] },
+  }),
+  async (c) => {
+    const auth = requireAuth(c);
+    await c.env.DB.prepare("UPDATE users SET password_hash = NULL, password_failures = 0, password_locked_until = NULL, updated_at = ? WHERE id = ?")
+      .bind(nowIso(), auth.userId).run();
+    return c.body(null, 204);
+  },
+);
+
+/** The end of every sign-in: the user (made on first sign-in), a session, the cookie, Me. */
+async function signIn(c: Context<AppEnv>, email: string) {
     const user = await upsertUser(c.env, email);
     let studioId = await firstStudioId(c.env, user.id);
     if (!studioId && isOwnerEmail(c.env, email)) studioId = await bootstrapStudio(c.env, user.id);
     const token = await createSession(c.env, user.id, studioId, c.req.header("User-Agent") ?? null);
     c.header("Set-Cookie", sessionCookie(token, SESSION_TTL));
     return send(c, await meFor(c.env, user.id, studioId));
-  },
-);
+}
 
 authRoutes.openapi(
   createRoute({
@@ -153,8 +223,8 @@ async function bootstrapStudio(env: Env, userId: string): Promise<string> {
 }
 
 async function meFor(env: Env, userId: string, activeStudioId: string | null): Promise<z.infer<typeof Me>> {
-  const user = (await env.DB.prepare("SELECT id, email, name FROM users WHERE id = ?").bind(userId)
-    .first<{ id: string; email: string; name: string | null }>())!;
+  const { password_hash, ...user } = (await env.DB.prepare("SELECT id, email, name, password_hash FROM users WHERE id = ?").bind(userId)
+    .first<{ id: string; email: string; name: string | null; password_hash: string | null }>())!;
   const rows = await env.DB.prepare(
     `SELECT m.studio_id, s.name, m.role, m.client_id FROM memberships m JOIN studios s ON s.id = m.studio_id
       WHERE m.user_id = ? AND m.deleted_at IS NULL AND s.deleted_at IS NULL ORDER BY m.created_at, m.id`,
@@ -163,5 +233,6 @@ async function meFor(env: Env, userId: string, activeStudioId: string | null): P
     user,
     memberships: rows.results.map((r) => ({ studioId: r.studio_id, studioName: r.name, role: r.role, clientId: r.client_id })),
     activeStudioId,
+    hasPassword: password_hash != null,
   };
 }

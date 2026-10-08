@@ -1,25 +1,23 @@
 # Prompt for the next session
 
-Paste this into a new chat (repos: Art-Talk-Back, booth-studio, art-show-tracker):
+Paste this into a new chat (repos: Art-Talk-Back, fineartos, booth-studio, art-show-tracker):
 
-> Read Art-Talk-Back `docs/HANDOFF.md` first, then booth-studio `HANDOFF.md` → Now and Next.
-> CLAUDE.md in each repo loads on its own. Keep the repos separate (D-042). Art-Talk-Back's default
-> branch is `claude/next-steps-y4vrwv` (no `main`); the apps' is `main`, and merging there deploys.
-> Read other files only when a step needs them.
+> Read Art-Talk-Back `docs/HANDOFF.md` → "Where things stand", then `docs/phase-6-fineartos.md`,
+> then fineartos `HANDOFF.md` → Next. CLAUDE.md in each repo loads on its own. Keep repos separate
+> (D-042). Art-Talk-Back's default branch is `claude/next-steps-y4vrwv`; the apps' is `main`
+> (merging deploys). Read other files only when a step needs them.
 >
-> 0. State on 2026-10-07: everything from that day is merged — app map (D-072/D-073), figures (D-074),
->    "take me to …" in both apps (D-075; booth-studio#24, art-show-tracker#7). Check nothing is red on
->    any default branch. Ask Isaac whether he has run "Deploy production assistant" since D-072; until
->    he does, production's assistant lacks the map intro and `open_in_app`.
-> 1. Ask Isaac how the chats went on his phone (panel fixes, pictures, take-me-to) and fix what he finds.
-> 2. Render with AI (booth-studio `src/ai-render.js`, `provider = null`): waits on Isaac picking an
->    image service and OK'ing the spend. If he has, plan a studio Worker route that holds the key
->    (never the app) and plug it in as `provider`. Server-side work is his call first.
-> 3. Then `phase-5-booth.md` step 10: 10c's commands that run something ("export this as a PDF"),
->    then 10d (agents outside the chat).
-> 4. His GitHub clicks, if not done: booth-studio Allow auto-merge + `ci` ruleset requiring `booth`;
->    Art-Talk-Back ruleset adds `booth-studio`.
+> 0. State 2026-10-08: Artist OS has studio sign-in and an Assistant (D-078/D-079; Art-Talk-Back#37,
+>    fineartos#2; production assistant redeployed). Notes save on close and can live on the home
+>    screen or in a folder (fineartos#1). Check nothing is red on any default branch.
+> 1. Ask Isaac how the Artist OS assistant went on the live site (sign-in, "make a note … in the …
+>    folder", Confirm, folder shows it) and fix what he finds.
+> 2. Then add device actions for a commission draft and an invoice draft (fineartos
+>    `src/studio/actions.ts` + `snapshot.ts`, tests, `scripts/check-assistant.mjs`).
+> 3. Still open from before: Booth Studio "Render with AI" waits on Isaac's image service and spend
+>    OK; `phase-5-booth.md` 10c/10d; his GitHub ruleset clicks.
 >
-> Isaac isn't technical: give him clicks, not commands, in one list. `backend-builder` skill for every
-> Art-Talk-Back change; next decision is D-076 (fetch first). A `CHANGELOG.md` line per platform item.
-> Shipping as each CLAUDE.md says: merge your own PRs once CI is green.
+> Isaac isn't technical: give him clicks, not commands, in one list. `backend-builder` skill for
+> every Art-Talk-Back change; next decision is D-080 (fetch first). A `CHANGELOG.md` line per
+> platform item. Merge your own PRs once CI is green; platform before app when the app needs a new
+> contract. Keep the session short; update each HANDOFF after every commit.

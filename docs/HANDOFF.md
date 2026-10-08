@@ -1,9 +1,16 @@
-# Handoff — 2026-10-07
+# Handoff — 2026-10-08
 
 Read this first, then `CLAUDE.md`, then `docs/phase-3.md` (assistant) or `docs/phase-5-booth.md`
 (Booth Studio), whichever your task is.
 
 ## Where things stand
+
+- **Artist OS (`yitzhach/fineartos`) joined the platform (2026-10-08, D-078/D-079,
+  `docs/phase-6-fineartos.md`).** Studio sign-in + an Assistant dock window; records stay in the
+  device's IndexedDB, and the assistant changes them through app-declared `deviceActions` (confirm
+  cards the app runs). Art-Talk-Back#37 + fineartos#2 merged; production assistant redeployed
+  (run 37786155312). NOT yet tried by Isaac with the real model. Next: his feedback, then
+  commission/invoice draft actions.
 
 - **Phases 0–2 shipped.** Production `studio-api` is live (`studio-db-prod`, `iaa-files`). The Show
   Tracker syncs shows + sales through it, and Isaac's data is imported (iPhone + iMac verified).

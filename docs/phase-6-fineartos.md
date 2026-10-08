@@ -31,7 +31,7 @@ Both repos work on the branch `claude/fine-art-os-notes-backend-2bmdzx` (D-056).
 
 ## Steps
 
-1. [ ] Plan (this file), D-078, D-079; Artist OS `HANDOFF.md` → Next points here.
+1. [x] Plan (this file), D-078, D-079; Artist OS `HANDOFF.md` → Next points here.
 2. [x] Platform (assistant Worker): `deviceActions` on `POST /assistant/chat` — up to 40 the app
    declares (name `^[a-z][a-z_]{0,39}$`, description, object input schema ≤ 4,000 chars). A call
    emits a `device` event `{id, name, input, summary}` and ends the turn like a card (D-059); the
@@ -48,8 +48,11 @@ Both repos work on the branch `claude/fine-art-os-notes-backend-2bmdzx` (D-056).
    `src/assistant/actions.ts` with tests, each calling the same model functions as the UI.
 6. [x] Browser check (`scripts/check-assistant.mjs`, platform faked at the network; a real model and studio NOT yet): sign in against a local studio-api, ask for a note in a folder, confirm,
    reload, it is there; a second tab open; offline signed-out run unchanged.
-7. [ ] Ship: platform PR first (new contract), then "Deploy production assistant" (Isaac), then
-   the fineartos PR.
+7. [x] Ship (2026-10-08): Art-Talk-Back#37 merged; fineartos#2 merged (it went first by mistake —
+   harmless, an older assistant ignores `deviceActions`); "Deploy production assistant" run 5
+   (37786155312) on `d11f637`, started by Claude at Isaac's request.
+8. [ ] Isaac tries it live (sign in, a note in a folder, Confirm). Then: commission / invoice draft
+   actions; later, syncing Artist OS records into studio-api (D-079 revisit).
 
 ## Gate
 

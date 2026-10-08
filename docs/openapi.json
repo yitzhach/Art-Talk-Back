@@ -1396,6 +1396,9 @@
                         "string",
                         "null"
                       ]
+                    },
+                    "hasPassword": {
+                      "type": "boolean"
                     }
                   },
                   "required": [
@@ -1419,6 +1422,220 @@
           },
           "429": {
             "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/password/login": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "security": [],
+        "summary": "Sign in with email and password (D-080)",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "format": "email"
+                  },
+                  "password": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200
+                  }
+                },
+                "required": [
+                  "email",
+                  "password"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Signed in; sets the session cookie",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "user": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "description": "ULID"
+                        },
+                        "email": {
+                          "type": "string"
+                        },
+                        "name": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "email",
+                        "name"
+                      ]
+                    },
+                    "memberships": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "studioId": {
+                            "type": "string",
+                            "description": "ULID"
+                          },
+                          "studioName": {
+                            "type": "string"
+                          },
+                          "role": {
+                            "type": "string",
+                            "enum": [
+                              "owner",
+                              "staff",
+                              "client"
+                            ]
+                          },
+                          "clientId": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "studioId",
+                          "studioName",
+                          "role",
+                          "clientId"
+                        ]
+                      }
+                    },
+                    "activeStudioId": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "hasPassword": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "user",
+                    "memberships",
+                    "activeStudioId"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many wrong passwords: 15 minutes off; the emailed code still works",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/password": {
+      "put": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Set or change your password (D-080)",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "password": {
+                    "type": "string",
+                    "minLength": 10,
+                    "maxLength": 200
+                  }
+                },
+                "required": [
+                  "password"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Password set; other sessions are signed out"
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Remove your password; sign in by code only (D-080)",
+        "responses": {
+          "204": {
+            "description": "Password removed"
+          },
+          "401": {
+            "description": "Not signed in",
             "content": {
               "application/json": {
                 "schema": {
@@ -1539,6 +1756,9 @@
                         "string",
                         "null"
                       ]
+                    },
+                    "hasPassword": {
+                      "type": "boolean"
                     }
                   },
                   "required": [
@@ -1650,6 +1870,9 @@
                         "string",
                         "null"
                       ]
+                    },
+                    "hasPassword": {
+                      "type": "boolean"
                     }
                   },
                   "required": [

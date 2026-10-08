@@ -5,6 +5,12 @@ Read this first, then `CLAUDE.md`, then `docs/phase-3.md` (assistant) or `docs/p
 
 ## Where things stand
 
+- **Optional password (2026-10-08, D-080).** Isaac couldn't find Booth Studio's sign-in (the header's
+  "IA" circle, hidden on phones; booth-studio#27 makes it a "Sign in" button) and asked to choose a
+  password. studio-api now has one beside the code (migration 0007, three `/auth/password` routes,
+  `Me.hasPassword`). The apps' Studio account screens still need "Set a password" and a
+  "Sign in with password" option — Booth Studio first, then Artist OS and the Show Tracker.
+
 - **Phases 0–2 shipped.** Production `studio-api` is live (`studio-db-prod`, `iaa-files`). The Show
   Tracker syncs shows + sales through it, and Isaac's data is imported (iPhone + iMac verified).
 - **Booth Studio is the platform's second app (2026-10-05, D-061…D-070, `docs/phase-5-booth.md`).**

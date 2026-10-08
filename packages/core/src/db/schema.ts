@@ -53,6 +53,10 @@ export const users = sqliteTable(
     version: integer("version").notNull().default(1),
     deletedAt: text("deleted_at"),
     meta: text("meta", { mode: "json" }).$type<Record<string, unknown>>().notNull().default(sql`'{}'`),
+    // Migration 0007 appends these after meta.
+    passwordHash: text("password_hash"), // D-080: PBKDF2, optional
+    passwordFailures: integer("password_failures").notNull().default(0),
+    passwordLockedUntil: text("password_locked_until"),
   },
   () => [metaCheck("users_meta")],
 );

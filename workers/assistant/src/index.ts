@@ -4,9 +4,30 @@
 import type { Env } from "./env";
 import { type Model, anthropicModel, modelSettings } from "./model";
 import { StudioError, studioFor } from "./studio";
-import { type TurnEvent, type TurnInput, runTurn } from "./turn";
+import { type DeviceAction, type TurnEvent, type TurnInput, runTurn } from "./turn";
 
-interface ChatBody { threadId?: unknown; fresh?: unknown; message?: unknown; app?: unknown; today?: unknown; page?: unknown; record?: unknown; images?: unknown; appMap?: unknown; appData?: unknown; commands?: unknown }
+/** Device actions an app may declare (D-079): names the model sees, schemas it fills. */
+const MAX_DEVICE_ACTIONS = 40;
+const MAX_DEVICE_SCHEMA_CHARS = 4000;
+
+function parseDeviceActions(raw: unknown): DeviceAction[] | string {
+  if (raw === undefined) return [];
+  if (!Array.isArray(raw) || raw.length > MAX_DEVICE_ACTIONS) return `Declare up to ${MAX_DEVICE_ACTIONS} device actions`;
+  const out: DeviceAction[] = [];
+  for (const d of raw as { name?: unknown; description?: unknown; inputSchema?: unknown }[]) {
+    const schema = d?.inputSchema as { type?: unknown } | undefined;
+    if (typeof d?.name !== "string" || !/^[a-z][a-z_]{0,39}$/.test(d.name)) return "A device action needs a name of a-z and _ (up to 40)";
+    if (typeof d.description !== "string" || !d.description.trim()) return `Device action ${d.name} needs a description`;
+    if (!schema || typeof schema !== "object" || schema.type !== "object" || JSON.stringify(schema).length > MAX_DEVICE_SCHEMA_CHARS) {
+      return `Device action ${d.name} needs an object input schema under ${MAX_DEVICE_SCHEMA_CHARS} characters`;
+    }
+    if (out.some((o) => o.name === d.name)) return `Device action ${d.name} is declared twice`;
+    out.push({ name: d.name, description: d.description.slice(0, 1000), inputSchema: schema as Record<string, unknown> });
+  }
+  return out;
+}
+
+interface ChatBody { threadId?: unknown; fresh?: unknown; message?: unknown; app?: unknown; today?: unknown; page?: unknown; record?: unknown; images?: unknown; appMap?: unknown; appData?: unknown; commands?: unknown; deviceActions?: unknown; deviceOutcomes?: unknown }
 
 /** Pictures the app attaches to one message (D-071): the app shrinks them first. */
 const IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"] as const;
@@ -35,6 +56,11 @@ const json = (status: number, code: string, message: string) =>
 function parse(body: ChatBody): TurnInput | string {
   const images = parseImages(body.images);
   if (typeof images === "string") return images;
+  const deviceActions = parseDeviceActions(body.deviceActions);
+  if (typeof deviceActions === "string") return deviceActions;
+  const deviceOutcomes = Array.isArray(body.deviceOutcomes)
+    ? body.deviceOutcomes.filter((o): o is string => typeof o === "string" && !!o.trim()).slice(0, 5).map((o) => o.slice(0, 200))
+    : [];
   let message = typeof body.message === "string" ? body.message.trim() : "";
   // A picture on its own is a message too.
   if (!message && images?.length) message = images.length > 1 ? "(pictures attached)" : "(picture attached)";
@@ -51,7 +77,8 @@ function parse(body: ChatBody): TurnInput | string {
   const threadId = typeof body.threadId === "string" && /^[0-9A-HJKMNP-TV-Z]{26}$/i.test(body.threadId) ? body.threadId : undefined;
   // What the app runs on the device when asked (D-075); only names it knows.
   const commands = Array.isArray(body.commands) ? body.commands.filter((c): c is string => c === "open") : undefined;
-  return { app, message, today, page, record, fresh: body.fresh === true, threadId, images, appMap, appData, ...(commands?.length ? { commands } : {}) };
+  return { app, message, today, page, record, fresh: body.fresh === true, threadId, images, appMap, appData, ...(commands?.length ? { commands } : {}),
+    ...(deviceActions.length ? { deviceActions } : {}), ...(deviceOutcomes.length ? { deviceOutcomes } : {}) };
 }
 
 /** Builds the Worker; tests pass their own model. */

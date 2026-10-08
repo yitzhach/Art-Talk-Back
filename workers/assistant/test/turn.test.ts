@@ -365,6 +365,45 @@ describe("the app's map of its screens, and the booth's sync state (D-072)", () 
     expect(plain.requests[0]!.tools!.map((t: any) => t.name)).not.toContain("open_in_app");
   });
 
+  it("device actions: offered as tools, a call is a card the app runs, nothing reaches studio-api (D-079)", async () => {
+    const NOTE = { name: "note_create", description: "Make a note and keep it on the home screen, in Notes or in a folder.",
+      inputSchema: { type: "object", properties: { title: { type: "string" }, folder: { type: "string" } }, required: ["title"] } };
+    const before = (await api(server, cookie, "GET", "/sales?limit=200")).data.items.length;
+    const { model, requests } = scripted([
+      () => message([toolUse("note_create", { title: "Framing quote", folder: "Harbour", card_summary: "Note \"Framing quote\" in Harbour" })]),
+    ]);
+    const out = await chat(makeHandler(() => model), assistantEnv(server), cookie, {
+      app: "fineartos", fresh: true, message: "make a note called Framing quote in the Harbour folder",
+      deviceActions: [NOTE, { ...NOTE, name: "search", description: "shadow" }], deviceOutcomes: ['card x "Note \"Old\"": confirmed and done on the device'],
+    });
+    const tools = requests[0]!.tools!.map((t: any) => t.name);
+    expect(tools).toContain("note_create");
+    expect(tools.filter((n: string) => n === "search")).toHaveLength(1); // a device action can't shadow a studio tool
+    const offered = requests[0]!.tools!.find((t: any) => t.name === "note_create") as any;
+    expect(offered.input_schema.required).toEqual(["title", "card_summary"]);
+    expect(out.events.map((e: any) => e.type)).toEqual(["device", "end"]);
+    expect(out.events[0]).toMatchObject({ type: "device", name: "note_create", input: { title: "Framing quote", folder: "Harbour" }, summary: 'Note "Framing quote" in Harbour' });
+    expect(requests).toHaveLength(1); // the card ends the turn (D-059)
+    const said = (requests[0]!.messages.at(-1)!.content as any[]).at(-1).text;
+    expect(said).toContain('confirmed and done on the device');
+    expect((await api(server, cookie, "GET", "/sales?limit=200")).data.items.length).toBe(before);
+  });
+
+  it("device actions: bad declarations are refused with a 400", async () => {
+    const env = assistantEnv(server);
+    const handler = makeHandler(() => scripted([]).model);
+    for (const deviceActions of [
+      [{ name: "Bad Name", description: "x", inputSchema: { type: "object" } }],
+      [{ name: "ok", description: "", inputSchema: { type: "object" } }],
+      [{ name: "ok", description: "x", inputSchema: { type: "string" } }],
+      [{ name: "ok", description: "x", inputSchema: { type: "object" } }, { name: "ok", description: "y", inputSchema: { type: "object" } }],
+      Array.from({ length: 41 }, (_, i) => ({ name: `a${"_".repeat(i % 5)}x`, description: "x", inputSchema: { type: "object" } })),
+    ]) {
+      const out = await chat(handler, env, cookie, { app: "fineartos", fresh: true, message: "hi", deviceActions });
+      expect(out.status).toBe(400);
+    }
+  });
+
   it("no map, no change: the prompt is exactly as before", async () => {
     const { model, requests } = scripted([() => message([text("OK.")])]);
     await chat(makeHandler(() => model), assistantEnv(server), cookie, { app: "booth-studio", fresh: true, message: "hi", appMap: "   " });

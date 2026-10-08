@@ -4,6 +4,7 @@
 
 ### Phase 6 · Artist OS joins the platform (D-078)
 - Plan in `docs/phase-6-fineartos.md`; D-078 (sign-in + assistant, Isaac), D-079 (device actions, records stay on the device in v1).
+- Assistant: `deviceActions` / `deviceOutcomes` on `POST /assistant/chat` — app-declared tools that become a `device` card the app runs; Artist OS guide (`fineartos`).
 
 ### Phase 5 · Booth Studio's part (D-061)
 - Handoff: "take me to …" is in both apps (art-show-tracker#7 joins booth-studio#24); Render with AI waits on a provider; next-session prompt rewritten.

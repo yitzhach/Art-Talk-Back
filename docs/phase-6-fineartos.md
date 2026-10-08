@@ -20,7 +20,7 @@ Both repos work on the branch `claude/fine-art-os-notes-backend-2bmdzx` (D-056).
   the app tells the assistant which device actions it has (name, words, JSON Schema); the model
   calls one; the assistant Worker sends it back to the app as a card event; the app shows the
   confirm card and runs the action in its own code (same functions its buttons use), then reports
-  how it ended. Reading (list folders, find a note) runs without a card. This generalises D-075's
+  how it ended. Reading needs no tool: the app sends what it holds as `appData`. This generalises D-075's
   `open_in_app`. Syncing Artist OS's records into studio-api (so agents can work with the app
   closed, and records follow the artist between devices) is a later phase, not this one.
 - **What the assistant can do (first set):** open any window or tool; list folders and what is in
@@ -32,12 +32,12 @@ Both repos work on the branch `claude/fine-art-os-notes-backend-2bmdzx` (D-056).
 ## Steps
 
 1. [ ] Plan (this file), D-078, D-079; Artist OS `HANDOFF.md` → Next points here.
-2. [ ] Platform (assistant Worker): `deviceActions` on `POST /assistant/chat` — up to 40 tools
-   the app declares (name `^[a-z_]{1,40}$`, description, input schema, `reads` or `writes`).
-   A write ends the turn with a `device` card event like a studio card; a read is answered
-   by the app on the next request (`deviceResults`). Card outcomes reuse D-045's statuses.
-   Tests: the model gets the tools; names can't shadow studio tools; caps; an older app
-   that sends none sees no change. Needs a "Deploy production assistant" run (Isaac's).
+2. [x] Platform (assistant Worker): `deviceActions` on `POST /assistant/chat` — up to 40 the app
+   declares (name `^[a-z][a-z_]{0,39}$`, description, object input schema ≤ 4,000 chars). A call
+   emits a `device` event `{id, name, input, summary}` and ends the turn like a card (D-059); the
+   app reports outcomes next turn in `deviceOutcomes` (up to 5 lines). Reads need no tool: the app
+   sends folders, notes and windows as `appData` (D-077). A device action never shadows a studio
+   tool or `open_in_app`. `APP_GUIDES.fineartos` added. Needs a "Deploy production assistant" run.
 3. [ ] App Worker: add `main` (`worker/index.ts` rewritten: `/v1/*` and `/assistant/*` forwarded,
    all else to assets), `run_worker_first` for those paths, bindings `API` → `studio-api`,
    `ASSISTANT` → `studio-assistant`. The old Supabase `/api/*` code is unused today and goes.

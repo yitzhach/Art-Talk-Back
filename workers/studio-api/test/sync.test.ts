@@ -248,5 +248,7 @@ describe("sync stays inside the D1 query budget", () => {
     const res = await call("/v1/sync/pull?since=0&limit=200", { cookie: a.cookie, env: counted.env });
     expect(res.data.changes.length).toBeGreaterThanOrEqual(200);
     expect(counted.count.queries).toBeLessThanOrEqual(10);
-  });
+    // The check is the query count, not the time: writing 200 shows first took
+    // over the 5 s default on a busy CI runner (default-branch CI, 2026-10-08).
+  }, 30_000);
 });

@@ -72,7 +72,7 @@ const EDIT_TOOL_SCHEMA = {
 export const placementEdit = defineAction({
   name: "placement.edit",
   description:
-    "Change things inside a Booth Studio booth: its size, venue, canopy and wall colour; furniture; free-standing walls; where each work hangs. Call describe_booth first for the ids and positions (inches). The whole list is applied, or none of it.",
+    "Change things inside a Booth Studio booth: its size, venue, canopy and wall colour; furniture; free-standing walls; where each work hangs; its look and lighting. Call describe_booth first for the ids and positions (inches). The whole list is applied, or none of it.",
   input: z.object({ id: Id, version: z.number().int().min(1), ops: Ops }),
   toolSchema: EDIT_TOOL_SCHEMA,
   permission: "placements:write",

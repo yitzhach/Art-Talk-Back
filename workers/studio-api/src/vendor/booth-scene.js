@@ -528,6 +528,7 @@ const OUTDOOR = {
 };
 const ART_SHOW_PANEL = { width: 38, height: 144, linked: false };
 const DIFFUSION_MAX = 3;
+const LIGHT_BAR_POWER_STEP = 0.16;
 const LIGHT_BAR = {
   on: true,
   height: 132,
@@ -549,6 +550,7 @@ const LIGHT_BAR = {
   diffusion: 1.5
 };
 const HALL = { on: false, ceiling: 360, showCeiling: false };
+const isArtShow = (p) => ((p?.booth || p)?.venue || "outdoor") === "artshow";
 const artShowPanel = (b) => ({ ...ART_SHOW_PANEL, ...b.artShow || {} });
 const lightBarSpec = (b) => ({ ...LIGHT_BAR, ...b.lightBar || {} });
 const hallSpec = (b) => ({ ...HALL, ...b.hall || {} });
@@ -660,6 +662,29 @@ function constrainPanel(p, panel) {
 }
 const GROUND_KINDS = ["studio", "grass", "concrete", "asphalt", "carpet", "wood"];
 const GROUND_UPLOAD = "upload:";
+const uploadRef = (value) => typeof value === "string" && value.startsWith(GROUND_UPLOAD) ? value.slice(GROUND_UPLOAD.length) : null;
+function groundUpload(p) {
+  const chosen = uploadRef(p.booth?.ground);
+  if (chosen && p.assets?.[chosen]) return chosen;
+  const legacy = p.booth?.groundAsset;
+  return legacy && p.assets?.[legacy] ? legacy : null;
+}
+function groundKind(p) {
+  if (groundUpload(p)) return null;
+  for (const value of [p.booth?.ground, p.booth?.groundPreset])
+    if (GROUND_KINDS.includes(value)) return value;
+  return "studio";
+}
+function selectGround(p, value) {
+  const upload = uploadRef(value);
+  if (upload) {
+    if (p.assets?.[upload]) p.booth.ground = GROUND_UPLOAD + upload;
+    return;
+  }
+  if (!GROUND_KINDS.includes(value)) return;
+  p.booth.ground = value;
+  p.booth.groundPreset = value;
+}
 function adoptGroundAsset(p) {
   const id = p.booth?.groundAsset;
   if (!id || !p.assets?.[id]) return p;
@@ -974,17 +999,17 @@ function spaceEvenly(works, wall) {
   const out = {};
   let x = gap;
   for (const a of sorted) {
-    out[a.id] = round(x);
+    out[a.id] = round$1(x);
     x += a.w + gap;
   }
   return out;
 }
 function hangAt(works, wall, line = HANG_LINE) {
   const out = {};
-  for (const a of works) out[a.id] = round(Math.max(0, Math.min(wall.height - a.h, line - a.h / 2)));
+  for (const a of works) out[a.id] = round$1(Math.max(0, Math.min(wall.height - a.h, line - a.h / 2)));
   return out;
 }
-const round = (n) => Math.round(n * 100) / 100;
+const round$1 = (n) => Math.round(n * 100) / 100;
 const FORMAT = "booth-studio/1";
 const typeOf = (dataUrl) => /^data:([^;,]+)/.exec(String(dataUrl || ""))?.[1] || "application/octet-stream";
 function bytesOf(dataUrl) {
@@ -1055,6 +1080,231 @@ const newPerson = (kind = DEFAULT_PERSON, id = "") => ({
   // would be standing if you were photographing the booth from outside.
   rotation: 180
 });
+const ENV_PRESETS = {
+  studio: {
+    label: "Studio · neutral",
+    hdri: null,
+    ground: "studio",
+    horizon: "studio",
+    exposure: 1.15,
+    envIntensity: 1
+  },
+  // A white hall, and nothing photographed in it. This preset carried the
+  // burnt-warehouse HDRI until someone put an art-show booth in it and got
+  // brick, girders and a dark ceiling behind seamless white walls: a trade
+  // show is a convention centre, not a warehouse, and the photograph was
+  // answering a question nobody asked. The warehouse is still here — it is
+  // its own preset below, which is where someone who wants it goes.
+  //
+  // No `hdri`, so the procedural surroundings and the booth's own exhibition
+  // hall stand, and the floor is the texture-free studio grey rather than a
+  // concrete photograph.
+  tradeshow: {
+    label: "Trade show · exhibition hall",
+    hdri: null,
+    ground: "studio",
+    horizon: "studio",
+    exposure: 1,
+    envIntensity: 1
+  },
+  warehouse: {
+    label: "Warehouse · photographed",
+    hdri: "warehouse",
+    ground: "concrete",
+    horizon: "studio",
+    exposure: 1,
+    envIntensity: 1
+  },
+  artfair: {
+    label: "Art fair · outdoor",
+    hdri: "artfair",
+    ground: "grass",
+    horizon: "open",
+    exposure: 1.1,
+    envIntensity: 1
+  },
+  home: {
+    label: "Home · interior",
+    hdri: "home",
+    ground: "studio",
+    horizon: "studio",
+    exposure: 0.9,
+    envIntensity: 0.9
+  }
+};
+const DEFAULT_PRESET = "studio";
+const resolvePreset = (id) => ENV_PRESETS[id] ? { id, ...ENV_PRESETS[id] } : { id: DEFAULT_PRESET, ...ENV_PRESETS[DEFAULT_PRESET] };
+const LOOKS$1 = {
+  gallery: {
+    label: "Gallery white",
+    blurb: "Neutral studio light that keeps colour true: the jury-photo look.",
+    envPreset: "studio",
+    ambient: 1.25,
+    kelvin: 4e3,
+    power: 80
+  },
+  hall: {
+    label: "Convention hall",
+    blurb: "A bright white exhibition hall, as at an indoor show.",
+    envPreset: "tradeshow",
+    ambient: 1.15,
+    kelvin: 3500,
+    power: 90
+  },
+  fair: {
+    label: "Outdoor fair",
+    blurb: "Daylight on grass under open sky, as at a summer art fair.",
+    envPreset: "artfair",
+    ambient: 1.35,
+    kelvin: 5e3,
+    power: 70
+  },
+  evening: {
+    label: "Warm evening",
+    blurb: "Lower room light and warm spots that make the work glow.",
+    envPreset: "home",
+    ambient: 0.8,
+    kelvin: 3e3,
+    power: 120
+  }
+};
+const lookFor = (p) => isArtShow(p) ? "gallery" : p.booth.tent ? "fair" : "gallery";
+function applyEnvPreset(p, id) {
+  const preset = resolvePreset(id);
+  p.booth.envPreset = preset.id;
+  if (groundUpload(p)) p.booth.groundPreset = preset.ground;
+  else selectGround(p, preset.ground);
+  p.booth.horizon = preset.horizon;
+  if (isArtShow(p) && preset.hdri && hallSpec(p.booth).on) {
+    p.booth.hall = { ...hallSpec(p.booth), on: false };
+    return { hallOff: true };
+  }
+  return { hallOff: false };
+}
+function applyLook(p, key) {
+  const look = LOOKS$1[key];
+  if (!look) return null;
+  const { hallOff } = applyEnvPreset(p, look.envPreset);
+  p.ambient = look.ambient;
+  for (const l of p.lights || []) {
+    l.kelvin = look.kelvin;
+    l.power = look.power;
+  }
+  return { look: key, hallOff };
+}
+function currentLook(p) {
+  const env = resolvePreset(p.booth.envPreset);
+  const lights = p.lights || [];
+  for (const [key, look] of Object.entries(LOOKS$1)) {
+    if (env.id !== look.envPreset || p.ambient !== look.ambient || (p.booth.horizon || "studio") !== env.horizon) continue;
+    if ((groundUpload(p) ? p.booth.groundPreset : groundKind(p)) !== env.ground) continue;
+    if (isArtShow(p) && env.hdri && hallSpec(p.booth).on) continue;
+    if (lights.every((l) => l.kelvin === look.kelvin && l.power === look.power)) return key;
+  }
+  return null;
+}
+const isWork = (a) => a.kind !== "sign" && a.kind !== "label";
+const ownBooth = (a) => (a.booth || null) === null;
+function evenHang(p) {
+  const seen = /* @__PURE__ */ new Set();
+  let walls = 0;
+  for (const a of p.art) {
+    if (!ownBooth(a)) continue;
+    const key = `${a.wall}|${a.face || "inside"}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    const wall = wallSpec(p, a.wall);
+    if (!wall || wall.enabled === false) continue;
+    const works = sameWall(p.art, a);
+    if (!works.length || !works.every(isWork)) continue;
+    const xs = spaceEvenly(works, wall);
+    const ys = hangAt(works, wall);
+    for (const w of works) Object.assign(w, constrain(p, { ...w, x: xs[w.id], y: ys[w.id] }));
+    walls++;
+  }
+  return walls;
+}
+function perimeter(p, wall) {
+  const W = p.booth.width / 2, D = p.booth.depth / 2;
+  if (wall === "back") return { at: (u, v) => [-W + u, v, -D], n: [0, 0, 1] };
+  if (wall === "left") return { at: (u, v) => [-W, v, D - u], n: [1, 0, 0] };
+  if (wall === "right") return { at: (u, v) => [W, v, -D + u], n: [-1, 0, 0] };
+  return null;
+}
+const MAX_LIGHTS = 4;
+const STANDOFF = 48;
+const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+const round = (n) => Math.round(n * 10) / 10;
+function chunks(list, k) {
+  const out = [];
+  for (let i = 0; i < k; i++) out.push(list.slice(Math.round(i * list.length / k), Math.round((i + 1) * list.length / k)));
+  return out.filter((c) => c.length);
+}
+function lightTargets(p) {
+  const byWall = /* @__PURE__ */ new Map();
+  for (const a of p.art) {
+    if (!ownBooth(a) || !isWork(a) || !isShown(a) || (a.face || "inside") !== "inside") continue;
+    const frame = perimeter(p, a.wall);
+    if (!frame || wallSpec(p, a.wall)?.enabled === false) continue;
+    if (!byWall.has(a.wall)) byWall.set(a.wall, []);
+    byWall.get(a.wall).push(a);
+  }
+  if (!byWall.size) return [];
+  const walls = [...byWall.entries()].map(([wall, works]) => ({ wall, works: works.sort((a, b) => a.x + a.w / 2 - (b.x + b.w / 2)), k: 1 }));
+  walls.sort((a, b) => b.works.length - a.works.length);
+  const slots = Math.min(MAX_LIGHTS, walls.reduce((n, w) => n + w.works.length, 0));
+  const lit = walls.slice(0, slots);
+  for (let spare = slots - lit.length; spare > 0; spare--) {
+    const next = lit.filter((w) => w.k < w.works.length).sort((a, b) => b.works.length / b.k - a.works.length / a.k)[0];
+    if (!next) break;
+    next.k++;
+  }
+  const out = [];
+  for (const { wall, works, k } of lit) {
+    const frame = perimeter(p, wall);
+    for (const group of chunks(works, k)) {
+      const u = (Math.min(...group.map((a) => a.x)) + Math.max(...group.map((a) => a.x + a.w))) / 2;
+      const v = group.reduce((s, a) => s + a.y + a.h / 2, 0) / group.length;
+      out.push({ wall, at: frame.at(u, v), n: frame.n, count: group.length });
+    }
+  }
+  return out;
+}
+function aimLights(p) {
+  let targets = lightTargets(p);
+  if (!targets.length) return 0;
+  const have = p.lights || [];
+  if (targets.length === 1 && have.length >= 2) targets = [targets[0], targets[0]];
+  const W = p.booth.width / 2 - 6, D = p.booth.depth / 2 - 6;
+  const height = clamp((p.booth.height || 96) - 5, 60, 150);
+  const like = have[0] || { power: 75, kelvin: 4e3 };
+  const lights = targets.map((t, i) => {
+    const [tx, ty, tz] = t.at;
+    const along = targets.length === 2 && targets[0] === targets[1] ? i ? 24 : -24 : 0;
+    const side = [t.n[2], 0, -t.n[0]];
+    const x = clamp(tx + t.n[0] * STANDOFF + side[0] * along, -W, W);
+    const z = clamp(tz + t.n[2] * STANDOFF + side[2] * along, -D, D);
+    const old = have[i];
+    return {
+      ...old || { id: uid(), power: like.power, kelvin: like.kelvin },
+      x: round(x),
+      y: round(height),
+      z: round(z),
+      // A hair in front of the face, so the beam's centre is on the work.
+      tx: round(tx + t.n[0]),
+      ty: round(clamp(ty, 0, 160)),
+      tz: round(tz + t.n[2])
+    };
+  });
+  p.lights = lights;
+  return lights.length;
+}
+function polish(p, { look = lookFor(p) } = {}) {
+  const walls = evenHang(p);
+  const lights = aimLights(p);
+  const applied = applyLook(p, look) || applyLook(p, lookFor(p));
+  return { look: applied.look, hallOff: applied.hallOff, walls, lights };
+}
 const SCENE_OPS_VERSION = 1;
 const MAX_OPS = 50;
 class SceneOpError extends Error {
@@ -1182,10 +1432,24 @@ function describe(scene, images = []) {
       ...x.hidden ? { hidden: true } : {}
     })),
     ...b.showPeople === false ? { peopleShown: false } : {},
+    lighting: lightingSummary(p),
     floor: p.hall ? floorSummary(p.hall) : null,
     limits: { furniture: MAX_PEDESTALS, freeStandingWalls: MAX_PANELS, people: MAX_PEOPLE, floorPieces: MAX_ITEMS, ops: MAX_OPS }
   };
 }
+function lightingSummary(p) {
+  const bar = lightBarSpec(p.booth);
+  return {
+    look: currentLook(p),
+    environment: resolvePreset(p.booth.envPreset).label,
+    ambient: p.ambient,
+    spotlights: (p.lights || []).map((l) => ({ kelvin: l.kelvin, power: l.power, ...l.on === false ? { hidden: true } : {} })),
+    ...isArtShow(p) ? { lightBar: { on: bar.on, kelvin: bar.kelvin, brightness: barBrightness(bar) } } : {}
+  };
+}
+const barBrightness = (bar) => Number((bar.power / LIGHT_BAR_POWER_STEP).toFixed(2));
+const HALL_OFF = "; the white hall goes, under the photographed sky";
+const onStep = (v, step) => Math.round(Math.round(v / step) * step * 100) / 100;
 const FLOOR_LIST_MAX = 300;
 function floorSummary(h) {
   const items = showItems(h);
@@ -1352,6 +1616,29 @@ const OPS = [
       spacing: str("even (default) or keep", { enum: ["even", "keep"] })
     },
     ["wall"]
+  ),
+  op(
+    "apply_look",
+    `Light and surround the booth in one of the app's named looks, all at once — ${Object.entries(LOOKS$1).map(([key, l]) => `${key} (${l.label}): ${l.blurb.replace(/\.$/, "")}`).join("; ")}. Sets the environment with its floor and horizon, the room light, and every spotlight's colour and power together; each stays editable by hand.`,
+    { look: str("One of the looks above", { enum: Object.keys(LOOKS$1) }) },
+    ["look"]
+  ),
+  op(
+    "make_beautiful",
+    `Make it beautiful, the app's one-tap polish: the look for the venue (fair under a canopy, gallery white otherwise) unless look is given; every wall of this booth hung evenly, each work centred on the ${HANG_LINE}″ line (a wall carrying a sign or label is left as it hangs); and, when work hangs on the booth's walls, the spotlights aimed at it, up to four, any beyond what is hung taken down (with nothing hung, the spotlights stay as they are). Use it when asked to make the booth look good or finished, or ready for a jury photograph.`,
+    { look: str("A look instead of the venue's, one of apply_look's", { enum: Object.keys(LOOKS$1) }) }
+  ),
+  op(
+    "set_lighting",
+    "Change the light by hand, as the Lighting tab's sliders do: the room light (ambient), every spotlight's temperature and brightness at once, and on an art-show booth the light bar over it (on or off, temperature, brightness). describe_booth lists the current values. For a whole look at once use apply_look; to aim the spotlights at the work, make_beautiful.",
+    {
+      ambient: num("Ambient illumination, the room light: 0–4 in steps of 0.05, 1.25 to start with; under 1 is a dim room", { minimum: 0, maximum: 4 }),
+      kelvin: num("Every spotlight's temperature in kelvin, in steps of 100: 2700 (warm, like a lamp) to 6500 (cool daylight); 4000 to start with", { minimum: 2700, maximum: 6500 }),
+      power: num("Every spotlight's brightness: 0–300 in steps of 5, 75 to start with", { minimum: 0, maximum: 300 }),
+      barOn: { type: "boolean", description: "An art-show booth's light bar: switch it on (true) or off (false)" },
+      barKelvin: num("An art-show booth's light bar: its temperature in kelvin, 2700–6500 in steps of 100; 3500 to start with", { minimum: 2700, maximum: 6500 }),
+      barBrightness: num("An art-show booth's light bar: its brightness on the Lighting tab's scale, 0–100; 50 to start with, 100 twice that", { minimum: 0, maximum: 100 })
+    }
   ),
   // ---- the show floor
   op(
@@ -1787,6 +2074,52 @@ function run(p, o, i, refs) {
       const xs = o.spacing === "keep" ? {} : spaceEvenly(sameWall(works, works[0]), wall);
       p.art = p.art.map((a) => ys[a.id] === void 0 ? a : constrain(p, { ...a, y: ys[a.id], ...xs[a.id] !== void 0 ? { x: xs[a.id] } : {} }));
       return `${wallLabel(p, key)}: ${works.length} work${works.length === 1 ? "" : "s"} centred ${inches(line)} off the floor${o.spacing === "keep" ? "" : ", evenly spaced"}`;
+    }
+    case "apply_look": {
+      const done = applyLook(p, o.look);
+      return `Light it as ${LOOKS$1[done.look].label}${done.hallOff ? HALL_OFF : ""}`;
+    }
+    case "make_beautiful": {
+      const done = polish(p, o.look ? { look: o.look } : {});
+      const hung = p.art.some((a) => (a.booth || null) === null);
+      const parts = [
+        LOOKS$1[done.look].label,
+        done.walls ? `${done.walls} wall${done.walls === 1 ? "" : "s"} hung evenly` : hung ? "no wall respaced (a wall carrying a sign or label is left as it hangs)" : "nothing hung to space"
+      ];
+      if (done.lights) parts.push(`${done.lights} spotlight${done.lights === 1 ? "" : "s"} aimed at the work`);
+      return `Make it beautiful: ${parts.join(", ")}${done.hallOff ? HALL_OFF : ""}`;
+    }
+    case "set_lighting": {
+      const said = [];
+      if (has(o, "ambient")) {
+        p.ambient = onStep(o.ambient, 0.05);
+        said.push(`ambient ${p.ambient}`);
+      }
+      if (has(o, "kelvin") || has(o, "power")) {
+        const lights = p.lights || [];
+        if (!lights.length) throw new SceneOpError(`Op ${i + 1} (set_lighting): this booth has no spotlights. make_beautiful adds them, aimed at the work hanging on its walls.`, i);
+        for (const l of lights) {
+          if (has(o, "kelvin")) l.kelvin = onStep(o.kelvin, 100);
+          if (has(o, "power")) l.power = onStep(o.power, 5);
+        }
+        const what = [has(o, "kelvin") ? `${lights[0].kelvin} K` : "", has(o, "power") ? `brightness ${lights[0].power}` : ""].filter(Boolean);
+        const n = lights.length, hidden = lights.filter((l) => l.on === false).length;
+        const which = n === 1 ? "the spotlight" : n === 2 ? "both spotlights" : `all ${n} spotlights`;
+        said.push(`${which}${hidden ? n === 1 ? " (hidden)" : ` (${hidden} hidden)` : ""} at ${what.join(", ")}`);
+      }
+      if (has(o, "barOn") || has(o, "barKelvin") || has(o, "barBrightness")) {
+        if (!isArtShow(p)) throw new SceneOpError(`Op ${i + 1} (set_lighting): this booth has no light bar; it comes with an art-show booth (set_booth venue artshow).`, i);
+        const bar = lightBarSpec(p.booth);
+        if (has(o, "barOn")) bar.on = o.barOn;
+        if (has(o, "barKelvin")) bar.kelvin = onStep(o.barKelvin, 100);
+        if (has(o, "barBrightness")) bar.power = Math.round(Math.round(o.barBrightness) * LIGHT_BAR_POWER_STEP * 100) / 100;
+        p.booth.lightBar = bar;
+        const what = [has(o, "barKelvin") ? `${bar.kelvin} K` : "", has(o, "barBrightness") ? `brightness ${barBrightness(bar)}` : ""].filter(Boolean);
+        const state = has(o, "barOn") ? bar.on ? " switched on" : " switched off" : bar.on ? "" : " (switched off)";
+        said.push(`the light bar${state}${what.length ? ` at ${what.join(", ")}` : ""}`);
+      }
+      if (!said.length) throw new SceneOpError(`Op ${i + 1} (set_lighting): say what to change.`, i);
+      return `Light it: ${said.join("; ")}`;
     }
     case "start_floor":
     case "set_floor":

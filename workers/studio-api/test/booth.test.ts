@@ -76,6 +76,49 @@ describe("booth actions", () => {
     expect((again.scene as any).booth.width).toBe(180);
   });
 
+  it("an agent makes a booth beautiful: a look and the app's one-tap polish, on the card in the app's words (D-081)", async () => {
+    const a = await makeStudio();
+    const p = (await call("/v1/placements", { method: "POST", cookie: a.cookie, json: syncedBooth() })).data;
+    const res = await run(a.cookie, "placement.edit", { id: p.id, version: 1, ops: [{ op: "make_beautiful" }, { op: "apply_look", look: "evening" }] });
+    expect(res.status).toBe(200);
+    const after = res.data.result;
+    for (const w of after.scene.art) expect(w.y + w.h / 2).toBe(60);
+    expect(after.scene.booth.envPreset).toBe("home");
+    expect(after.scene.lights.every((l: any) => l.kelvin === 3000 && l.power === 120)).toBe(true);
+    // The model is offered both ops, each with its looks.
+    expect(Booth.OP_NAMES).toEqual(expect.arrayContaining(["apply_look", "make_beautiful"]));
+    const look = Booth.OPS.find((o) => o.name === "apply_look")!;
+    expect((look.schema as any).properties.look.enum).toEqual(["gallery", "hall", "fair", "evening"]);
+    // A look the app doesn't have is refused by name, and nothing is written.
+    const bad = await run(a.cookie, "placement.edit", { id: p.id, version: 2, ops: [{ op: "apply_look", look: "neon" }] });
+    expect(bad.status).toBe(400);
+    expect(JSON.stringify(bad.data)).toMatch(/look must be one of gallery, hall, fair, evening/);
+  });
+
+  it("the summary carries the lighting, and set_lighting changes it as the app's sliders do (D-081)", async () => {
+    const a = await makeStudio();
+    const p = (await call("/v1/placements", { method: "POST", cookie: a.cookie, json: syncedBooth() })).data;
+    const before = (await call(`/v1/placements/${p.id}/summary`, { cookie: a.cookie })).data;
+    expect(before.lighting).toEqual({
+      look: null, environment: "Art fair · outdoor", ambient: 1.25,
+      spotlights: [{ kelvin: 4000, power: 75 }, { kelvin: 4000, power: 75 }],
+    });
+    const look = await run(a.cookie, "placement.edit", { id: p.id, version: 1, ops: [{ op: "apply_look", look: "evening" }] });
+    expect(look.status).toBe(200);
+    expect((await call(`/v1/placements/${p.id}/summary`, { cookie: a.cookie })).data.lighting.look).toBe("evening");
+    const res = await run(a.cookie, "placement.edit", { id: p.id, version: 2, ops: [{ op: "set_lighting", ambient: 0.6, kelvin: 2700 }] });
+    expect(res.status).toBe(200);
+    expect(res.data.result.scene.ambient).toBe(0.6);
+    const after = (await call(`/v1/placements/${p.id}/summary`, { cookie: a.cookie })).data.lighting;
+    expect(after).toMatchObject({ look: null, environment: "Home · interior", ambient: 0.6 });
+    expect(after.spotlights.length).toBeGreaterThan(0);
+    for (const l of after.spotlights) expect(l).toEqual({ kelvin: 2700, power: 120 });
+    // Past a slider's end is refused by name, and nothing is written.
+    const bad = await run(a.cookie, "placement.edit", { id: p.id, version: 3, ops: [{ op: "set_lighting", kelvin: 9000 }] });
+    expect(bad.status).toBe(400);
+    expect(JSON.stringify(bad.data)).toMatch(/kelvin must be at most 6500/);
+  });
+
   it("a bad op is a 400 naming it, a stale version a 409, and nothing is written", async () => {
     const a = await makeStudio();
     const p = (await call("/v1/placements", { method: "POST", cookie: a.cookie, json: syncedBooth() })).data;

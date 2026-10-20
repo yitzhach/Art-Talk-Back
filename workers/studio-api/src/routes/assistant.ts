@@ -235,7 +235,7 @@ const DESCRIBE_BOOTH_TOOL = {
   name: "describe_booth",
   action: null,
   read: { path: "/placements/{id}/summary" },
-  description: "What is in a Booth Studio booth: its size and venue, its walls, each work (with its wall and position) and each piece of furniture, with their ids, in inches. Call it before placement_edit, and again after a change if you need the new positions.",
+  description: "What is in a Booth Studio booth: its size and venue, its walls, each work (with its wall and position) and each piece of furniture, with their ids, in inches, and its lighting (the look it is in, the ambient level, each spotlight's temperature and brightness, an art-show booth's light bar). Call it before placement_edit, and again after a change if you need the new positions.",
   inputSchema: {
     type: "object",
     properties: { id: { type: "string", description: "The booth's id (from search, or the booth on screen)" } },

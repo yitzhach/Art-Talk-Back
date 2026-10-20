@@ -76,6 +76,25 @@ describe("booth actions", () => {
     expect((again.scene as any).booth.width).toBe(180);
   });
 
+  it("an agent makes a booth beautiful: a look and the app's one-tap polish, on the card in the app's words (D-081)", async () => {
+    const a = await makeStudio();
+    const p = (await call("/v1/placements", { method: "POST", cookie: a.cookie, json: syncedBooth() })).data;
+    const res = await run(a.cookie, "placement.edit", { id: p.id, version: 1, ops: [{ op: "make_beautiful" }, { op: "apply_look", look: "evening" }] });
+    expect(res.status).toBe(200);
+    const after = res.data.result;
+    for (const w of after.scene.art) expect(w.y + w.h / 2).toBe(60);
+    expect(after.scene.booth.envPreset).toBe("home");
+    expect(after.scene.lights.every((l: any) => l.kelvin === 3000 && l.power === 120)).toBe(true);
+    // The model is offered both ops, each with its looks.
+    expect(Booth.OP_NAMES).toEqual(expect.arrayContaining(["apply_look", "make_beautiful"]));
+    const look = Booth.OPS.find((o) => o.name === "apply_look")!;
+    expect((look.schema as any).properties.look.enum).toEqual(["gallery", "hall", "fair", "evening"]);
+    // A look the app doesn't have is refused by name, and nothing is written.
+    const bad = await run(a.cookie, "placement.edit", { id: p.id, version: 2, ops: [{ op: "apply_look", look: "neon" }] });
+    expect(bad.status).toBe(400);
+    expect(JSON.stringify(bad.data)).toMatch(/look must be one of gallery, hall, fair, evening/);
+  });
+
   it("a bad op is a 400 naming it, a stale version a 409, and nothing is written", async () => {
     const a = await makeStudio();
     const p = (await call("/v1/placements", { method: "POST", cookie: a.cookie, json: syncedBooth() })).data;

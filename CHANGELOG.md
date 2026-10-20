@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+### Booth Studio · looks and Make it beautiful through the assistant (D-081)
+- Booth ops `apply_look` and `make_beautiful`, from Booth Studio's own scene build (vendored `booth-scene.js`, now 108 KB): "make my booth look good" is one `placement_edit` with a card line in the app's words. Test: `test/booth.test.ts`. No assistant deploy needed — it reads the op catalog from `GET /assistant/tools`.
+
 ### Sign-in · optional password (D-080)
 - Migration 0007 (`users.password_hash`, failures, lock); `POST /auth/password/login`, `PUT`/`DELETE /auth/password`; `Me.hasPassword`. The emailed code always still works.
 

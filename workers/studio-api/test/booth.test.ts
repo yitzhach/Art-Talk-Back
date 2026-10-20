@@ -95,6 +95,30 @@ describe("booth actions", () => {
     expect(JSON.stringify(bad.data)).toMatch(/look must be one of gallery, hall, fair, evening/);
   });
 
+  it("the summary carries the lighting, and set_lighting changes it as the app's sliders do (D-081)", async () => {
+    const a = await makeStudio();
+    const p = (await call("/v1/placements", { method: "POST", cookie: a.cookie, json: syncedBooth() })).data;
+    const before = (await call(`/v1/placements/${p.id}/summary`, { cookie: a.cookie })).data;
+    expect(before.lighting).toEqual({
+      look: null, environment: "Art fair · outdoor", ambient: 1.25,
+      spotlights: [{ kelvin: 4000, power: 75 }, { kelvin: 4000, power: 75 }],
+    });
+    const look = await run(a.cookie, "placement.edit", { id: p.id, version: 1, ops: [{ op: "apply_look", look: "evening" }] });
+    expect(look.status).toBe(200);
+    expect((await call(`/v1/placements/${p.id}/summary`, { cookie: a.cookie })).data.lighting.look).toBe("evening");
+    const res = await run(a.cookie, "placement.edit", { id: p.id, version: 2, ops: [{ op: "set_lighting", ambient: 0.6, kelvin: 2700 }] });
+    expect(res.status).toBe(200);
+    expect(res.data.result.scene.ambient).toBe(0.6);
+    const after = (await call(`/v1/placements/${p.id}/summary`, { cookie: a.cookie })).data.lighting;
+    expect(after).toMatchObject({ look: null, environment: "Home · interior", ambient: 0.6 });
+    expect(after.spotlights.length).toBeGreaterThan(0);
+    for (const l of after.spotlights) expect(l).toEqual({ kelvin: 2700, power: 120 });
+    // Past a slider's end is refused by name, and nothing is written.
+    const bad = await run(a.cookie, "placement.edit", { id: p.id, version: 3, ops: [{ op: "set_lighting", kelvin: 9000 }] });
+    expect(bad.status).toBe(400);
+    expect(JSON.stringify(bad.data)).toMatch(/kelvin must be at most 6500/);
+  });
+
   it("a bad op is a 400 naming it, a stale version a 409, and nothing is written", async () => {
     const a = await makeStudio();
     const p = (await call("/v1/placements", { method: "POST", cookie: a.cookie, json: syncedBooth() })).data;

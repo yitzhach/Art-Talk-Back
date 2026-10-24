@@ -71,8 +71,14 @@ Later: `board.share`, `share.revoke` (stage 5), `board.start_artwork` (needs art
 6. [x] Tests: `test/boards.test.ts` (actions, batches, delete/restore with cards, copy, move, stars,
    sync, file attach, staff/client roles); every new route and action in `test/tenancy.test.ts`.
 7. [x] `pnpm openapi` → `docs/openapi.json`.
-8. [ ] Ship: PR to the default branch; CI green; merge; "Deploy production API" applies 0008 to
+8. [x] Ship: PR to the default branch; CI green; merge; "Deploy production API" applies 0008 to
    `studio-db-prod`; check the job log (bookmark, migration) and the deployed `studio-api` code.
+   Done 2026-10-24: #42 merged (`27fd2a6`); "Deploy production API" run 155 applied 0008 to
+   `studio-db-prod`; `studio-api` `8e5e18db`, live as `54475061` after the run's secret step.
+   Restore: bookmark `0000006f-00000000-0000510e-19bb937755e91fb3bd072bf621e17ac0`, previous
+   Worker `61df684f`. Checked through the Cloudflare connector: the three tables and the 0008 row
+   exist in production, and the deployed code has `pin.save`, `feedback.star` and "Restore its
+   board first". Studio Wall's stage 2 (Studio-Wall#25) merged after it.
 
 ## Gate (stage 1)
 

@@ -1,16 +1,19 @@
 import {
-  Artwork, ArtworkInput, ArtworkPatch, ArtworkStatus, Client, ClientInput, ClientPatch, Placement, PlacementInput,
+  Artwork, ArtworkInput, Board, BoardInput, BoardPatch, Feedback, FeedbackInput, FeedbackPatch, Id, Pin, PinInput, PinKind,
+  PinPatch, ArtworkPatch, ArtworkStatus, Client, ClientInput, ClientPatch, Placement, PlacementInput,
   PlacementPatch, Settings, SettingsPatch, Sale, SaleInput, SalePatch, Show, ShowDetail, ShowInput, ShowPatch, ShowStatus,
   db as schema,
 } from "@studio/core";
 import { createRoute } from "@hono/zod-openapi";
 import { and, desc, eq, inArray, isNull, lt, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
+import type { SQLiteColumn } from "drizzle-orm/sqlite-core";
 import { z } from "zod";
 import {
   type EntityDef, artworkEntity, clientEntity, getRecord, placementEntity, saleEntity, settingsEntity, showEntity,
 } from "../actions/records";
 import { boothSummary } from "../actions/booth";
+import { boardEntity, feedbackEntity, pinEntity } from "../actions/boards";
 import { HttpError } from "../lib/errors";
 import type { Snapshot } from "../actions/runner";
 import type { Db } from "../env";
@@ -54,10 +57,12 @@ function mountRecordRoutes({ entity: e, path, tag, record, input, patch, filters
     async (c) => {
       const actor = requireActor(c);
       requirePermission(actor.role, `${e.perm}:read` as Permission);
-      const q = c.req.valid("query") as { cursor?: string; limit: number; status?: string };
+      const q = c.req.valid("query") as { cursor?: string; limit: number } & Record<string, unknown>;
       const where = [eq(e.studio, actor.studioId), isNull(e.deletedAt)];
       if (q.cursor) where.push(lt(e.key, q.cursor));
-      if (q.status && "status" in e.table) where.push(eq((e.table as unknown as { status: typeof schema.artworks.status }).status, q.status as never));
+      // Each declared filter is an equality on the column of the same name (D-086).
+      const columns = e.table as unknown as Record<string, SQLiteColumn>;
+      for (const k of Object.keys(filters?.shape ?? {})) if (q[k] !== undefined) where.push(eq(columns[k]!, q[k]));
       const rows = await drizzle(c.env.DB).select().from(e.table).where(and(...where)).orderBy(desc(e.key)).limit(q.limit + 1);
       const items = rows.slice(0, q.limit) as { id: string }[];
       return send(c, { items, nextCursor: rows.length > q.limit ? items.at(-1)!.id : null });
@@ -208,6 +213,20 @@ mountRecordRoutes({
 mountRecordRoutes({
   entity: placementEntity, path: "placements", tag: "records", record: Placement.meta({ id: "Placement" }),
   input: PlacementInput, patch: PlacementPatch, maxLimit: 20,
+});
+
+// Studio Wall (D-082…D-086). Cards and comments are read per board.
+mountRecordRoutes({
+  entity: boardEntity, path: "boards", tag: "boards", record: Board.meta({ id: "Board" }),
+  input: BoardInput, patch: BoardPatch,
+});
+mountRecordRoutes({
+  entity: pinEntity, path: "pins", tag: "boards", record: Pin.meta({ id: "Pin" }),
+  input: PinInput, patch: PinPatch, filters: z.object({ boardId: Id.optional(), kind: PinKind.optional() }),
+});
+mountRecordRoutes({
+  entity: feedbackEntity, path: "feedback", tag: "boards", record: Feedback.meta({ id: "Feedback" }),
+  input: FeedbackInput, patch: FeedbackPatch, filters: z.object({ boardId: Id.optional(), pinId: Id.optional() }),
 });
 
 // What is in a Booth Studio booth, small enough for a model or an agent: the

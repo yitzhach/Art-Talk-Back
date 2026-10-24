@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### Studio Wall · boards, cards and comments on the platform (D-082…D-086)
+- Migration 0008: `boards`, `pins`, `board_feedback` (Drizzle mirror; drift test). Zod `Board*`, `Pin*`, `Feedback*` with caps (card meta 100,000 characters, 50 cards per batch).
+- Actions tagged `apps: ["studio-wall"]`: board/pin/feedback create, update, delete, restore; `pin.save` (1–50, all or nothing), `pin.move`, `pin.copy` (credits and file kept), `pin.link`, `feedback.star`. A board's delete takes its cards with it and its restore (or one undo) brings them back. New `boards:*` permissions (staff read/write).
+- Routes `/v1/boards`, `/v1/pins?boardId=&kind=`, `/v1/feedback?boardId=&pinId=`; record lists filter by any declared column (D-086). Sync push/pull carry the three kinds; `file.attach` takes `pin`. Tests: `test/boards.test.ts`, tenancy sweep extended; `docs/openapi.json` regenerated. SDK `RecordType` gains the three kinds (bundles unchanged).
+
 ### Booth Studio · looks and Make it beautiful through the assistant (D-081)
 - Booth ops `apply_look` and `make_beautiful`, from Booth Studio's own scene build (vendored `booth-scene.js`, now 113 KB): "make my booth look good" is one `placement_edit` with a card line in the app's words. Test: `test/booth.test.ts`. No assistant deploy needed — it reads the op catalog from `GET /assistant/tools`.
 - `GET /placements/{id}/summary` (the assistant's `describe_booth`) carries a `lighting` block: the look the booth is in, if any, the environment, the ambient level, each spotlight's temperature and brightness, and an art-show booth's light bar. Booth op `set_lighting` sets those as the app's controls do (on their own steps; the bar switched on or off too), so "make it warmer" doesn't have to change the whole look.

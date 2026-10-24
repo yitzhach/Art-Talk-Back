@@ -7,6 +7,7 @@ export type Permission =
   | "shows:read" | "shows:write" | "shows:delete"
   | "sales:read" | "sales:write" | "sales:delete"
   | "placements:read" | "placements:write" | "placements:delete"
+  | "boards:read" | "boards:write" | "boards:delete"
   | "files:read" | "files:write"
   | "settings:read" | "settings:write"
   | "activity:read" | "activity:undo"
@@ -16,7 +17,7 @@ export type Permission =
 // Client-role users get nothing here until the client portal (Phase 4).
 const STAFF: readonly Permission[] = [
   "artworks:read", "artworks:write", "clients:read", "clients:write", "shows:read", "shows:write",
-  "sales:read", "sales:write", "placements:read", "placements:write",
+  "sales:read", "sales:write", "placements:read", "placements:write", "boards:read", "boards:write",
   "files:read", "files:write", "settings:read", "activity:read", "activity:undo",
   "assistant:use",
 ];

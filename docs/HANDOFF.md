@@ -1,9 +1,17 @@
-# Handoff — 2026-10-07
+# Handoff — 2026-10-24
 
 Read this first, then `CLAUDE.md`, then `docs/phase-3.md` (assistant) or `docs/phase-5-booth.md`
-(Booth Studio), whichever your task is.
+(Booth Studio) or `docs/phase-5-studio-wall.md` (Studio Wall), whichever your task is.
 
 ## Where things stand
+
+- **Studio Wall joins the platform (2026-10-24, D-082…D-086, `docs/phase-5-studio-wall.md`).**
+  Isaac approved Studio Wall's plan (its repo, `docs/backend-and-ai-plan.md`). Stage 1 here:
+  migration 0008 (`boards`, `pins`, `board_feedback`), the actions tagged `apps: ["studio-wall"]`,
+  `/v1/boards`, `/v1/pins`, `/v1/feedback`, sync of the three kinds and `file.attach` to a pin.
+  Stage 2 (Studio Wall's `API` binding → `studio-api`, `/v1/*` forwarded) is in that repo. Next
+  here: stage 5's `shares` and guest sessions, and stage 7's `describe_board` and search; the app's
+  sign-in and sync (stage 3) and import (stage 4) are app work.
 
 - **Optional password (2026-10-08, D-080).** Isaac couldn't find Booth Studio's sign-in (the header's
   "IA" circle, hidden on phones; booth-studio#27 makes it a "Sign in" button) and asked to choose a
@@ -123,7 +131,7 @@ Isaac's first use of the Show Tracker chat in production (merged 2026-10-06, art
 - Booth Studio's (from its repo): `npm test`, `npm run build`, then
   `STUDIO_PLATFORM=../Art-Talk-Back BOOTH_TEST_CHROMIUM=/opt/pw-browsers/chromium node tests/two-devices.mjs`
   (`BOOTH_COMPAT_DATE=2026-08-15` for the platform's date; `E2E_LOG=<file>` keeps wrangler's log on a failure).
-- Next decision is D-071. **Fetch the default branch before taking a number**: two sessions worked
+- Next decision is D-087. **Fetch the default branch before taking a number**: two sessions worked
   here on 2026-10-05 and both took D-059/D-060; this branch's were renumbered. One `CHANGELOG.md`
   line per item.
 

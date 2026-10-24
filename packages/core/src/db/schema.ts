@@ -400,6 +400,79 @@ export const placements = sqliteTable(
   ],
 );
 
+// Phase 5, Studio Wall (D-083): inspiration boards, their cards (pins) and the
+// owner's and clients' comments and stars (board_feedback).
+export const boards = sqliteTable(
+  "boards",
+  {
+    id: text("id").primaryKey(),
+    studioId: text("studio_id").notNull().references(() => studios.id),
+    name: text("name").notNull(),
+    description: text("description"),
+    coverPinId: text("cover_pin_id"),
+    position: integer("position").notNull().default(0),
+    commentsEnabled: integer("comments_enabled", { mode: "boolean" }).notNull().default(true),
+    ...recordColumns(),
+  },
+  (t) => [
+    index("boards_studio_updated").on(t.studioId, t.updatedAt),
+    actorCheck("boards_actor"),
+    metaCheck("boards_meta"),
+  ],
+);
+
+export const pins = sqliteTable(
+  "pins",
+  {
+    id: text("id").primaryKey(),
+    studioId: text("studio_id").notNull().references(() => studios.id),
+    boardId: text("board_id").notNull().references(() => boards.id),
+    fileId: text("file_id").references(() => files.id),
+    sourceUrl: text("source_url"),
+    sourceCredit: text("source_credit"),
+    isOwn: integer("is_own", { mode: "boolean" }).notNull().default(false),
+    note: text("note"),
+    tags: text("tags", { mode: "json" }).$type<string[]>().notNull().default(sql`'[]'`),
+    palette: text("palette", { mode: "json" }).$type<string[]>().notNull().default(sql`'[]'`),
+    kind: text("kind", { enum: ["image", "idea", "link"] }).notNull().default("idea"),
+    title: text("title"),
+    linkedType: text("linked_type"),
+    linkedId: text("linked_id"),
+    contributorName: text("contributor_name"),
+    deletedBy: text("deleted_by"),
+    ...recordColumns(),
+  },
+  (t) => [
+    index("pins_studio_updated").on(t.studioId, t.updatedAt),
+    index("pins_studio_board").on(t.studioId, t.boardId),
+    check("pins_tags", sql`json_valid(tags)`),
+    check("pins_palette", sql`json_valid(palette)`),
+    check("pins_kind", sql`kind IN ('image','idea','link')`),
+    actorCheck("pins_actor"),
+    metaCheck("pins_meta"),
+  ],
+);
+
+export const boardFeedback = sqliteTable(
+  "board_feedback",
+  {
+    id: text("id").primaryKey(),
+    studioId: text("studio_id").notNull().references(() => studios.id),
+    boardId: text("board_id").notNull().references(() => boards.id),
+    pinId: text("pin_id").references(() => pins.id),
+    text: text("text").notNull().default(""),
+    starred: integer("starred", { mode: "boolean" }),
+    authorName: text("author_name"),
+    ...recordColumns(),
+  },
+  (t) => [
+    index("board_feedback_studio_updated").on(t.studioId, t.updatedAt),
+    index("board_feedback_studio_board").on(t.studioId, t.boardId),
+    actorCheck("board_feedback_actor"),
+    metaCheck("board_feedback_meta"),
+  ],
+);
+
 export type ArtworkRow = typeof artworks.$inferSelect;
 export type ClientRow = typeof clients.$inferSelect;
 export type FileRow = typeof files.$inferSelect;
@@ -408,3 +481,6 @@ export type ShowRow = typeof shows.$inferSelect;
 export type ShowArtworkRow = typeof showArtworks.$inferSelect;
 export type ActivityRow = typeof activityLog.$inferSelect;
 export type PlacementRow = typeof placements.$inferSelect;
+export type BoardRow = typeof boards.$inferSelect;
+export type PinRow = typeof pins.$inferSelect;
+export type FeedbackRow = typeof boardFeedback.$inferSelect;

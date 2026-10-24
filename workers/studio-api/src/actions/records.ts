@@ -158,11 +158,16 @@ interface CrudOptions {
   about?: string;
   /** The assistant's level for create and update (delete is always_confirm). */
   risk?: "auto" | "confirm";
+  /** The level for update, when it differs from create's (D-084: saving a card is auto, editing one asks). */
+  updateRisk?: "auto" | "confirm";
   apps?: readonly string[];
+  /** More writes in the same batch as a delete or restore, e.g. a board's cards (D-084). May throw to refuse. */
+  onDelete?: (ctx: ActionCtx, before: Snapshot) => Promise<Write[]>;
+  onRestore?: (ctx: ActionCtx, before: Snapshot) => Promise<Write[]>;
 }
 
 /** create / update / delete actions for one record type. */
-function crudActions(e: EntityDef, input: z.ZodType<Snapshot>, patch: z.ZodType<Snapshot>, { refs, risk = "auto", apps, about }: CrudOptions = {}) {
+export function crudActions(e: EntityDef, input: z.ZodType<Snapshot>, patch: z.ZodType<Snapshot>, { refs, risk = "auto", updateRisk = risk, apps, about, onDelete, onRestore }: CrudOptions = {}) {
   const more = about ? ` ${about}` : "";
   const one = (_c: ActionCtx, afters: (Snapshot | null)[]) => afters[0] as Snapshot;
   return {
@@ -184,7 +189,7 @@ function crudActions(e: EntityDef, input: z.ZodType<Snapshot>, patch: z.ZodType<
       description: `Change fields on a ${e.type}; send only the fields that change.${more}`,
       input: z.object({ ...VersionedId, patch }),
       permission: `${e.perm}:write` as Permission,
-      risk,
+      risk: updateRisk,
       ...(apps ? { apps } : {}),
       plan: async (ctx, { id, version, patch: p }) => {
         const before = await getRecord(ctx.db, e, ctx.actor.studioId, id);
@@ -204,7 +209,7 @@ function crudActions(e: EntityDef, input: z.ZodType<Snapshot>, patch: z.ZodType<
       plan: async (ctx, { id, version }) => {
         const before = await getRecord(ctx.db, e, ctx.actor.studioId, id);
         checkVersion(before, version);
-        return { writes: [updateWrite(ctx, e, before, { deletedAt: ctx.now })] };
+        return { writes: [updateWrite(ctx, e, before, { deletedAt: ctx.now }), ...(await onDelete?.(ctx, before) ?? [])] };
       },
       respond: one,
     }),
@@ -219,7 +224,9 @@ function crudActions(e: EntityDef, input: z.ZodType<Snapshot>, patch: z.ZodType<
       plan: async (ctx, { id }) => {
         const before = await getRecord(ctx.db, e, ctx.actor.studioId, id, { withDeleted: true });
         if (!before.deletedAt) throw new HttpError("bad_request", `That ${e.type} isn't deleted`);
-        return { writes: [updateWrite(ctx, e, before, { deletedAt: null })] };
+        // Who removed it no longer applies once it's back.
+        const back = "deletedBy" in e.defaults ? { deletedAt: null, deletedBy: null } : { deletedAt: null };
+        return { writes: [updateWrite(ctx, e, before, back), ...(await onRestore?.(ctx, before) ?? [])] };
       },
       respond: one,
     }),

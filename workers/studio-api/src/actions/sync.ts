@@ -22,12 +22,16 @@ const SYNCABLE = new Set([
   "show.create", "show.update", "show.delete", "show.restore",
   "sale.create", "sale.update", "sale.delete", "sale.restore",
   "placement.create", "placement.update", "placement.delete", "placement.restore",
+  "board.create", "board.update", "board.delete", "board.restore",
+  "pin.create", "pin.update", "pin.delete", "pin.restore", "pin.save", "pin.move", "pin.copy", "pin.link",
+  "feedback.create", "feedback.update", "feedback.delete", "feedback.restore", "feedback.star",
   "settings.update",
   "show.add_artwork", "show.remove_artwork", "artwork.mark_sold",
 ]);
 
 /** Record types a device keeps a copy of. */
-export const SYNCED_TYPES = ["artwork", "client", "show", "show_artwork", "sale", "settings", "file", "placement"] as const;
+export const SYNCED_TYPES = ["artwork", "client", "show", "show_artwork", "sale", "settings", "file", "placement",
+  "board", "pin", "feedback"] as const;
 
 /** Ids per query when pull reads records back (D1 allows 100 bound parameters). */
 const PULL_CHUNK = 50;

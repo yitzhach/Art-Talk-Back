@@ -14,7 +14,7 @@ const b: Record<string, any> = {};
 async function snapshotB() {
   const out: Record<string, unknown> = {};
   for (const t of ["artworks", "clients", "shows", "sales", "placements", "files", "studio_settings", "activity_log", "memberships",
-    "assistant_policy", "pending_actions", "assistant_messages"]) {
+    "assistant_policy", "pending_actions", "assistant_messages", "boards", "pins", "board_feedback"]) {
     out[t] = (await env.DB.prepare(`SELECT * FROM ${t} WHERE studio_id = ? ORDER BY 1`).bind(B.studioId).all()).results;
   }
   return out;
@@ -35,6 +35,14 @@ beforeAll(async () => {
   const up = (await call("/v1/files/upload-url", { method: "POST", cookie: B.cookie, json: { name: "b.jpg", contentType: "image/jpeg", size: 3 } })).data;
   await call(up.uploadUrl.replace(BASE, ""), { method: "PUT", body: "abc", headers: { "Content-Length": "3" } });
   b.file = (await call(`/v1/files/${up.file.id}/attach`, { method: "POST", cookie: B.cookie, json: { entityType: "artwork", entityId: b.artwork.id } })).data;
+  b.board = (await call("/v1/boards", { method: "POST", cookie: B.cookie, json: { name: "B's board" } })).data;
+  const wup = (await call("/v1/files/upload-url", { method: "POST", cookie: B.cookie, json: { name: "w.jpg", contentType: "image/jpeg", size: 3 } })).data;
+  await call(wup.uploadUrl.replace(BASE, ""), { method: "PUT", body: "abc", headers: { "Content-Length": "3" } });
+  b.pin = (await call("/v1/pins", { method: "POST", cookie: B.cookie, json: { boardId: b.board.id, kind: "image", fileId: wup.file.id, title: "B's card" } })).data;
+  b.pinFile = (await call(`/v1/files/${wup.file.id}/attach`, { method: "POST", cookie: B.cookie, json: { entityType: "pin", entityId: b.pin.id } })).data;
+  b.feedback = (await call("/v1/feedback", { method: "POST", cookie: B.cookie, json: { boardId: b.board.id, pinId: b.pin.id, text: "B's note" } })).data;
+  b.deletedPin = (await call("/v1/pins", { method: "POST", cookie: B.cookie, json: { boardId: b.board.id, kind: "idea", note: "gone" } })).data;
+  await call(`/v1/pins/${b.deletedPin.id}`, { method: "DELETE", cookie: B.cookie, headers: { "If-Match": "1" } });
   b.logId = (await call("/v1/activity", { cookie: B.cookie })).data.items[0].id;
   b.card = (await call("/v1/assistant/act", { method: "POST", cookie: B.cookie, headers: ASSISTANT,
     json: { action: "sale.create", input: { title: "B's card", showId: b.show.id }, summary: "B" } })).data.proposal;
@@ -78,6 +86,39 @@ cases.push(["get", "/files/{id}/download-url (B's placement image)", () => call(
 cases.push(["post", "/actions/show.add_artwork", () => call("/v1/actions/show.add_artwork", { method: "POST", cookie: A.cookie, json: { showId: b.show.id, artworkId: b.artwork.id } })]);
 cases.push(["post", "/actions/sale.restore", () => call("/v1/actions/sale.restore", { method: "POST", cookie: A.cookie, json: { id: b.sale.id } })]);
 cases.push(["post", "/actions/artwork.mark_sold", () => call("/v1/actions/artwork.mark_sold", { method: "POST", cookie: A.cookie, json: { artworkId: b.artwork.id, priceCents: 1 } })]);
+// Studio Wall (D-082…D-085): B's boards, cards and comments, and A's records pointing at them.
+const aBoard = async () => (await call("/v1/boards", { method: "POST", cookie: A.cookie, json: { name: "A's board" } })).data;
+const act = (name: string, json: unknown) => call(`/v1/actions/${name}`, { method: "POST", cookie: A.cookie, json });
+attempt("get", "/boards/{id}", () => call(`/v1/boards/${b.board.id}`, { cookie: A.cookie }));
+attempt("patch", "/boards/{id}", () => call(`/v1/boards/${b.board.id}`, { method: "PATCH", cookie: A.cookie, headers: { "If-Match": "1" }, json: { name: "pwned" } }));
+attempt("delete", "/boards/{id}", () => call(`/v1/boards/${b.board.id}`, { method: "DELETE", cookie: A.cookie, headers: { "If-Match": "1" } }));
+attempt("get", "/pins/{id}", () => call(`/v1/pins/${b.pin.id}`, { cookie: A.cookie }));
+attempt("patch", "/pins/{id}", () => call(`/v1/pins/${b.pin.id}`, { method: "PATCH", cookie: A.cookie, headers: { "If-Match": "1" }, json: { title: "pwned" } }));
+attempt("delete", "/pins/{id}", () => call(`/v1/pins/${b.pin.id}`, { method: "DELETE", cookie: A.cookie, headers: { "If-Match": "1" } }));
+attempt("get", "/feedback/{id}", () => call(`/v1/feedback/${b.feedback.id}`, { cookie: A.cookie }));
+attempt("patch", "/feedback/{id}", () => call(`/v1/feedback/${b.feedback.id}`, { method: "PATCH", cookie: A.cookie, headers: { "If-Match": "1" }, json: { text: "pwned" } }));
+attempt("delete", "/feedback/{id}", () => call(`/v1/feedback/${b.feedback.id}`, { method: "DELETE", cookie: A.cookie, headers: { "If-Match": "1" } }));
+cases.push(["post", "/actions/pin.restore", () => act("pin.restore", { id: b.deletedPin.id })]);
+cases.push(["post", "/actions/board.restore", () => act("board.restore", { id: b.board.id })]);
+cases.push(["post", "/actions/feedback.restore", () => act("feedback.restore", { id: b.feedback.id })]);
+cases.push(["post", "/actions/pin.save (on B's board)", () => act("pin.save", { pins: [{ boardId: b.board.id, kind: "idea", note: "x" }] })]);
+cases.push(["post", "/actions/pin.save (A's board, B's file)", async () => act("pin.save", { pins: [{ boardId: (await aBoard()).id, kind: "image", fileId: b.pinFile.id }] })]);
+cases.push(["post", "/actions/pin.move (B's card to A's board)", async () => act("pin.move", { ids: [b.pin.id], boardId: (await aBoard()).id })]);
+cases.push(["post", "/actions/pin.copy (B's card to A's board)", async () => act("pin.copy", { ids: [b.pin.id], boardId: (await aBoard()).id })]);
+cases.push(["post", "/actions/pin.link", () => act("pin.link", { id: b.pin.id, version: 1, linkedType: "artwork", linkedId: b.artwork.id })]);
+cases.push(["post", "/actions/pin.link (A's card, B's artwork)", async () => {
+  const pin = (await call("/v1/pins", { method: "POST", cookie: A.cookie, json: { boardId: (await aBoard()).id, kind: "idea", note: "a" } })).data;
+  return act("pin.link", { id: pin.id, version: 1, linkedType: "artwork", linkedId: b.artwork.id });
+}]);
+cases.push(["post", "/actions/feedback.star", () => act("feedback.star", { pinId: b.pin.id, starred: true })]);
+cases.push(["post", "/pins (on B's board)", () => call("/v1/pins", { method: "POST", cookie: A.cookie, json: { boardId: b.board.id, kind: "idea", note: "x" } })]);
+cases.push(["post", "/feedback (on B's board)", () => call("/v1/feedback", { method: "POST", cookie: A.cookie, json: { boardId: b.board.id, text: "x" } })]);
+cases.push(["post", "/feedback (A's board, B's card)", async () => call("/v1/feedback", { method: "POST", cookie: A.cookie, json: { boardId: (await aBoard()).id, pinId: b.pin.id, text: "x" } })]);
+cases.push(["patch", "/boards/{id} (A's board, B's card as cover)", async () => {
+  const board = await aBoard();
+  return call(`/v1/boards/${board.id}`, { method: "PATCH", cookie: A.cookie, headers: { "If-Match": "1" }, json: { coverPinId: b.pin.id } });
+}]);
+cases.push(["get", "/files/{id}/download-url (B's card image)", () => call(`/v1/files/${b.pinFile.id}/download-url`, { cookie: A.cookie })]);
 attempt("post", "/activity/{id}/undo", () => call(`/v1/activity/${b.logId}/undo`, { method: "POST", cookie: A.cookie }));
 attempt("post", "/files/{id}/attach", () => call(`/v1/files/${b.file.id}/attach`, { method: "POST", cookie: A.cookie, json: { entityType: "artwork", entityId: b.artwork.id } }));
 attempt("get", "/files/{id}/download-url", () => call(`/v1/files/${b.file.id}/download-url`, { cookie: A.cookie }));
@@ -112,6 +153,16 @@ describe("studio A can't reach studio B", () => {
       { opId: newId(), action: "show.restore", entityId: b.show.id, baseVersion: null, input: { id: b.show.id } },
       { opId: newId(), action: "placement.update", entityId: b.placement.id, baseVersion: 1, input: { patch: { name: "pwned" } } },
       { opId: newId(), action: "placement.delete", entityId: b.placement.id, baseVersion: 1, input: {} },
+      { opId: newId(), action: "board.update", entityId: b.board.id, baseVersion: 1, input: { patch: { name: "pwned" } } },
+      { opId: newId(), action: "board.delete", entityId: b.board.id, baseVersion: 1, input: {} },
+      { opId: newId(), action: "pin.update", entityId: b.pin.id, baseVersion: 1, input: { patch: { title: "pwned" } } },
+      { opId: newId(), action: "pin.delete", entityId: b.pin.id, baseVersion: 1, input: {} },
+      { opId: newId(), action: "pin.create", entityId: newId(), baseVersion: null, input: { boardId: b.board.id, kind: "idea", note: "x" } },
+      { opId: newId(), action: "pin.save", entityId: newId(), baseVersion: null, input: { pins: [{ boardId: b.board.id, kind: "idea", note: "x" }] } },
+      { opId: newId(), action: "pin.restore", entityId: b.deletedPin.id, baseVersion: null, input: { id: b.deletedPin.id } },
+      { opId: newId(), action: "feedback.update", entityId: b.feedback.id, baseVersion: 1, input: { patch: { text: "pwned" } } },
+      { opId: newId(), action: "feedback.create", entityId: newId(), baseVersion: null, input: { boardId: b.board.id, text: "x" } },
+      { opId: newId(), action: "feedback.star", entityId: newId(), baseVersion: null, input: { pinId: b.pin.id, starred: true } },
     ];
     // One push answers SYNC_PUSH_MAX_OPS ops (D-050), so send them the way a device would.
     const results: any[] = [];
@@ -125,7 +176,8 @@ describe("studio A can't reach studio B", () => {
   it("sync pull never returns B's records", async () => {
     covered.add("get /sync/pull");
     const res = await call("/v1/sync/pull?since=0&limit=500", { cookie: A.cookie });
-    const bIds = new Set([b.artwork.id, b.client.id, b.show.id, b.sale.id, b.file.id, b.placement.id, b.placementFile.id, B.studioId]);
+    const bIds = new Set([b.artwork.id, b.client.id, b.show.id, b.sale.id, b.file.id, b.placement.id, b.placementFile.id, B.studioId,
+      b.board.id, b.pin.id, b.pinFile.id, b.feedback.id, b.deletedPin.id]);
     expect(res.data.changes.filter((c: any) => bIds.has(c.entityId))).toEqual([]);
   });
 
@@ -134,6 +186,15 @@ describe("studio A can't reach studio B", () => {
     await call(up.uploadUrl.replace(BASE, ""), { method: "PUT", body: "abc", headers: { "Content-Length": "3" } });
     const before = await snapshotB();
     const res = await call(`/v1/files/${up.file.id}/attach`, { method: "POST", cookie: A.cookie, json: { entityType: "artwork", entityId: b.artwork.id } });
+    expect(res.status).toBe(404);
+    expect(await snapshotB()).toEqual(before);
+  });
+
+  it("A's own file can't be attached to B's card", async () => {
+    const up = (await call("/v1/files/upload-url", { method: "POST", cookie: A.cookie, json: { name: "a.jpg", contentType: "image/jpeg", size: 3 } })).data;
+    await call(up.uploadUrl.replace(BASE, ""), { method: "PUT", body: "abc", headers: { "Content-Length": "3" } });
+    const before = await snapshotB();
+    const res = await call(`/v1/files/${up.file.id}/attach`, { method: "POST", cookie: A.cookie, json: { entityType: "pin", entityId: b.pin.id } });
     expect(res.status).toBe(404);
     expect(await snapshotB()).toEqual(before);
   });
@@ -176,6 +237,21 @@ describe("studio A can't reach studio B", () => {
       // A booth built by A is A's.
       const made = (await call("/v1/actions/placement.build", { method: "POST", cookie: A.cookie, json: { name: "A's built booth" } })).data.result;
       expect(made.studioId).toBe(A.studioId);
+    }],
+    ["get", "/boards", async () => expect((await call("/v1/boards", { cookie: A.cookie })).data.items.map((x: any) => x.id)).not.toContain(b.board.id)],
+    ["post", "/boards", async () => expect((await call("/v1/boards", { method: "POST", cookie: A.cookie, json: { name: "A's" } })).data.studioId).toBe(A.studioId)],
+    ["get", "/pins", async () => {
+      expect((await call(`/v1/pins?boardId=${b.board.id}`, { cookie: A.cookie })).data.items).toEqual([]);
+      expect((await call("/v1/pins", { cookie: A.cookie })).data.items.map((x: any) => x.id)).not.toContain(b.pin.id);
+    }],
+    ["post", "/pins", async () => {
+      const board = (await call("/v1/boards", { method: "POST", cookie: A.cookie, json: { name: "A's" } })).data;
+      expect((await call("/v1/pins", { method: "POST", cookie: A.cookie, json: { boardId: board.id, kind: "idea", note: "a" } })).data.studioId).toBe(A.studioId);
+    }],
+    ["get", "/feedback", async () => expect((await call(`/v1/feedback?boardId=${b.board.id}`, { cookie: A.cookie })).data.items).toEqual([])],
+    ["post", "/feedback", async () => {
+      const board = (await call("/v1/boards", { method: "POST", cookie: A.cookie, json: { name: "A's" } })).data;
+      expect((await call("/v1/feedback", { method: "POST", cookie: A.cookie, json: { boardId: board.id, text: "a" } })).data.studioId).toBe(A.studioId);
     }],
     ["post", "/clients", async () => expect((await call("/v1/clients", { method: "POST", cookie: A.cookie, json: { name: "A's" } })).data.studioId).toBe(A.studioId)],
     ["get", "/assistant/proposals", async () => expect((await call("/v1/assistant/proposals", { cookie: A.cookie })).data.items).toEqual([])],

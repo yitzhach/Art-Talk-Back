@@ -7,6 +7,7 @@ import "./actions/files";
 import "./actions/shows";
 import "./actions/assistant";
 import "./actions/booth";
+import "./actions/boards";
 import { loadAuth } from "./auth/session";
 import type { AppEnv } from "./env";
 import { safeEqual, sha256 } from "./lib/crypto";

@@ -102,7 +102,7 @@ export const UploadRequest = z.object({
   kind: FileKind.optional(),
 }).strict();
 
-export const AttachableType = z.enum(["artwork", "client", "placement"]);
+export const AttachableType = z.enum(["artwork", "client", "placement", "pin"]);
 export const AttachRequest = z.object({ entityType: AttachableType, entityId: Id }).strict();
 
 export const FileRecord = RecordMeta.extend({
@@ -272,6 +272,71 @@ export const PlacementPatch = PlacementFields.partial().strict()
 export const PlacementInput = PlacementFields.partial().required({ name: true, format: true })
   .extend({ id: Id.optional() }).strict();
 export const Placement = RecordMeta.extend(PlacementFields.shape);
+
+// ------------------------------------------------- boards, pins, feedback
+// Phase 5, Studio Wall (D-083): inspiration boards, their cards (pins) and
+// comments and stars on them (board_feedback). Empty text is null, not "".
+
+/** Keeps a card's `meta` (its drawings live there) small enough to log twice in one row. */
+export const PIN_META_MAX = 100_000;
+/** Most cards one pin.save, pin.move or pin.copy handles. */
+export const PIN_BATCH_MAX = 50;
+
+const HttpUrl = z.string().max(2000).regex(/^https?:\/\/\S+$/i, "A complete http or https link");
+
+export const BoardFields = z.object({
+  name: z.string().trim().min(1).max(200),
+  description: nullableText(),
+  coverPinId: Id.nullable(),
+  position: z.number().int().min(0).max(1_000_000),
+  commentsEnabled: z.boolean().meta({ description: "Clients may comment and star through a link (stage 5)" }),
+  meta: Meta,
+});
+export const BoardPatch = BoardFields.partial().strict()
+  .refine((v) => Object.keys(v).length > 0, "Send at least one field");
+export const BoardInput = BoardFields.partial().required({ name: true }).extend({ id: Id.optional() }).strict();
+export const Board = RecordMeta.extend(BoardFields.shape);
+
+export const PinKind = z.enum(["image", "idea", "link"]);
+export const PinLinkType = z.enum(["artwork"]);
+const PinMeta = Meta.refine((v) => JSON.stringify(v).length <= PIN_META_MAX,
+  `The card's meta is too big (over ${PIN_META_MAX} characters of JSON)`);
+
+export const PinFields = z.object({
+  boardId: Id,
+  fileId: Id.nullable().meta({ description: "The card's picture: a studio file in this studio" }),
+  sourceUrl: HttpUrl.nullable(),
+  sourceCredit: nullableText(500),
+  isOwn: z.boolean().meta({ description: "The artist's own work, not a reference" }),
+  note: nullableText(),
+  tags: z.array(z.string().trim().min(1).max(50)).max(50),
+  palette: z.array(z.string().regex(/^#[0-9a-f]{6}$/i, "#rrggbb")).max(12),
+  kind: PinKind,
+  title: nullableText(500),
+  linkedType: PinLinkType.nullable(),
+  linkedId: Id.nullable(),
+  contributorName: nullableText(100),
+  deletedBy: nullableText(100).meta({ description: "Who removed it, when not the owner (e.g. guest:<id>)" }),
+  meta: PinMeta,
+});
+export const PinPatch = PinFields.partial().strict()
+  .refine((v) => Object.keys(v).length > 0, "Send at least one field");
+export const PinInput = PinFields.partial().required({ boardId: true, kind: true }).extend({ id: Id.optional() }).strict();
+export const Pin = RecordMeta.extend(PinFields.shape);
+
+export const FeedbackFields = z.object({
+  boardId: Id,
+  pinId: Id.nullable(),
+  text: z.string().trim().max(4000),
+  starred: z.boolean().nullable().meta({ description: "null for a comment; true or false for a star" }),
+  authorName: nullableText(100),
+  meta: Meta,
+});
+export const FeedbackPatch = FeedbackFields.omit({ boardId: true }).partial().strict()
+  .refine((v) => Object.keys(v).length > 0, "Send at least one field");
+export const FeedbackInput = FeedbackFields.partial().required({ boardId: true }).extend({ id: Id.optional() }).strict()
+  .refine((v) => !!v.text || typeof v.starred === "boolean", "A comment needs text; a star needs starred");
+export const Feedback = RecordMeta.extend(FeedbackFields.shape);
 
 // -------------------------------------------------------------------- sync
 

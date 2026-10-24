@@ -4,7 +4,8 @@ import { type DBSchema, type IDBPDatabase, openDB } from "idb";
 import type { z } from "zod";
 import type { SyncOp } from "@studio/core";
 
-export type RecordType = "artwork" | "client" | "show" | "show_artwork" | "sale" | "settings" | "file" | "placement";
+export type RecordType = "artwork" | "client" | "show" | "show_artwork" | "sale" | "settings" | "file" | "placement"
+  | "board" | "pin" | "feedback";
 export type LocalRecord = Record<string, unknown> & { id?: string; studioId?: string; version?: number; deletedAt?: string | null };
 export type OutboxOp = z.infer<typeof SyncOp> & { entityType: RecordType };
 

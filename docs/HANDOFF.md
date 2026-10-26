@@ -16,6 +16,12 @@ Read this first, then `CLAUDE.md`, then `docs/phase-3.md` (assistant) or `docs/p
   here: stage 5's `shares` and guest sessions, and stage 7's `describe_board` and search; the app's
   sign-in and sync (stage 3) and import (stage 4) are app work.
 
+- **Studio Wall stage 3 (2026-10-26, D-087…D-089).** Studio Wall signs in with the studio's code or password
+  and, on a device switched to studio sync, syncs boards, cards, comments and pictures through `/v1`
+  (Studio-Wall `src/studio.ts`; gate `tests/two-devices.mjs`, run by Studio Wall's CI and by the new
+  `studio-wall` job here). No platform code changed. Next for Studio Wall: stage 4 (the library import, app
+  work), then stage 5 (client links: `shares` and guest sessions here).
+
 - **Optional password (2026-10-08, D-080).** Isaac couldn't find Booth Studio's sign-in (the header's
   "IA" circle, hidden on phones; booth-studio#27 makes it a "Sign in" button) and asked to choose a
   password. studio-api now has one beside the code (migration 0007, three `/auth/password` routes,

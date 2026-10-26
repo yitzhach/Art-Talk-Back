@@ -358,3 +358,12 @@ As for placements (D-063): the app uploads through `file.upload`, puts the file'
 
 ### D-086 · Record lists filter by any declared column · 2026-10-24 · default
 `/v1/pins` and `/v1/feedback` are read per board (`?boardId=`). The record list route used to know only `status`; it now applies each declared filter as an equality on the column of the same name, so the existing `status` filters work as before and a new filter needs no new code.
+
+### D-087 · Studio Wall syncs by comparing, not by hooking its actions · 2026-10-26 · default
+Studio Wall's local data layer keeps whole-library undo/redo (it restores snapshots without new `updated_at`s), so translating each local action into an op would miss changes. Its adapter (Studio Wall `src/studio.ts`, stage 3) instead compares every local record with the SDK's copy against the last state the two agreed on (a hash per record, kept per browser): only the device moved → the op that makes the studio match (create, update with the changed fields only, delete, restore); only the studio moved → merged into the device through `library.merge`; both → the studio keeps its copy and a review card offers the device's (as D-064). Deletes go last, cards before boards, and cards deleted with their board go with the board's delete or restore (D-084). A card's picture goes up after its card exists, then `fileId` is set (D-085). The SDK and the platform are unchanged.
+
+### D-088 · On Studio Wall, only new work goes up before the import · 2026-10-26 · default
+As in Booth Studio and the Show Tracker, nothing older goes up without the artist asking: after a device switches to studio sync, the studio gets the records it already has, what is made on that device from then on, the device's Inbox (mapped onto the studio's Inbox if it already has one, so every device shares one), and whatever those need (a new card's board, a comment's card). Older boards wait for stage 4's "Import my library".
+
+### D-089 · Old sync or studio sync, one per device · 2026-10-26 · default
+Studio Wall's plan asks for a setting that picks old sync (`/api/sync`, behind Cloudflare Access) or studio sync per device, old by default. Signing in to the studio changes nothing; switching reloads the app so only one of the two ever runs in a page. Client links still live on the old Worker's D1 until stage 5, so a device on studio sync says they need old sync rather than making links its boards wouldn't back.

@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Studio Wall · sign-in and sync through the studio, stage 3 (D-087…D-089)
+- Studio Wall (its repo) signs in with the studio's code or password and, once a device switches, syncs boards, cards, comments and pictures through `/v1` (Studio-Wall `src/studio.ts`, `tests/two-devices.mjs`). No platform code changed.
+- CI job `studio-wall`: Studio Wall's branch of the same name (else its main): SDK copy current, two-device run against this API. Passes with a notice while Studio Wall's main doesn't sync through the studio.
+
 ### Studio Wall · boards, cards and comments on the platform (D-082…D-086)
 - Migration 0008: `boards`, `pins`, `board_feedback` (Drizzle mirror; drift test). Zod `Board*`, `Pin*`, `Feedback*` with caps (card meta 100,000 characters, 50 cards per batch).
 - Actions tagged `apps: ["studio-wall"]`: board/pin/feedback create, update, delete, restore; `pin.save` (1–50, all or nothing), `pin.move`, `pin.copy` (credits and file kept), `pin.link`, `feedback.star`. A board's delete takes its cards with it and its restore (or one undo) brings them back. New `boards:*` permissions (staff read/write).

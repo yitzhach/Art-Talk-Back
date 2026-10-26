@@ -87,6 +87,20 @@ Later: `board.share`, `share.revoke` (stage 5), `board.start_artwork` (needs art
    or sync op (tenancy suite, B unchanged).
 3. CI green on the default branch, and production has migration 0008 and the new routes.
 
+## Stage 3 — the app signs in and syncs (Studio Wall's repo, 2026-10-26)
+
+Built in Studio-Wall (`src/studio.ts`, `src/studio-session.ts`, `tests/two-devices.mjs`, its new CI); nothing
+in studio-api changed. Here: D-087…D-089 and the `studio-wall` CI job.
+
+1. [x] Studio account panel in the app: emailed code or password, set/remove password, sign out.
+2. [x] Per device: old sync (default) or studio sync; switching reloads (D-089).
+3. [x] Adapter: compare device and studio per record, ops for what moved here, `library.merge` for what
+   moved there, review cards for both (D-087); the Inbox maps onto the studio's; only new work goes up
+   before the import (D-088); pictures uploaded, attached and downloaded by signed link.
+4. [x] Gate: Studio Wall's `tests/two-devices.mjs` against a local studio-api from this repo (desktop and
+   390 px; sign-in, switch, pictures, edits, offline, conflict, delete and restore, sign-out), and a CI check
+   of its `src/vendor/studio-sdk.js`. Both in Studio Wall's CI and in the `studio-wall` job here.
+
 ## Shipping order
 
 Platform first, as for Booth Studio's 0006: nothing calls the new routes until Studio Wall's

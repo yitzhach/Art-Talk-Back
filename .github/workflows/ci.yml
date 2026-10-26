@@ -135,3 +135,56 @@ jobs:
         working-directory: .booth-studio
         env: { HTTPS_PROXY: "http://127.0.0.1:9", HTTP_PROXY: "http://127.0.0.1:9", NO_PROXY: "127.0.0.1,localhost", STUDIO_PLATFORM: ".." }
         run: node tests/two-devices.mjs
+
+  # Studio Wall lives in yitzhach/Studio-Wall (D-082, phase-5-studio-wall.md). From
+  # here, as for Booth Studio: its vendored ES-module SDK still matches this SDK,
+  # and this API still passes its two-device run (sign-in, images, offline edits,
+  # conflicts, delete and restore). Its branch of the same name, else its main
+  # (D-056). A Studio Wall without tests/two-devices.mjs doesn't sync through the
+  # studio yet: the job says so and passes.
+  studio-wall:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - name: Pick the app branch
+        id: app
+        run: |
+          ref="${GITHUB_HEAD_REF:-$GITHUB_REF_NAME}"
+          if git ls-remote --exit-code --heads https://github.com/yitzhach/Studio-Wall "$ref" >/dev/null 2>&1; then
+            echo "ref=$ref" >> "$GITHUB_OUTPUT"
+          else
+            echo "ref=main" >> "$GITHUB_OUTPUT"
+          fi
+          echo "Testing against Studio-Wall@$(grep -o 'ref=.*' "$GITHUB_OUTPUT" | tail -1 | cut -d= -f2)"
+      - uses: actions/checkout@v4
+        with:
+          repository: yitzhach/Studio-Wall
+          ref: ${{ steps.app.outputs.ref }}
+          path: .studio-wall
+      - name: Is this Studio Wall on the platform?
+        id: on
+        run: |
+          if [ -f .studio-wall/tests/two-devices.mjs ]; then echo "yes=true" >> "$GITHUB_OUTPUT"
+          else echo "yes=false" >> "$GITHUB_OUTPUT"; echo "::notice::Studio-Wall@${{ steps.app.outputs.ref }} doesn't sync through the studio yet: nothing to test"; fi
+      - uses: pnpm/action-setup@v4
+        if: steps.on.outputs.yes == 'true'
+      - uses: actions/setup-node@v4
+        if: steps.on.outputs.yes == 'true'
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+        if: steps.on.outputs.yes == 'true'
+      - name: The app's src/vendor/studio-sdk.js matches this SDK
+        if: steps.on.outputs.yes == 'true'
+        run: pnpm --filter @studio/sdk bundle:esm --check --out "$GITHUB_WORKSPACE/.studio-wall/src/vendor/studio-sdk.js"
+      - name: Build Studio Wall
+        if: steps.on.outputs.yes == 'true'
+        working-directory: .studio-wall
+        run: npm ci && npm run build && npx playwright install --with-deps chromium
+      - name: Two devices, offline, against this API
+        if: steps.on.outputs.yes == 'true'
+        working-directory: .studio-wall
+        env: { HTTPS_PROXY: "http://127.0.0.1:9", HTTP_PROXY: "http://127.0.0.1:9", NO_PROXY: "127.0.0.1,localhost", STUDIO_PLATFORM: ".." }
+        run: node tests/two-devices.mjs

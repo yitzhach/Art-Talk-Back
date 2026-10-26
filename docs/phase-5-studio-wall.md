@@ -71,8 +71,14 @@ Later: `board.share`, `share.revoke` (stage 5), `board.start_artwork` (needs art
 6. [x] Tests: `test/boards.test.ts` (actions, batches, delete/restore with cards, copy, move, stars,
    sync, file attach, staff/client roles); every new route and action in `test/tenancy.test.ts`.
 7. [x] `pnpm openapi` → `docs/openapi.json`.
-8. [ ] Ship: PR to the default branch; CI green; merge; "Deploy production API" applies 0008 to
+8. [x] Ship: PR to the default branch; CI green; merge; "Deploy production API" applies 0008 to
    `studio-db-prod`; check the job log (bookmark, migration) and the deployed `studio-api` code.
+   Done 2026-10-24: #42 merged (`27fd2a6`); "Deploy production API" run 155 applied 0008 to
+   `studio-db-prod`; `studio-api` `8e5e18db`, live as `54475061` after the run's secret step.
+   Restore: bookmark `0000006f-00000000-0000510e-19bb937755e91fb3bd072bf621e17ac0`, previous
+   Worker `61df684f`. Checked through the Cloudflare connector: the three tables and the 0008 row
+   exist in production, and the deployed code has `pin.save`, `feedback.star` and "Restore its
+   board first". Studio Wall's stage 2 (Studio-Wall#25) merged after it.
 
 ## Gate (stage 1)
 
@@ -80,6 +86,20 @@ Later: `board.share`, `share.revoke` (stage 5), `board.start_artwork` (needs art
 2. Studio A can't read or write studio B's boards, cards or comments through any new route, action
    or sync op (tenancy suite, B unchanged).
 3. CI green on the default branch, and production has migration 0008 and the new routes.
+
+## Stage 3 — the app signs in and syncs (Studio Wall's repo, 2026-10-26)
+
+Built in Studio-Wall (`src/studio.ts`, `src/studio-session.ts`, `tests/two-devices.mjs`, its new CI); nothing
+in studio-api changed. Here: D-087…D-089 and the `studio-wall` CI job.
+
+1. [x] Studio account panel in the app: emailed code or password, set/remove password, sign out.
+2. [x] Per device: old sync (default) or studio sync; switching reloads (D-089).
+3. [x] Adapter: compare device and studio per record, ops for what moved here, `library.merge` for what
+   moved there, review cards for both (D-087); the Inbox maps onto the studio's; only new work goes up
+   before the import (D-088); pictures uploaded, attached and downloaded by signed link.
+4. [x] Gate: Studio Wall's `tests/two-devices.mjs` against a local studio-api from this repo (desktop and
+   390 px; sign-in, switch, pictures, edits, offline, conflict, delete and restore, sign-out), and a CI check
+   of its `src/vendor/studio-sdk.js`. Both in Studio Wall's CI and in the `studio-wall` job here.
 
 ## Shipping order
 

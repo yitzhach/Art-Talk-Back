@@ -367,3 +367,21 @@ As in Booth Studio and the Show Tracker, nothing older goes up without the artis
 
 ### D-089 · Old sync or studio sync, one per device · 2026-10-26 · default
 Studio Wall's plan asks for a setting that picks old sync (`/api/sync`, behind Cloudflare Access) or studio sync per device, old by default. Signing in to the studio changes nothing; switching reloads the app so only one of the two ever runs in a page. Client links still live on the old Worker's D1 until stage 5, so a device on studio sync says they need old sync rather than making links its boards wouldn't back.
+
+### D-090 · Client links answer from studio-api at the same address · 2026-11-02 · default
+Studio Wall stage 5. The client page (`/s/<token>`) and its requests (`/api/s/<token>/*`, the paths Cloudflare Access already lets through) stay as they are. Studio Wall's Worker forwards a request for a token studio-api knows to `/v1/public/shares/<token>/*` through its `API` binding; studio-api answers in the old Worker's JSON (`board`, `permission`, `expires_at`, `pins` with `file_ref`, `comments`, `starred`), so the page needs no change and looks the same. A token the old D1 still holds is served by the old code until stage 6, so no link a client has stops working.
+
+### D-091 · A link's token is derived, never stored · 2026-11-02 · default
+The token is HMAC-SHA256(SIGNING_KEY, "share\n" + share id) in hex: 64 characters, inside the old links' `[A-Za-z0-9_-]{32,64}`. `shares.token_hash` keeps its SHA-256 to find the link; the database alone can't open any link. The owner's list recomputes the token, so "Copy" keeps working for older links (the old Worker stored tokens in plain text). Rotating `SIGNING_KEY` turns every link off.
+
+### D-092 · A client is a guest, marked in created_by · 2026-11-02 · default
+What a client writes through a link (comments, stars, cards, removals) is written by internal actions run with a guest actor: `created_by` / `actor_id` `guest:<id>` (the page's per-browser id, as on the old Worker), `actor_type` `user`, source `app`. No new actor type: the `actor_type` CHECK in 0001 and 0008 would need four tables rebuilt in production. Every guest write still goes validate → share check → write → `activity_log`, so devices pull it and the owner can undo it. Unlocking a password link (`share_sessions`) and wrong tries (`share_attempts`) are written directly, like sign-in sessions and limits.
+
+### D-093 · Client cards go straight onto the board, within limits · 2026-11-02 · Isaac
+Isaac's answer to Studio Wall's open decision 6: no approval step. Limits carried over from the old Worker: up to 10 images a request, 10 MB each, 25 cards per client and 100 per board in 24 hours; 60 comments and stars per client an hour; 10 wrong passwords per address per link in 15 minutes; an unlocked link stays open in that browser 30 days or until it expires. A board with comments off makes every link view only. A link to chosen cards also shows the cards its clients add.
+
+### D-094 · Pictures lose hidden metadata in studio-api · 2026-11-02 · default
+`lib/strip.ts` (Studio Wall's `worker/strip.ts`, unchanged) removes GPS, camera, dates and edit history from JPEG, PNG and WebP without re-encoding. A client's added picture is stripped before it is stored, and every picture a link serves is stripped on the way out, because the owner's own uploads keep theirs in the studio (private to the studio). Added files are checked by their bytes (JPEG, PNG, WebP, GIF, HEIC), never by the declared type.
+
+### D-095 · Making a link isn't an assistant tool yet · 2026-11-02 · default
+`share.create` takes the link's password, which would sit in a confirm card (`pending_actions`), so the assistant can't run it (`assistant: never`) until stage 7 decides how. `share.revoke` is a tool for Studio Wall's assistant at always-confirm, as the plan has for anything a client sees.

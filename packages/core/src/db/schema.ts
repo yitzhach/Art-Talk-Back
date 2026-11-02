@@ -473,6 +473,51 @@ export const boardFeedback = sqliteTable(
   ],
 );
 
+// Phase 5, Studio Wall stage 5 (D-090…D-095): client links to a board. The
+// token is derived from the id (D-091); token_hash finds it.
+export const shares = sqliteTable(
+  "shares",
+  {
+    id: text("id").primaryKey(),
+    studioId: text("studio_id").notNull().references(() => studios.id),
+    boardId: text("board_id").notNull().references(() => boards.id),
+    tokenHash: text("token_hash").notNull().unique(),
+    permission: text("permission", { enum: ["view", "comment", "contribute"] }).notNull(),
+    expiresAt: text("expires_at"),
+    passwordHash: text("password_hash"),
+    pinIds: text("pin_ids", { mode: "json" }).$type<string[] | null>(),
+    ...recordColumns(),
+  },
+  (t) => [
+    index("shares_studio_board").on(t.studioId, t.boardId),
+    check("shares_permission", sql`permission IN ('view','comment','contribute')`),
+    check("shares_pin_ids", sql`pin_ids IS NULL OR json_valid(pin_ids)`),
+    actorCheck("shares_actor"),
+    metaCheck("shares_meta"),
+  ],
+);
+
+export const shareSessions = sqliteTable(
+  "share_sessions",
+  {
+    idHash: text("id_hash").primaryKey(),
+    shareId: text("share_id").notNull().references(() => shares.id),
+    createdAt: text("created_at").notNull(),
+    expiresAt: text("expires_at").notNull(),
+  },
+  (t) => [index("share_sessions_expires").on(t.expiresAt)],
+);
+
+export const shareAttempts = sqliteTable(
+  "share_attempts",
+  {
+    shareId: text("share_id").notNull().references(() => shares.id),
+    ipHash: text("ip_hash").notNull(),
+    at: text("at").notNull(),
+  },
+  (t) => [index("share_attempts_share_ip").on(t.shareId, t.ipHash, t.at)],
+);
+
 export type ArtworkRow = typeof artworks.$inferSelect;
 export type ClientRow = typeof clients.$inferSelect;
 export type FileRow = typeof files.$inferSelect;
@@ -484,3 +529,4 @@ export type PlacementRow = typeof placements.$inferSelect;
 export type BoardRow = typeof boards.$inferSelect;
 export type PinRow = typeof pins.$inferSelect;
 export type FeedbackRow = typeof boardFeedback.$inferSelect;
+export type ShareRow = typeof shares.$inferSelect;

@@ -14,7 +14,7 @@ const b: Record<string, any> = {};
 async function snapshotB() {
   const out: Record<string, unknown> = {};
   for (const t of ["artworks", "clients", "shows", "sales", "placements", "files", "studio_settings", "activity_log", "memberships",
-    "assistant_policy", "pending_actions", "assistant_messages", "boards", "pins", "board_feedback"]) {
+    "assistant_policy", "pending_actions", "assistant_messages", "boards", "pins", "board_feedback", "shares"]) {
     out[t] = (await env.DB.prepare(`SELECT * FROM ${t} WHERE studio_id = ? ORDER BY 1`).bind(B.studioId).all()).results;
   }
   return out;
@@ -43,6 +43,7 @@ beforeAll(async () => {
   b.feedback = (await call("/v1/feedback", { method: "POST", cookie: B.cookie, json: { boardId: b.board.id, pinId: b.pin.id, text: "B's note" } })).data;
   b.deletedPin = (await call("/v1/pins", { method: "POST", cookie: B.cookie, json: { boardId: b.board.id, kind: "idea", note: "gone" } })).data;
   await call(`/v1/pins/${b.deletedPin.id}`, { method: "DELETE", cookie: B.cookie, headers: { "If-Match": "1" } });
+  b.share = (await call("/v1/shares", { method: "POST", cookie: B.cookie, json: { boardId: b.board.id, permission: "contribute" } })).data;
   b.logId = (await call("/v1/activity", { cookie: B.cookie })).data.items[0].id;
   b.card = (await call("/v1/assistant/act", { method: "POST", cookie: B.cookie, headers: ASSISTANT,
     json: { action: "sale.create", input: { title: "B's card", showId: b.show.id }, summary: "B" } })).data.proposal;
@@ -119,6 +120,7 @@ cases.push(["patch", "/boards/{id} (A's board, B's card as cover)", async () => 
   return call(`/v1/boards/${board.id}`, { method: "PATCH", cookie: A.cookie, headers: { "If-Match": "1" }, json: { coverPinId: b.pin.id } });
 }]);
 cases.push(["get", "/files/{id}/download-url (B's card image)", () => call(`/v1/files/${b.pinFile.id}/download-url`, { cookie: A.cookie })]);
+attempt("delete", "/shares/{id}", () => call(`/v1/shares/${b.share.id}`, { method: "DELETE", cookie: A.cookie, headers: { "If-Match": "1" } }));
 attempt("post", "/activity/{id}/undo", () => call(`/v1/activity/${b.logId}/undo`, { method: "POST", cookie: A.cookie }));
 attempt("post", "/files/{id}/attach", () => call(`/v1/files/${b.file.id}/attach`, { method: "POST", cookie: A.cookie, json: { entityType: "artwork", entityId: b.artwork.id } }));
 attempt("get", "/files/{id}/download-url", () => call(`/v1/files/${b.file.id}/download-url`, { cookie: A.cookie }));
@@ -208,8 +210,50 @@ describe("studio A can't reach studio B", () => {
     expect(await snapshotB()).toEqual(before);
   });
 
+  /** A link of A's own: the public routes act through a token, never a session (D-090). */
+  let aLink: { token: string } | null = null;
+  const mine = async () => {
+    if (!aLink) {
+      const board = (await call("/v1/boards", { method: "POST", cookie: A.cookie, json: { name: "A's shared" } })).data;
+      aLink = (await call("/v1/shares", { method: "POST", cookie: A.cookie, json: { boardId: board.id, permission: "contribute" } })).data;
+    }
+    return aLink!.token;
+  };
+  const guest = { "x-guest-id": "t".repeat(20) };
+
   // List and create routes take no id: prove they only ever see or write A's studio.
   for (const [method, path, check] of [
+    ["get", "/shares", async () => {
+      expect((await call("/v1/shares", { cookie: A.cookie })).data.items.map((x: any) => x.id)).not.toContain(b.share.id);
+      expect((await call(`/v1/shares?boardId=${b.board.id}`, { cookie: A.cookie })).data.items).toEqual([]);
+    }],
+    ["post", "/shares", async () => {
+      expect((await call("/v1/shares", { method: "POST", cookie: A.cookie, json: { boardId: b.board.id, permission: "view" } })).status).toBe(404);
+      expect((await call("/v1/shares", { method: "POST", cookie: A.cookie, json: { boardId: b.board.id, permission: "view", pinIds: [b.pin.id] } })).status).toBe(404);
+    }],
+    // A's link, naming B's records: nothing of B's is shown, served or changed.
+    ["get", "/public/shares/{token}", async () => {
+      const got = (await call(`/v1/public/shares/${await mine()}`, { headers: guest })).data;
+      expect(JSON.stringify(got)).not.toMatch(new RegExp(`${b.pin.id}|${b.pinFile.id}|B's`));
+    }],
+    ["post", "/public/shares/{token}/unlock", async () => {
+      expect((await call(`/v1/public/shares/${await mine()}/unlock`, { method: "POST", json: { password: "x" } })).status).toBe(200);
+    }],
+    ["get", "/public/shares/{token}/files/{fileId}", async () => {
+      expect((await call(`/v1/public/shares/${await mine()}/files/${b.pinFile.id}`, { headers: guest })).status).toBe(404);
+    }],
+    ["post", "/public/shares/{token}/feedback", async () => {
+      const t = await mine();
+      expect((await call(`/v1/public/shares/${t}/feedback`, { method: "POST", headers: guest, json: { pin_id: b.pin.id, text: "x" } })).status).toBe(404);
+      expect((await call(`/v1/public/shares/${t}/feedback`, { method: "POST", headers: guest, json: { pin_id: b.pin.id, starred: true } })).status).toBe(404);
+    }],
+    ["post", "/public/shares/{token}/pins", async () => {
+      const r = await call(`/v1/public/shares/${await mine()}/pins?name=T`, { method: "POST", headers: guest, json: { note: "x" } });
+      expect((await call(`/v1/pins/${r.data.pin.id}`, { cookie: A.cookie })).data.studioId).toBe(A.studioId);
+    }],
+    ["delete", "/public/shares/{token}/pins/{id}", async () => {
+      expect((await call(`/v1/public/shares/${await mine()}/pins/${b.pin.id}`, { method: "DELETE", headers: guest })).status).toBe(404);
+    }],
     ["get", "/artworks", async () => expect((await call("/v1/artworks", { cookie: A.cookie })).data.items).toEqual([])],
     ["get", "/clients", async () => expect((await call("/v1/clients", { cookie: A.cookie })).data.items).toEqual([])],
     ["get", "/activity", async () => {

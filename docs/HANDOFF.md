@@ -5,6 +5,13 @@ Read this first, then `CLAUDE.md`, then `docs/phase-3.md` (assistant) or `docs/p
 
 ## Where things stand
 
+- **Studio Wall stage 5: client links on the platform (2026-11-02, D-090…D-095, `docs/phase-5-studio-wall.md`).**
+  Migration 0009 (`shares`, `share_sessions`, `share_attempts`); owner routes `/v1/shares`; public routes
+  `/v1/public/shares/{token}/…` that answer Studio Wall's unchanged client page (its Worker forwards `/api/s/<token>/*`
+  for tokens its old D1 doesn't hold). Isaac: client cards go straight onto the board (D-093); email invitations not
+  now. Pictures lose hidden metadata here (D-094). Platform first: this branch's PR, then Studio Wall's
+  (`claude/festive-euler-l6v71d` in both). Next for Studio Wall: stage 6 (switch over).
+
 - **Studio Wall joins the platform (2026-10-24, D-082…D-086, `docs/phase-5-studio-wall.md`).**
   Isaac approved Studio Wall's plan (its repo, `docs/backend-and-ai-plan.md`). Stage 1 here:
   migration 0008 (`boards`, `pins`, `board_feedback`), the actions tagged `apps: ["studio-wall"]`,

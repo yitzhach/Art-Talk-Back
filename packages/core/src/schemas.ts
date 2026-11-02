@@ -338,6 +338,37 @@ export const FeedbackInput = FeedbackFields.partial().required({ boardId: true }
   .refine((v) => !!v.text || typeof v.starred === "boolean", "A comment needs text; a star needs starred");
 export const Feedback = RecordMeta.extend(FeedbackFields.shape);
 
+// ------------------------------------------------------------------ shares
+// Phase 5, Studio Wall stage 5 (D-090…D-095): a client link to one board.
+
+export const SharePermission = z.enum(["view", "comment", "contribute"]);
+/** Most chosen cards one link may name. */
+export const SHARE_PINS_MAX = 500;
+
+export const ShareInput = z.object({
+  boardId: Id,
+  permission: SharePermission,
+  expiresDays: z.number().int().min(0).max(365).default(30)
+    .meta({ description: "Days until the link stops working; 0 = never" }),
+  password: z.string().min(8).max(200).optional()
+    .meta({ description: "Clients type it once per browser; stored only as a hash" }),
+  pinIds: z.array(Id).min(1).max(SHARE_PINS_MAX).optional()
+    .meta({ description: "Only these cards of the board (live ones); absent = the whole board" }),
+}).strict();
+
+/** What the owner sees of a link. The token is shown again on every read (D-091). */
+export const Share = z.object({
+  id: Id,
+  version: z.number().int().min(1).meta({ description: "Send it as If-Match to turn the link off" }),
+  boardId: Id,
+  token: z.string(),
+  permission: SharePermission,
+  createdAt: z.string(),
+  expiresAt: z.string().nullable(),
+  locked: z.boolean().meta({ description: "Has a password" }),
+  pinCount: z.number().int().nullable().meta({ description: "Chosen cards; null = the whole board" }),
+});
+
 // -------------------------------------------------------------------- sync
 
 export const SyncOp = z.object({

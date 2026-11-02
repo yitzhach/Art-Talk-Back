@@ -1595,6 +1595,80 @@
           "furniture",
           "limits"
         ]
+      },
+      "Share": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "ULID"
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Send it as If-Match to turn the link off"
+          },
+          "boardId": {
+            "type": "string",
+            "description": "ULID"
+          },
+          "token": {
+            "type": "string"
+          },
+          "permission": {
+            "type": "string",
+            "enum": [
+              "view",
+              "comment",
+              "contribute"
+            ]
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "expiresAt": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "locked": {
+            "type": "boolean",
+            "description": "Has a password"
+          },
+          "pinCount": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "description": "Chosen cards; null = the whole board"
+          }
+        },
+        "required": [
+          "id",
+          "version",
+          "boardId",
+          "token",
+          "permission",
+          "createdAt",
+          "expiresAt",
+          "locked",
+          "pinCount"
+        ]
+      },
+      "LinkError": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string"
+          },
+          "password": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "error"
+        ]
       }
     },
     "parameters": {}
@@ -9741,6 +9815,698 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/shares": {
+      "post": {
+        "tags": [
+          "shares"
+        ],
+        "summary": "Make a client link to a board",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Optional ULID; a repeat returns the first result"
+            },
+            "required": false,
+            "description": "Optional ULID; a repeat returns the first result",
+            "name": "idempotency-key",
+            "in": "header"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "boardId": {
+                    "type": "string",
+                    "description": "ULID"
+                  },
+                  "permission": {
+                    "type": "string",
+                    "enum": [
+                      "view",
+                      "comment",
+                      "contribute"
+                    ]
+                  },
+                  "expiresDays": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 365,
+                    "default": 30,
+                    "description": "Days until the link stops working; 0 = never"
+                  },
+                  "password": {
+                    "type": "string",
+                    "minLength": 8,
+                    "maxLength": 200,
+                    "description": "Clients type it once per browser; stored only as a hash"
+                  },
+                  "pinIds": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "description": "ULID"
+                    },
+                    "minItems": 1,
+                    "maxItems": 500,
+                    "description": "Only these cards of the board (live ones); absent = the whole board"
+                  }
+                },
+                "required": [
+                  "boardId",
+                  "permission"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created; the token is in the link",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Share"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not allowed for your role",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (or in another studio)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "shares"
+        ],
+        "summary": "Client links that are on (expired ones too), newest first",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "ULID"
+            },
+            "required": false,
+            "description": "ULID",
+            "name": "boardId",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Share"
+                      }
+                    }
+                  },
+                  "required": [
+                    "items"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not allowed for your role",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/shares/{id}": {
+      "delete": {
+        "tags": [
+          "shares"
+        ],
+        "summary": "Turn a client link off",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Record version the change was based on"
+            },
+            "required": false,
+            "description": "Record version the change was based on",
+            "name": "if-match",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Optional ULID; a repeat returns the first result"
+            },
+            "required": false,
+            "description": "Optional ULID; a repeat returns the first result",
+            "name": "idempotency-key",
+            "in": "header"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Share"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (or in another studio)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The record changed since you loaded it",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/public/shares/{token}": {
+      "get": {
+        "tags": [
+          "links"
+        ],
+        "summary": "A client link's board: its cards, comments and this browser's stars",
+        "security": [],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "token",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {}
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Needs the password",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LinkError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Off, expired or never existed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LinkError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/public/shares/{token}/unlock": {
+      "post": {
+        "tags": [
+          "links"
+        ],
+        "summary": "Type a link's password; sets this browser's unlock cookie",
+        "security": [],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "token",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "password": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "password"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "ok"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Wrong password",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LinkError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Off or expired",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LinkError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many tries",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LinkError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/public/shares/{token}/files/{fileId}": {
+      "get": {
+        "tags": [
+          "links"
+        ],
+        "summary": "A picture on the link's board, without its hidden data",
+        "security": [],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "token",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "fileId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The picture"
+          },
+          "404": {
+            "description": "Not on this link",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LinkError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/public/shares/{token}/feedback": {
+      "post": {
+        "tags": [
+          "links"
+        ],
+        "summary": "A client's comment, or star on a card",
+        "security": [],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "token",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "pin_id": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "text": {
+                    "type": "string"
+                  },
+                  "starred": {
+                    "type": "boolean"
+                  },
+                  "name": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {}
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LinkError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "View only",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LinkError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Off, or the card is gone",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LinkError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LinkError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/public/shares/{token}/pins": {
+      "post": {
+        "tags": [
+          "links"
+        ],
+        "summary": "Add cards through a contribute link: up to 10 pictures (multipart: image, palette, title), one picture (its bytes), or a link or note (JSON)",
+        "security": [],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "token",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "name": "name",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {}
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LinkError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Can't add cards",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LinkError"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Too large",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LinkError"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Not a picture",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LinkError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Over today's limit",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LinkError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/public/shares/{token}/pins/{id}": {
+      "delete": {
+        "tags": [
+          "links"
+        ],
+        "summary": "Remove a card this browser added (the owner can restore it)",
+        "security": [],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "token",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "ok"
+                  ]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not yours, or can't change cards",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LinkError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not on this board",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LinkError"
                 }
               }
             }

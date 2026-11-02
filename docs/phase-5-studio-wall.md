@@ -115,3 +115,59 @@ existing `studio-api`) adds no new Worker and changes nothing for a signed-out u
 | 2 | Removing Cloudflare Access from the owner app (after stage 6) | Zero Trust dashboard, his step |
 | 3 | Deleting the old D1 `studio-wall-sync` / R2 `studio-wall-files` (30 days after the switch) | Deleting data |
 | 4 | Automatic tags, Cloudflare Images, email invitations | Spending money |
+
+## Stage 5 — client links on the platform (2026-11-02, D-090…D-095)
+
+Studio Wall's client links (`/s/<token>`) move from its old Worker and D1 into studio-api. Isaac's
+answers (2026-11-02): client cards go **straight onto the board** (decision 6); email invitations
+**not now** (decision 8, no cost). Both repos work on `claude/festive-euler-l6v71d` (D-056).
+
+**What the client sees doesn't change.** The page keeps its address and its requests: the app's Worker
+sends `/api/s/<token>/*` (already outside Cloudflare Access) to `/v1/public/shares/<token>/*` here through
+the `API` binding, and studio-api answers in the same JSON the old Worker did (D-090). Tokens the old D1
+still knows keep working on the old code until stage 6, so nothing a client holds breaks.
+
+**Built here:**
+- Migration `0009_shares.sql`: `shares` (board, permission view/comment/contribute, expiry, password hash,
+  chosen cards, the token's hash), `share_sessions` (a password link unlocked in one browser) and
+  `share_attempts` (wrong passwords per address). Drizzle mirror, Zod shapes.
+- Owner: `POST /v1/shares`, `GET /v1/shares?boardId=`, `DELETE /v1/shares/{id}` (`share.create`,
+  `share.revoke`). The token is derived from the share's id with the signing key, so the owner's list can
+  show it again and the database never holds it (D-091).
+- Clients (`/v1/public/shares/{token}`, no sign-in; the token is the credential): the board, `unlock`,
+  `files/{fileId}`, `feedback` (comment or star), `pins` (add: JSON link/note or up to 10 images),
+  `pins/{id}` (remove one you added). A client is a guest: `created_by` `guest:<browser id>` (D-092).
+  Limits as on the old Worker (D-093).
+- `lib/strip.ts` (from Studio Wall's `worker/strip.ts`): pictures lose GPS, camera and dates when a client
+  adds them and whenever a link serves one (D-094).
+- Making a link is not an assistant tool yet (D-095).
+
+**Built in Studio Wall:** the Worker's forwarding and old-token fallback, link previews from studio-api,
+the share dialog on studio sync calling `/v1/shares`, and guest records keeping `guest:` on the device.
+
+**Shipping order:** platform first (the app calls a contract that doesn't exist yet, as Booth Studio's 0006):
+this PR merges, "Deploy production API" applies 0009, then Studio Wall's PR merges.
+
+### Steps
+1. [x] Plan (this section) and D-090…D-095.
+2. [x] Migration 0009 + Drizzle mirror (drift test) + Zod shapes.
+3. [x] `lib/strip.ts` and its tests (ported from Studio Wall `src/strip.test.ts`).
+4. [x] Actions: `share.create`, `share.revoke`; guest actions (internal): comment, star, add cards, remove own card.
+5. [x] Routes: owner `/v1/shares`; public `/v1/public/shares/{token}/…`; `pnpm openapi`.
+6. [x] Tests: `test/shares.test.ts` (ported from Studio Wall `src/contribute.test.ts` and
+   `src/share-password.test.ts`, plus expiry, revoke, chosen cards, comments off, limits, metadata) and
+   the new routes in `test/tenancy.test.ts`.
+7. [x] Studio Wall's side and its two-device test with a third browser as the client.
+8. [ ] Ship: this PR, deploy (0009), then Studio Wall's PR; check both deploys.
+
+Done so far (2026-11-02): `test/shares.test.ts` 22 tests (owner links, what a client sees, comments off, chosen
+cards, pictures stripped, the ported contribute and password tests, limits, pulls, one studio's link never reaching
+another's) and `test/strip.test.ts` 6; the tenancy sweep covers the nine new routes (100). Studio Wall: `src/links.test.ts`
+(the Worker's forwarding and old-token fallback) and `tests/two-devices.mjs` 67 checks with a third, client browser.
+
+### Gate (stage 5)
+1. The ported contribute and password tests pass here; typecheck, tests and openapi clean.
+2. Studio Wall's `tests/two-devices.mjs`: a link made on studio sync opens in a third browser (Chromium) with
+   the same page; a comment, a star, an added picture and a removed card reach the owner's devices;
+   a password link asks once; a turned-off link says it isn't available.
+3. CI green in both repos; production has 0009.

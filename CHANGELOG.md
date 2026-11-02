@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### Studio Wall · client links on the platform, stage 5 (D-090…D-095)
+- Migration 0009: `shares` (token stored only as a hash; derived from the id with the signing key, D-091), `share_sessions`, `share_attempts`. Zod `ShareInput`, `Share`.
+- Owner: `POST /v1/shares`, `GET /v1/shares?boardId=`, `DELETE /v1/shares/{id}` (`share.create`, not an assistant tool, D-095; `share.revoke`, always confirm).
+- Clients, no sign-in: `/v1/public/shares/{token}` (board), `/unlock`, `/files/{fileId}`, `/feedback`, `/pins`, `/pins/{id}`, answering in the old Studio Wall Worker's JSON (D-090). A client is a guest, `created_by` `guest:<id>`, through internal actions `share.comment`, `share.star`, `share.add`, `share.remove` (D-092). Cards go straight onto the board, with the old limits (D-093).
+- `lib/strip.ts` from Studio Wall: a client's photo is stripped of GPS, camera and dates before it's stored, and every picture a link serves on the way out (D-094). Tests: `test/shares.test.ts` (Studio Wall's contribute and password tests ported), `test/strip.test.ts`, tenancy sweep. `docs/openapi.json` regenerated.
+
 ### Studio Wall · sign-in and sync through the studio, stage 3 (D-087…D-089)
 - Studio Wall (its repo) signs in with the studio's code or password and, once a device switches, syncs boards, cards, comments and pictures through `/v1` (Studio-Wall `src/studio.ts`, `tests/two-devices.mjs`). No platform code changed.
 - CI job `studio-wall`: Studio Wall's branch of the same name (else its main): SDK copy current, two-device run against this API. Passes with a notice while Studio Wall's main doesn't sync through the studio.

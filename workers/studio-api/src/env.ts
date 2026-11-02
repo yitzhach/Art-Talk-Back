@@ -15,7 +15,8 @@ export interface Env {
   ASSISTANT_KEY?: string;
 }
 
-export type Role = "owner" | "staff" | "client";
+/** "guest": a client acting through a Studio Wall link (D-092); never a membership, only an Actor. */
+export type Role = "owner" | "staff" | "client" | "guest";
 export type Source = "app" | "assistant" | "job" | "api_key" | "sync" | "system";
 
 /** Who is calling. studioId always comes from here, never from a request body. */

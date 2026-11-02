@@ -11,7 +11,8 @@ export type Permission =
   | "files:read" | "files:write"
   | "settings:read" | "settings:write"
   | "activity:read" | "activity:undo"
-  | "assistant:use";
+  | "assistant:use"
+  | "shares:guest";
 
 // D-023: staff can do day-to-day work but not delete or change settings.
 // Client-role users get nothing here until the client portal (Phase 4).
@@ -23,6 +24,8 @@ const STAFF: readonly Permission[] = [
 ];
 
 export function can(role: Role, permission: Permission): boolean {
+  // A guest (someone with a client link, D-092) can do only what the link's own actions allow.
+  if (role === "guest") return permission === "shares:guest";
   if (role === "owner") return true;
   if (role === "staff") return STAFF.includes(permission);
   return false;

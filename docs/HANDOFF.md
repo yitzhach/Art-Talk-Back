@@ -9,8 +9,8 @@ Read this first, then `CLAUDE.md`, then `docs/phase-3.md` (assistant) or `docs/p
   public site rebuilt from nothing as a product other artists can use: fast pages from one catalogue, a visitor
   assistant that shows real works in the chat and makes a page of them, text/email/call to the artist, checkout,
   the wall view, collector pages. He reviewed the drawing (link in the plan) and answered the first questions;
-  ten more are open at the end of the plan. Next: his answers, then stage 0 (names, the new app repo), then
-  stage 1 (the catalogue). One stage per session.
+  ten more were answered the same day (defaults; D-102, D-103). Stage 0 done: stage 1 (the catalogue) is
+  planned in the brief with D-104…D-106 and waits for Isaac's OK and the new `studio-site` repo. One stage per session.
 
 - **Studio Wall stage 5: client links on the platform (2026-11-02, D-090…D-095, `docs/phase-5-studio-wall.md`).**
   Migration 0009 (`shares`, `share_sessions`, `share_attempts`); owner routes `/v1/shares`; public routes
@@ -154,7 +154,7 @@ Isaac's first use of the Show Tracker chat in production (merged 2026-10-06, art
 - Booth Studio's (from its repo): `npm test`, `npm run build`, then
   `STUDIO_PLATFORM=../Art-Talk-Back BOOTH_TEST_CHROMIUM=/opt/pw-browsers/chromium node tests/two-devices.mjs`
   (`BOOTH_COMPAT_DATE=2026-08-15` for the platform's date; `E2E_LOG=<file>` keeps wrangler's log on a failure).
-- Next decision is D-102. **Fetch the default branch before taking a number**: two sessions worked
+- Next decision is D-107. **Fetch the default branch before taking a number**: two sessions worked
   here on 2026-10-05 and both took D-059/D-060; this branch's were renumbered. One `CHANGELOG.md`
   line per item.
 

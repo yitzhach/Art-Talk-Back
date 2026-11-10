@@ -1,6 +1,6 @@
 # Phase 6, the site — Site 3.0: a public studio site with a visitor assistant
 
-**Status: plan only. Nothing is built.** Isaac asked on 2026-11-10 for a ground-up rebuild of
+**Status: stage 0 done (2026-11-10): answers recorded, stage 1 planned and waiting for Isaac's OK. Nothing is built.** Isaac asked on 2026-11-10 for a ground-up rebuild of
 isaacandersonart.com that he can later sell to other artists, galleries and art shows (D-096…D-101).
 The drawing he reviewed (eight phone screens, ideas, stages, questions):
 https://claude.ai/artifact/TjfVTjJFCHcaGEc2gjEpTw (private to Isaac).
@@ -29,12 +29,12 @@ tenant and the demo. Aim: an artist keeps the sale and the collector instead of 
 | Catalogue | Doesn't exist yet; stage 1 builds it. AI drafts descriptions, colours, tags; Isaac approves |
 | About page | Isaac supplies education, exhibitions, press after launch |
 | Design | The current look becomes the first template; light and dark; other studios pick a template |
-| Wall tool | AR-WALLE is the live iPhone version. Isaac will check which repo has the uploaded-photo version |
+| Wall tool | AR-WALLE is the live iPhone version. The uploaded-photo version is his "Art Wall" repo (D-103: best match `SEEWALLE`, to confirm at stage 5) |
 | First outside customer | Solo artists first; data ready for galleries |
 | AI budget | $10 a month for the site's assistant; he will raise it if it earns more than it costs |
 | Build | Opus 5.5 as lead, cheaper helpers where they fit |
 
-Still open: the ten questions at the end.
+The ten questions at the end were answered on 2026-11-10: the defaults, except the wall tool (D-102, D-103).
 
 ## What the current site is (checked 2026-11-10)
 
@@ -99,12 +99,12 @@ One stage per session. A stage ships only when its gate passes.
 
 | # | Stage | Ships | Gate | Needs from Isaac |
 |---|---|---|---|---|
-| 0 | Brief | This file, decisions, names, the empty app repo | Isaac approves the drawing | Answers; Stripe account; repo created |
-| 1 | Catalogue | Add a work from a phone; drafts for approval; current site's images imported as drafts; public read routes | 12 works approved on Isaac's phone and returned by the public list; tenancy tests | Sizes, prices, statuses |
-| 2 | The site | Plaster template; home, works, piece, commissions, process, about; inquiry by text, email, call | Lighthouse mobile ≥ 95; pages readable with scripts off; both themes; Isaac's OK on staging | First deploy of the new Worker; later the domain |
+| 0 | Brief | This file, decisions, names, the empty app repo | Isaac approves the drawing and the stage 1 plan | Answers (done); Stripe account (by stage 4); repo created |
+| 1 | Catalogue | Add a work from a phone; drafts for approval; current site's images imported as drafts; public read routes | 12 works approved on Isaac's phone and returned by the public list; tenancy tests | Sizes, prices, statuses; first deploy of `studio-site-staging` (D-105) |
+| 2 | The site | Plaster template; home, works, piece, commissions, process, about; inquiry by text, email, call | Lighthouse mobile ≥ 95; pages readable with scripts off; both themes; Isaac's OK on staging | First deploy of the production Worker; later the domain |
 | 3 | Assistant | Asking, cards, saved chats, made pages, the lead card | 30 test questions with no invented work or price; cost per chat measured; the cap holds; security review | 20 real visitor questions; model OK |
 | 4 | Buying | Checkout, holds, commission deposits; sales land in the studio | Test-mode purchase end to end; webhook signature checked; one piece can't sell twice; security review | Stripe keys (secure form); shipping and returns terms |
-| 5 | On my wall | Live iPhone view and photo mode from any piece | Size within 2% on measured test photos; smooth on a phone | Which repo has the photo mode |
+| 5 | On my wall | Live iPhone view and photo mode from any piece | Size within 2% on measured test photos; smooth on a phone | Confirm the "Art Wall" repo (D-103) |
 | 6 | Collectors | Follow, first look, collection page, certificate, commission tracker, show QR | A test collector goes invite → first look → purchase | Past buyers to invite |
 | 7 | Second studio | Another studio live on its own address, second template, billing | Set up in under an hour with no code change; isolation tests | A test artist; a price |
 
@@ -132,22 +132,163 @@ Keeping it cheap: one stage per session; reuse sign-in, files, shares, chat thre
 log; no new infrastructure until a gate needs it; `backend-builder` for every platform change.
 Still Isaac's: secrets, spending, a new Worker's first deploy, deleting anything.
 
-## Open questions (defaults apply if Isaac says "default")
+## Stage 0 — the brief (2026-11-10)
 
-1. Visitor assistant on Haiku 5.5? Default yes; move up only if stage 3's answers aren't good enough.
-2. Product name for other artists. Default: working name "Studio Site".
-3. How other artists pay. Default: flat monthly fee, no commission; amount at stage 7.
-4. Shipping. Default: flat rate at checkout for small works; a quote within two working days for large.
-5. Returns and tax. Default: seven days on available works, none on commissions; Stripe calculates tax.
-6. Public prices. Default: per piece; sold works hide the price and offer "commission one like this".
-7. Phone for text and call, and hours. Default: the studio number on the site, calls 9–6.
-8. Prints and editions. Default: originals and commissions now; catalogue ready for editions.
-9. Past buyers or an email list. Default: start from the Show Tracker's clients.
-10. Which repo has the photo-based wall tool (`ar-wall-placer`, `SEEWALLE`, other).
+- Plan merged (#45). Isaac's answers recorded (D-102, D-103).
+- Decisions for stage 1 taken as defaults (D-104…D-106); change any of them before stage 1 starts.
+- **Isaac creates the empty repo `studio-site`** (private, with a README so it has a `main` branch),
+  gives the Claude GitHub app access to it, and turns on **Allow auto-merge**. The `ci` ruleset waits
+  until stage 1's first CI run, because a check can only be required once it has run.
+- Not needed yet: the Stripe account (stage 4), confirming the "Art Wall" repo (stage 5).
+
+## Stage 1 — the catalogue (plan, waiting for Isaac's OK)
+
+**Goal.** Isaac can add a work from his phone, the assistant drafts its words, he approves it, and the
+platform can list his approved works to anyone. The current site's photographs come in as drafts.
+No public pages yet (stage 2); this stage is the data, the owner's screens and the read routes.
+
+**Repos.** Art-Talk-Back (platform, `backend-builder` skill) and `studio-site` (new; owner screens
+only). Both on the same branch name (D-056). Platform merges first: the app needs the new contract.
+
+### What Isaac sees (studio-site, `/studio`, phone first)
+
+1. **Sign in** with the studio's email code (as Booth Studio). Stays signed in 30 days.
+2. **Works**: a grid of every work, newest first, with a chip for *Draft*, *Public*, *Sold*. Filter
+   by those and by collection. A banner: "N drafts waiting for you".
+3. **Add a work**: take or pick photos (first one is the cover). The phone makes the sizes and the
+   colours; title is the only required field; size, medium, year, price, status if he knows them.
+   Save → the work is a draft and the assistant starts drafting its words.
+4. **A work**: big image, then every field, editable. The assistant's text (description, tags,
+   collection, alt text) shows "drafted by the assistant" until he edits it. Buttons: **Approve and
+   publish** / **Unpublish**, **Redo the draft**, **Delete** (soft, undoable as today).
+5. **Review drafts**: one draft at a time, swipe-sized: photo, the draft, the missing facts
+   highlighted (size, price, status). **Approve** or **Skip**. This is how the 12 for the gate get done.
+
+Both themes, 390 px wide with no sideways scroll, the current site's palette and fonts.
+
+### Data (migration 0010, `artworks` and `files`)
+
+`artworks` gains:
+
+| Column | Type | Notes |
+|---|---|---|
+| `public` | 0/1, default 0 | D-104: approved = public |
+| `published_at` | text, null | first time it went public |
+| `slug` | text, null | unique per studio among undeleted works; made from the title on publish, editable |
+| `collection` | text, null | e.g. Abstract, Figurative, Sculptural |
+| `tags` | JSON array of text | ≤ 20, lower case |
+| `palette` | JSON array of `{hex, share}` | ≤ 6, `share` in basis points, from the cover by code |
+| `edition_size` | integer, null | null = original (question 8: ready for editions, unused now) |
+| `drafted_fields` | JSON array of field names | which fields still hold the assistant's unedited text |
+
+`files` gains `position` (order of a work's images) and `alt_text`. A file's sizes are listed in
+`meta.sizes` (D-106). Index `(studio_id, public, status)` on `artworks`.
+
+Zod (`packages/core`): the new fields on `ArtworkFields`; `PublicArtwork` (what anyone may see:
+title, slug, medium, year, size, collection, tags, palette, description, images with alt text and
+sizes, status, and the price only when the work is available and priced; never inventory code,
+`meta`, notes, who made it); `PublicArtworkList` with a cursor.
+
+### Actions (all through `defineAction`, logged to `activity_log`)
+
+- `artwork.create` / `artwork.update` take the new fields (existing actions, extended). An owner's
+  edit to a drafted field removes it from `drafted_fields`.
+- `artwork.publish` / `artwork.unpublish` (new; permission `artworks:write`; assistant: never in
+  stage 1 — publishing is Isaac's tap). Publish needs a title and a cover image; it makes the slug.
+- `artwork.applyDraft` (new; actor `assistant` only): writes description, tags, collection, alt text,
+  and adds them to `drafted_fields`; refuses to touch a field Isaac has edited; never sets `public`.
+- `file.reorder` and alt text through the existing file update.
+
+### Routes
+
+Owner (signed in, existing style): the extended `/v1/artworks` CRUD; `POST /v1/artworks/{id}/publish`,
+`/unpublish` (If-Match); `POST /v1/artworks/{id}/draft` (asks the assistant to draft again);
+`POST /v1/files/upload-url` accepts `sizes: [480, 960, 1600]` and returns one signed link per size.
+
+Public (no sign-in, read only, in the style of `/v1/public/shares`, D-090):
+
+- `GET /v1/public/studios/{slug}/artworks?status=&collection=&tag=&colour=&cursor=` — public works only.
+  `colour` is a hex; matched by distance to the palette. 48 a page.
+- `GET /v1/public/studios/{slug}/artworks/{artworkSlug}`
+- `GET /v1/public/studios/{slug}/collections` — names and counts.
+- `GET /v1/public/studios/{slug}/images/{fileId}/{width}.webp` — D-106; 404 for anything not public.
+
+The studio comes from the path's slug now; stage 2 maps hostnames to studios on the platform and
+the site Worker passes the hostname, never a body. Responses carry `Cache-Control` for the edge, and
+publish/unpublish/update bump a per-studio catalogue version so caches can be keyed on it.
+
+### The assistant's drafts (studio-assistant)
+
+A job per work, run when a work is saved with a cover and no text, or on "Redo the draft". It reads
+the cover at 960 px through studio-api, asks **Haiku 5.5** (vision) for a description in the studio's
+voice (the current site's copy as the style sample), up to 12 tags, a collection from the studio's
+list, and alt text. It may say only what it sees; size, medium, price and year are never guessed. It
+writes through `artwork.applyDraft`. Cost: about 1,500 input and 300 output tokens a work, well under
+1¢; the whole import under $1 at list price. Counted against the studio's assistant budget (D-100).
+
+### Importing the current site (a script that calls studio-api, never the database)
+
+From `yitzhach/IA-ART-Claude-Code`: the 131 WebP images, the 12 works on Available (title, size,
+"Sold"), the three collections, `library.state.json`'s five items. Steps: group identical and
+near-identical images (same picture at other sizes or crops) into one work; take what each page
+types about it; make the sizes; upload as drafts through the same routes the phone uses, as Isaac's
+studio, with `meta.importedFrom` naming the page and file. Run on staging first, then production
+with Isaac's OK. Idempotent: running it twice adds nothing.
+
+### Gate
+
+1. Isaac, on his phone, on staging: adds one new work from the camera, sees the assistant's draft,
+   and approves 12 works (imported or new).
+2. `GET /v1/public/studios/{his studio's slug}/artworks` (staging) returns those 12 and nothing else.
+3. Tests: a public route never returns another studio's works, a draft, a deleted work, a locked
+   file, an inventory code or `meta`; a sold work has no price; a guest can't write; publish with a
+   stale version → 409; `applyDraft` never overwrites Isaac's edit; the importer is idempotent.
+4. `pnpm typecheck`, `pnpm test`, openapi diff (additive only), the app's own tests, phone and
+   desktop pictures of each screen in both themes, `/code-review` on both diffs.
+
+### Task cards (build loop step 4)
+
+| # | Card | Who | Repo |
+|---|---|---|---|
+| A | Migration 0010, Zod, actions, owner routes, openapi | Lead (Opus 5.5), `backend-builder` | Art-Talk-Back |
+| B | Public routes, image serving, caching, tenancy tests | Sonnet 5.5 | Art-Talk-Back |
+| C | Draft job in studio-assistant + its tests (model stubbed) | Sonnet 5.5 | Art-Talk-Back |
+| D | App scaffold: Worker, sign-in, service binding, CI, staging deploy workflow | Sonnet 5.5 | studio-site |
+| E | Owner screens: works, add, a work, review drafts | Sonnet 5.5 | studio-site |
+| F | In-browser sizes and palette (from Studio Wall's `src/colour.ts`) | Sonnet 5.5 | studio-site |
+| G | Importer: grouping, text from the old pages, upload | Sonnet 5.5; Haiku 5.5 for the per-image descriptions | studio-site (`scripts/`) |
+
+A and the contract come first; B–G build to it in parallel.
+
+### Needs Isaac, in order
+
+1. OK this plan (or change D-104…D-106).
+2. The repo created (stage 0 above).
+3. In the stage 1 chat: the first deploy of `studio-site-staging` (one approval, D-105).
+4. During review: sizes, prices and statuses for the works he approves (typed on his phone).
+5. OK to run the import on production once staging looks right.
+
+## Open questions — answered 2026-11-10 (D-102, D-103)
+
+Isaac: "default on all, except number 10."
+
+1. Visitor assistant on Haiku 5.5: **yes**; move up only if stage 3's answers aren't good enough.
+2. Product name: **working name "Studio Site"**.
+3. How other artists pay: **flat monthly fee, no commission**; amount at stage 7.
+4. Shipping: **flat rate at checkout for small works; a quote within two working days for large**.
+5. Returns and tax: **seven days on available works, none on commissions; Stripe calculates tax**.
+6. Public prices: **per piece; sold works hide the price and offer "commission one like this"**.
+7. Phone and hours: **the studio number on the site for text and call; calls 9–6** (studio time zone).
+8. Prints and editions: **originals and commissions now; catalogue ready for editions**.
+9. Past buyers: **start from the Show Tracker's clients**.
+10. Photo-based wall tool: **Isaac's repo called "Art Wall"**. No repo has that name; best match by
+    name `yitzhach/SEEWALLE`, runner-up `home-layout` (D-103). Not opened yet; Isaac confirms before
+    stage 5 uses it.
 
 ## Prompt for the build session
 
-> Read Art-Talk-Back `docs/phase-6-site.md`. Work stage N only. Write the stage plan into that file,
+> Read Art-Talk-Back `docs/phase-6-site.md`. Work stage N only (if its plan is already written and
+> approved, start from it). Write the stage plan into that file,
 > agree the contract, then build with helpers (Sonnet 5.5; Haiku 5.5 for bulk drafts). Keep the repos
 > separate (D-042); the site lives in its own repo, platform changes in Art-Talk-Back with the
 > `backend-builder` skill. Fetch the default branch before taking a decision number. Stop at the gate

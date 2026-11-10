@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+### Site 3.0 · plan only (D-096…D-101)
+- `docs/phase-6-site.md`: the build brief for a public studio site with a visitor assistant, rebuilt from nothing with Isaac's site as the first studio: his decisions, what carries over from the current site, the shape, eight stages with gates, the build loop for a lead and helpers, ten open questions. No code changed.
+
 ### Studio Wall · client links on the platform, stage 5 (D-090…D-095)
 - Migration 0009: `shares` (token stored only as a hash; derived from the id with the signing key, D-091), `share_sessions`, `share_attempts`. Zod `ShareInput`, `Share`.
 - Owner: `POST /v1/shares`, `GET /v1/shares?boardId=`, `DELETE /v1/shares/{id}` (`share.create`, not an assistant tool, D-095; `share.revoke`, always confirm).

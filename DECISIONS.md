@@ -385,3 +385,21 @@ Isaac's answer to Studio Wall's open decision 6: no approval step. Limits carrie
 
 ### D-095 · Making a link isn't an assistant tool yet · 2026-11-02 · default
 `share.create` takes the link's password, which would sit in a confirm card (`pending_actions`), so the assistant can't run it (`assistant: never`) until stage 7 decides how. `share.revoke` is a tool for Studio Wall's assistant at always-confirm, as the plan has for anything a client sees.
+
+### D-096 · Site 3.0: a public studio site, rebuilt from nothing, sold to other artists later · 2026-11-10 · Isaac
+Isaac asked for isaacandersonart.com to be rethought from the ground up and owned as new code: easy to browse, an assistant that answers questions and shows works in the chat ("show me pieces with blue" → the pieces → one tap makes a page of them, chats saved), easy reach to the artist for purchases and custom orders, fast on phones, connected to his other tools (the wall tool first), and a product for other artists, galleries and shows with his site as the demo. The aim is that an artist no longer needs a marketplace that keeps a large share of each sale. Plan and stages: `docs/phase-6-site.md`. Nothing is built until Isaac approves the drawing. Only the look, the writing and the photographs carry over from the current site (`yitzhach/IA-ART-Claude-Code`, a design-prototype export that compiles each page in the visitor's browser).
+
+### D-097 · Site 3.0 is its own app repo on the platform, one engine for every studio · 2026-11-10 · default
+As D-042: the site engine lives in a new repo (working name `studio-site`, Worker `studio-site`), and its data and assistant stay here. One Worker serves each studio by hostname and reads through `studio-api`; the studio comes from the hostname's record, never the request. A studio picks a template; the current look is the first. Names are Isaac's to change (open question 2).
+
+### D-098 · What a visitor can do without signing in · 2026-11-10 · Isaac
+Isaac took the defaults: no sign-in to chat; an email only to keep history across devices or to send an inquiry; the assistant is clearly an AI ("the studio's assistant") and says only what the studio's records hold, handing anything else to the artist. He added: text, email and call are all offered for reaching him. A visitor is a guest actor as in D-092.
+
+### D-099 · Buying is per piece, through Stripe · 2026-11-10 · Isaac
+A piece with a listed price gets card checkout; a piece without one shows "price on request" and an inquiry. Commission deposits are taken online. Isaac has no Stripe account yet and will open one; keys go in through a secure form at stage 4, never a chat. Checkout is Stripe's hosted page, so no card data touches the platform.
+
+### D-100 · The site assistant's budget is $10 a month, capped · 2026-11-10 · Isaac
+Isaac's budget for the site's AI is about $10 a month, to be raised if it earns more than it costs. The plan meets it by doing the costly work once per artwork (drafted description and tags; colours by code), reading a cached catalogue digest per visitor turn, limiting each visitor, and capping the month per studio: at the cap the chat becomes plain search plus "ask the artist" and the owner is told. Running the visitor assistant on Haiku 5.5 is proposed, not decided: the model is Isaac's call (open question 1).
+
+### D-101 · The catalogue is built in stage 1; the wall tool starts from AR-WALLE · 2026-11-10 · Isaac
+There is no catalogue: stage 1 builds it on the existing `artworks` table, importing the current site's images as drafts for Isaac to approve. About-page facts follow after launch. AR-WALLE (USDZ built in the browser, Apple AR Quick Look, iPhone only) is the live wall view; Isaac will check which repo has the uploaded-photo version for other devices.

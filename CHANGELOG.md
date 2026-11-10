@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+### Site 3.0 · stage 0: answers and the stage 1 plan (D-102…D-106)
+- Isaac's answers to the ten open questions (defaults; the photo wall tool is his "Art Wall" repo, to confirm). Stage 1 (the catalogue) planned in `docs/phase-6-site.md`: migration 0010, publish = approve, public read routes, in-browser image sizes, assistant drafts on Haiku 5.5, the import, owner screens in the new `studio-site` repo. No code changed.
+
 ### CI · Playwright jobs pinned to Ubuntu 24.04
 - `ubuntu-latest` became 26.04, where Playwright 1.56.1 cannot install Chromium, so `show-tracker` and `studio-wall` failed before any test ran. Both jobs now run on `ubuntu-24.04`.
 

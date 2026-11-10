@@ -36,7 +36,7 @@ jobs:
   # fails here). Its own suites run in its repo. Test steps point Chromium at a
   # dead proxy (the suites assume no internet); loopback bypasses it.
   show-tracker:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04  # Playwright 1.56.1 has no browser build for 26.04, which ubuntu-latest now is
     timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
@@ -143,7 +143,7 @@ jobs:
   # (D-056). A Studio Wall without tests/two-devices.mjs doesn't sync through the
   # studio yet: the job says so and passes.
   studio-wall:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04  # as show-tracker: the app pins Playwright 1.56.1
     timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4

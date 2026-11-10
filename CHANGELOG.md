@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+### CI · Playwright jobs pinned to Ubuntu 24.04
+- `ubuntu-latest` became 26.04, where Playwright 1.56.1 cannot install Chromium, so `show-tracker` and `studio-wall` failed before any test ran. Both jobs now run on `ubuntu-24.04`.
+
 ### Site 3.0 · plan only (D-096…D-101)
 - `docs/phase-6-site.md`: the build brief for a public studio site with a visitor assistant, rebuilt from nothing with Isaac's site as the first studio: his decisions, what carries over from the current site, the shape, eight stages with gates, the build loop for a lead and helpers, ten open questions. No code changed.
 

@@ -176,9 +176,12 @@ export const artworks = sqliteTable(
     palette: text("palette", { mode: "json" }).$type<{ hex: string; share: number }[]>().notNull().default(sql`'[]'`),
     editionSize: integer("edition_size"),
     draftedFields: text("drafted_fields", { mode: "json" }).$type<string[]>().notNull().default(sql`'[]'`),
+    // Migration 0011 (Site 3.0 stage 2, D-118): a work, or a photo the site's pages use.
+    kind: text("kind", { enum: ["work", "site_photo"] }).notNull().default("work"),
   },
   (t) => [
     index("artworks_studio_updated").on(t.studioId, t.updatedAt),
+    index("artworks_studio_kind").on(t.studioId, t.kind, t.public),
     uniqueIndex("artworks_studio_slug").on(t.studioId, t.slug).where(sql`slug IS NOT NULL AND deleted_at IS NULL`),
     index("artworks_studio_public").on(t.studioId, t.public, t.status),
     index("artworks_studio_status").on(t.studioId, t.status),
@@ -186,6 +189,7 @@ export const artworks = sqliteTable(
     uniqueIndex("artworks_studio_code")
       .on(t.studioId, t.inventoryCode)
       .where(sql`inventory_code IS NOT NULL AND deleted_at IS NULL`),
+    check("artworks_kind", sql`kind IN ('work','site_photo')`),
     actorCheck("artworks_actor"),
     metaCheck("artworks_meta"),
   ],

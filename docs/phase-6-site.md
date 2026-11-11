@@ -1,6 +1,6 @@
 # Phase 6, the site — Site 3.0: a public studio site with a visitor assistant
 
-**Status: stage 1 built (2026-11-11), waiting at its gate for Isaac's look on staging. Stage 0 done (2026-11-10).** Isaac asked on 2026-11-10 for a ground-up rebuild of
+**Status: stage 1 shipped (2026-11-11, #47; production import waits for Isaac's OK). Stage 2 approved by Isaac (2026-11-11), building.** Isaac asked on 2026-11-10 for a ground-up rebuild of
 isaacandersonart.com that he can later sell to other artists, galleries and art shows (D-096…D-101).
 The drawing he reviewed (eight phone screens, ideas, stages, questions):
 https://claude.ai/artifact/TjfVTjJFCHcaGEc2gjEpTw (private to Isaac).
@@ -141,7 +141,7 @@ Still Isaac's: secrets, spending, a new Worker's first deploy, deleting anything
   until stage 1's first CI run, because a check can only be required once it has run.
 - Not needed yet: the Stripe account (stage 4), confirming the "Art Wall" repo (stage 5).
 
-## Stage 1 — the catalogue (approved 2026-11-11; built, at the gate)
+## Stage 1 — the catalogue (approved 2026-11-11; gate passed, shipped)
 
 ### Where it stands (2026-11-11)
 
@@ -156,7 +156,8 @@ Still Isaac's: secrets, spending, a new Worker's first deploy, deleting anything
 - [x] First deploy of `studio-site-staging` (Isaac, 2026-11-11). Import of all 65 photos run by Isaac on staging.
 - [x] Gate 2 checked at 7 approved: the public list returned exactly those 7. Isaac then asked for every photo public for testing: **Approve all drafts** (D-115).
 - [x] Gate 1: one work added from Isaac's iPhone camera ("Door Test upload test", 2026-11-11): the assistant's live draft arrived (description, tags, collection, alt text) and its sizes are WebP (960×1280). Public list then held 66: the 65 imported plus this one.
-- [ ] Ship: platform PR, then the site's; production import with Isaac's OK.
+- [x] Shipped 2026-11-11: #47 merged; "Deploy production API" run 190 applied 0010 to `studio-db-prod`, `studio-api` `124f16b5`. Restore points: bookmark `000000f2-00000004-00005120-c36ac75ce1c0bb4915fab086971db40b`, previous Worker `f552dcf1`. Site: IA-ART-SITE-REPO#1 merged (nothing deploys from it).
+- [ ] Production: run "Deploy production assistant" (it has no `/assistant/draft` yet), then the import (Isaac's OK), then the first deploy of production `studio-site` (Isaac's, stage 2's gate).
 
 **Repo name.** The brief's `studio-site` is the repo `yitzhach/IA-ART-SITE-REPO` (D-107); the Workers keep the
 names `studio-site` and `studio-site-staging`.
@@ -291,6 +292,237 @@ A and the contract come first; B–G build to it in parallel.
 3. In the stage 1 chat: the first deploy of `studio-site-staging` (one approval, D-105).
 4. During review: sizes, prices and statuses for the works he approves (typed on his phone).
 5. OK to run the import on production once staging looks right.
+
+## Stage 2 — the site (approved by Isaac 2026-11-11)
+
+### Where it stands (2026-11-11)
+
+- [x] A — migration 0011 (`kind`), `SiteProfile`, `GET /v1/public/studios/{slug}`, `…/site-photos`, `kind` on the list; tests, openapi; review fixes (lead). D-122.
+- [x] Site skeleton: `worker/site/` routes, data from `/v1/public`, the page contract, shared fake API and local server (lead).
+- [x] B+C+D — Plaster template (`plaster.ts`, self-hosted fonts), layout, home, works, a piece, commissions, process, about; theme, lightbox and inquiry scripts; the old pages' words in `src/import/site-text.json` (Haiku 5.5) (Sonnet 5.5).
+- [x] E — edge cache on the catalogue version, sitemap, robots, the old addresses (301), `npm run test:site` (scripts off, sideways scroll, budgets, Lighthouse mobile) in CI (Sonnet 5.5).
+- [x] F — the Site screen (`/studio/site`: contact, hours, time zone, pages' words, a photo per place, the site name to copy) and the import's words-and-photos step (Sonnet 5.5). D-123.
+- [x] Checks: platform 385 tests; site 183 tests; `npm run test:site` 70/70 locally (Lighthouse 99–100 in every category, largest paint 1.5–1.8 s); `/code-review` on both diffs, findings fixed.
+- [x] Staging deployed ("Deploy staging" runs 23–25). Lighthouse mobile on staging with the real photos: performance 95–97,
+  accessibility, best practices and SEO 100 on home, works and a piece. Largest paint 2.6–2.9 s (budget 2.0 s) measured from
+  the build sandbox, where even a static file takes 0.2 s to arrive (a cached page 0.25 s), which Lighthouse's slow-phone
+  model multiplies; locally 1.5–1.8 s. Largest picture: imported photos ≤ 120 KB at phone size; the one iPhone upload's
+  960 px size is 303 KB (budget 200 KB). Left as known: re-check on Isaac's phone; if it feels slow, lower the upload's
+  WebP quality (0.82) for new photos.
+- [x] Isaac's look and OK on his phone on staging (2026-11-11: "looked at the staging site on my phone and it's OK").
+- [ ] Production, in order: merge both PRs (platform first: 0011 runs with "Deploy production API"); "Deploy production assistant" (Claude); "Deploy production site" (Isaac's first deploy, D-123); he signs in, the import runs; Claude reruns "Deploy production site" with the site name he copies.
+
+**Changes from the plan.** The import's site step publishes only the site photos it places; a work placed on a page waits
+for Isaac's approval (D-122). The live site learns its studio on a second run of its deploy (D-123).
+
+**Goal.** Anyone can visit Isaac's site on staging and browse it fast on a phone: home, works, a piece,
+commissions, process, about. Each page arrives finished (readable with scripts off), in both themes, in the
+current site's look. A visitor reaches Isaac by text, email or call from any page or piece. Production goes live
+on its `workers.dev` address with Isaac's first deploy; the domain moves later, by his choice.
+
+**Not in this stage:** the assistant (3), checkout (4), the wall view (5), inquiry forms that create a lead
+(3: the lead card). The old site keeps running at isaacandersonart.com until he moves the domain.
+
+### What a visitor sees (studio-site, phone first, 390 px and up)
+
+1. **Home** (`/`): the name, a hero picture, three collection tiles, a few available works, the two "room" photos
+   ("A custom art piece for a lobby in Beverly Hills"), "Start a conversation" (text, email, call).
+2. **Works** (`/works`): every public work, newest first, a numbered index as today. Filters as plain links:
+   collection (Abstract, Figurative, Sculptural), Available / Sold. 48 a page, "More" is a link. No script needed.
+3. **A piece** (`/works/{slug}`): big picture (sizes chosen by the browser), title, size in in and cm, medium, year,
+   description; available with a price → the price; no price → "Price on request"; sold → "Sold — commission one
+   like this". Buttons: **Text**, **Email**, **Call**, each prefilled with the piece's title and link. More
+   pictures under it; tap to enlarge (the one small script, loaded only on tap). Previous / next.
+4. **Commissions**, **Process** (five stages: Surface, Layering, Color, Erosion, Finished), **About**: the current
+   site's words and photos, unchanged in substance. About keeps its gaps out of sight until Isaac fills them.
+5. **"Several pieces, one inquiry"**: on a piece, **Add to inquiry**; a small bar then offers "Text / Email about
+   N works" with the list written in. Kept in the visitor's browser only. With scripts off the button is hidden.
+6. Header and footer on every page: the name, Works, Commissions, Process, About, a theme switch (follows the phone
+   by default), text / email / call. `/studio` stays the owner's area, unchanged.
+
+Search engines and link previews: a real `<title>` and description on every page, a preview picture, a sitemap,
+and each piece marked up as an artwork. Old addresses (`available.html`, `collection-abstract.html`, …) send the
+visitor to the matching new page, ready for when the domain moves.
+
+### Decisions (D-116…D-121, approved with the plan)
+
+- **D-116 · Pages are made by the site's Worker in plain TypeScript, no framework.** The brief proposed Astro. The
+  Worker already exists, the pages are few and simple, and plain templates add nothing to download and nothing
+  to update. Cached at Cloudflare's edge; the cache key carries the studio's catalogue version, so a publish
+  shows at once.
+- **D-117 · Which studio a site shows comes from the Worker's settings for now** (`STUDIO_SLUG` per environment:
+  staging and production both Isaac's). The platform-side "this address is this studio" record waits for
+  stage 7 (the second studio), when it is first needed.
+- **D-118 · Site photos are not works on the public site.** The 25 imported site photos (banners, process, rooms,
+  shows, references, thumbnails) show only where a page uses them (home hero, process stages, about, rooms),
+  never in Works. Platform: artworks gain `kind` (`work` or `site_photo`, migration 0011, additive; the 25
+  imported ones are set from the record the import left); the public list shows works only, and a new public
+  route gives the site photos a page asks for. Isaac changes which photo goes where in the studio (a "Site"
+  screen with a picker per place), defaulting to where each was on the old site.
+- **D-119 · The site's words and contact live in the studio's settings, not in code.** Name, tagline, phone,
+  email, call hours (9–6, D-102), and the Commissions, Process and About text, taken from the current site once
+  by the import page and editable on the "Site" screen. One public route returns only these
+  (`GET /v1/public/studios/{slug}`), never the rest of the settings. This is what lets a second studio use the
+  same engine.
+- **D-120 · Text, email and call are links, not a form.** `sms:`, `mailto:` and `tel:` with the piece written in;
+  no message goes through the platform in stage 2. The lead card that remembers who asked is stage 3.
+- **D-121 · The first template is "Plaster"**: the current site's palette (paper `#EDEAE3`, ink `#1A1814`, rust),
+  fonts (Bodoni Moda, Newsreader italic, Archivo, IBM Plex Mono, served from the site itself, not Google),
+  numbered index, both themes. Its colours and fonts sit in one file, so stage 7's second template is a copy.
+
+### Platform (Art-Talk-Back, `backend-builder`)
+
+- Migration 0011: `artworks.kind` (`work` default, `site_photo`); Zod, Drizzle mirror, drift test. `artwork.update`
+  can change it.
+- `settings.meta.site` given a schema (`SiteProfile`: name, tagline, phone, email, hours, pages' text, photo
+  places); written through the existing `settings.update`, checked on the way in.
+- Public routes: `GET /v1/public/studios/{slug}` (the site profile only), `GET …/artworks` gains `kind=work` by
+  default, `GET …/site-photos`. Tests: no private setting or other studio leaks; a draft site photo never shows.
+- openapi regenerated (additive).
+
+### Site (IA-ART-SITE-REPO)
+
+- `worker/pages/`: one file per page, a layout, the template's CSS (one file, inlined), the small lightbox and
+  inquiry scripts. `worker/index.ts` routes `/`, `/works`, `/works/:slug`, `/commissions`, `/process`, `/about`,
+  `/sitemap.xml`, `/robots.txt` and the old addresses; `/studio` and `/v1`, `/assistant` as now.
+- Owner side: a **Site** screen in `/studio` (words, contact, a photo per place), and the import page fills the
+  words from the old site once and marks the 25 site photos.
+
+### Gate
+
+1. Lighthouse (mobile) ≥ 95 for performance, accessibility, best practices and SEO on home, works and a piece,
+   on staging.
+2. Every page readable with scripts off (a test loads each with JavaScript disabled and finds the title, the
+   works and the contact links).
+3. Both themes; no sideways scroll at 390 px; AA contrast; the budgets above (script on content pages ≤ 50 KB,
+   largest picture above the fold ≤ 200 KB, largest paint ≤ 2.0 s throttled).
+4. Platform tests: the public profile and site photos never leak another studio's data or a private setting.
+5. Isaac's look on his phone on staging, with a short checklist, then his OK.
+6. Isaac's first deploy of the production `studio-site` Worker; the site then serves his production studio.
+
+### Task cards
+
+| # | Card | Who | Repo |
+|---|---|---|---|
+| A | 0011 `kind`, `SiteProfile`, public profile and site-photo routes, tests, openapi | Lead (Opus 5.5), `backend-builder` | Art-Talk-Back |
+| B | Layout, template CSS and fonts, header/footer, theme switch | Sonnet 5.5 | site |
+| C | Home, Works, a piece (with sizes, srcset, structured data) | Sonnet 5.5 | site |
+| D | Commissions, Process, About; words carried over from the old pages | Sonnet 5.5 (Haiku 5.5 to pull the text) | site |
+| E | Edge cache, sitemap, old-address redirects, scripts-off and Lighthouse checks in CI | Sonnet 5.5 | site |
+| F | "Site" owner screen and the import's words-and-photos step | Sonnet 5.5 | site |
+
+A first (the contract); B–F in parallel against it.
+
+### Needs Isaac, in order
+
+1. ~~OK this plan~~ (done 2026-11-11).
+2. Production all at once at stage 2's end (Isaac, 2026-11-11): "Deploy production assistant" (Claude), the first deploy
+   of production `studio-site` (Isaac), then the import runs on his first visit to its studio (D-114).
+3. At the gate: a look on his phone on staging; then the first deploy of production `studio-site`.
+4. Later, his choice: moving isaacandersonart.com to the new site.
+
+## Stage 3 — the visitor assistant (plan, waiting for Isaac's OK)
+
+### Where it stands (2026-11-11)
+
+- [x] Isaac's answers to `docs/phase-6-stage3-questions.md` 2, 4–18, 20–35 (D-125…D-131).
+- [ ] His own visitor questions (1), the oddest one (3), where his work can be seen (19), the general facts (15) and
+  the deposit wording (12): he sends them in a day or so. They become the test set.
+- [ ] Isaac's OK on this plan. Nothing is built before it.
+
+**Goal.** On any page of the site, a visitor taps **Ask**, chats with "Isaac's studio assistant, an AI", and gets short
+answers with real pieces as cards. Everything it says about a work or a price comes from the catalogue; everything
+else from the studio's own answers (D-126, D-128); anything it can't answer goes to Isaac by text, email or call.
+It can make a page of the pieces it suggested, keep the chat across devices with an email, take an inquiry or a
+48-hour hold request (a lead), and it stops spending at the studio's $10 a month.
+
+**Not in this stage:** checkout and deposits (4), "on my wall" (5), follow / first look (6), other languages.
+
+### What a visitor sees (phone first)
+
+1. **Ask** in the header and on each piece ("Ask about this piece"). A sheet opens over the page: the greeting
+   (D-125), three suggested questions, a text box. With scripts off the button is a link to `/ask`, a plain search
+   form that works without the chat.
+2. **Answers**: one or two sentences, then up to six **cards** (picture, title, size, price or "price on request",
+   a link to the piece). Cards are drawn from tool results by id, never from the model's text.
+3. **"Open these as a page"** under any answer with cards: a page at `/p/{id}` with a title, the pieces and the
+   question, to send to a partner or client. Read-only, unlisted (`noindex`).
+4. **Ask Isaac** (always on screen, and offered whenever it can't answer): Text, Email, Call with the conversation's
+   pieces written in, or **Send to Isaac** (name and email or phone, only if the visitor gives them, D-129): a lead.
+5. **Hold request** on an available piece (D-127): "Ask Isaac to hold this for 48 hours" → a lead marked hold.
+6. **Keep this chat**: an email, a six-digit code, then the chat opens on any device with that email.
+7. At the budget cap, or after 27 messages in a day: the sheet becomes plain search plus Ask Isaac, with one line
+   saying why.
+
+### What Isaac sees
+
+- **Leads** in `/studio` (new screen): who, how to reach them, the pieces they looked at, the chat, hold requests with
+  **Approve hold** (sets `reserved`, expires in 48 hours) and **Decline**. A lead creates or matches a client.
+- **Emails**: one per lead at once; one daily summary of all chats (count, questions it couldn't answer, leads).
+- **Texts** for leads: need a text-message service (see Needs Isaac). Until then, email only.
+- **Site screen → Assistant**: the answers of D-126 / D-128 (commission range, timeline, deposit, shipping, trade,
+  visits, general facts, where to see the work), the greeting, the monthly budget, this month's spend.
+
+### Shape (proposals; each becomes a decision when built)
+
+- **Path.** Site Worker `POST /ask/chat` → `studio-assistant` `POST /assistant/visitor` (service binding, as
+  `/assistant/*` today) → studio-api **public visitor routes** only. The visitor mode never holds an owner session and
+  never sees owner tools; the studio is the site's `STUDIO_SLUG` (D-117), never the request.
+- **Visitor identity.** A random per-browser id in an HttpOnly cookie, actor `guest:<id>` (D-092). With a verified
+  email, the visitor's chats follow the email.
+- **Read tools** (public data only): `search_works` (words, colour, size range, status, collection), `get_work`,
+  `studio_answers` (D-126/D-128 text, hours, where to see the work). One cached **catalogue digest** per catalogue
+  version (title, slug, size, status, price, collection, tags, colours; about 40 works ≈ 4k tokens) sits in the
+  cached prompt prefix, so most questions need no tool call.
+- **Writes** (internal actions, validate → check → write → `activity_log`, D-092 style): `visitor_page.create`,
+  `lead.create` (inquiry or hold request), `visitor.verify_email`. Nothing else.
+- **No invented work or price.** Cards come only from tool results; before a reply is shown, every price and title
+  in its text is checked against the works the turn read, and a mismatch is replaced with "price on request" and
+  logged (the gate counts these).
+- **Cost.** Each turn records its tokens and cost (Haiku 5.5 list prices) per studio per month; the cap check runs
+  before the model call. Per visitor: 27 messages a day; per address: a short burst limit.
+- **Daily summary.** A daily scheduled run in `studio-assistant` asks studio-api for yesterday's chats and leads and
+  sends one email (Resend, as the sign-in code).
+
+### Data (migration 0012, additive)
+
+`visitors` (studio, guest id, email, verified at), `visitor_messages` (thread, role, content; like
+`assistant_messages` but keyed by visitor), `visitor_pages` (title, question, artwork ids, unguessable id),
+`leads` (visitor, client, kind `inquiry`|`hold`, artwork ids, contact, status, expires), `assistant_usage`
+(studio, month, tokens, cents). `SiteProfile` gains `assistant` (the answers, greeting, budget cents).
+
+### Gate
+
+1. **Test set**: Isaac's own questions (20+) plus questions written to cover the eleven topics of question 2, the
+   oddest question, off-topic, other artists, prompt-injection tries (≥ 30 in all), run against staging's
+   catalogue: no invented work, no wrong or invented price, every "I don't know" offers Ask Isaac. Replayed in CI;
+   live by hand ("Assistant eval (live)").
+2. **Cost per chat measured** on that set; the $10 cap holds (a test with a tiny cap falls back to search and
+   emails Isaac once).
+3. **Limits**: the 28th message in a day gets search; one visitor can't read another's chat, page or lead; nothing
+   from another studio or a private field ever reaches a visitor (tenancy tests).
+4. `/security-review` on both diffs (public chat).
+5. Isaac's look on his phone on staging, with a short checklist, then his OK.
+
+### Task cards
+
+| # | Card | Who | Repo |
+|---|---|---|---|
+| A | 0012 tables, `SiteProfile.assistant`, public visitor routes and actions, usage and caps, tests, openapi | Lead (Opus 5.5), `backend-builder` | Art-Talk-Back |
+| B | Visitor mode in `studio-assistant`: prompt (D-125/D-126), digest, read tools, the price and title check, daily summary | Lead | Art-Talk-Back |
+| C | Test set and eval harness: Isaac's questions + coverage set, replay in CI | Sonnet 5.5 (Haiku 5.5 to draft variants) | Art-Talk-Back |
+| D | The Ask sheet, cards, `/ask` without scripts, made pages `/p/{id}`, keep-this-chat | Sonnet 5.5 | site |
+| E | Leads screen, Site screen → Assistant, hold approve / decline | Sonnet 5.5 | site |
+
+A first (the contract); B–E in parallel against it.
+
+### Needs Isaac, in order
+
+1. His visitor questions, the oddest one, where his work can be seen, the general facts, the deposit wording.
+2. OK this plan.
+3. **Texts for leads** need a text-message service (for example Twilio: an account, a number, about $1–2 a month
+   plus about a cent a text). Spending and a secret are his call; until then leads come by email only.
+4. At the gate: a look on his phone on staging.
 
 ## Open questions — answered 2026-11-10 (D-102, D-103)
 

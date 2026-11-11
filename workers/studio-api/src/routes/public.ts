@@ -1,8 +1,12 @@
-// The public catalogue (Site 3.0 stage 1, D-104…D-110): read-only routes anyone may call, no sign-in.
+// The public catalogue (Site 3.0 stage 1, D-104…D-110) and the studio's site profile and photos (stage 2,
+// D-118, D-119): read-only routes anyone may call, no sign-in.
 // The studio comes from the path's slug and nothing else; a cookie changes nothing. A work shows only
 // when it is public and not deleted, a picture only when it is ready, unlocked and has that size.
 // Rows are turned into answers field by field, never spread, so a new column can't leak.
-import { ArtworkStatus, IMAGE_WIDTHS, PublicArtwork, PublicArtworkDetail, PublicArtworkList, PublicCollections, Slug } from "@studio/core";
+import {
+  ArtworkKind, ArtworkStatus, IMAGE_WIDTHS, PublicArtwork, PublicArtworkDetail, PublicArtworkList, PublicCollections, PublicSitePhotos,
+  PublicStudio, SitePlace, SiteProfile, Slug,
+} from "@studio/core";
 import { createRoute } from "@hono/zod-openapi";
 import type { Context } from "hono";
 import { z } from "zod";
@@ -31,11 +35,11 @@ const reply = (c: Context<AppEnv>, data: unknown, version: number): never =>
     status: 200, headers: { "content-type": "application/json", "cache-control": "public, max-age=60" },
   }) as never;
 
-async function studioOf(c: Context<AppEnv>, slug: string): Promise<{ id: string; version: number }> {
+async function studioOf(c: Context<AppEnv>, slug: string): Promise<{ id: string; version: number; name: string }> {
   if (!Slug.safeParse(slug).success && !/^[A-Za-z0-9_-]{1,100}$/.test(slug)) throw notFound("Studio");
-  const row = await c.env.DB.prepare("SELECT id, catalogue_version FROM studios WHERE slug = ? AND deleted_at IS NULL").bind(slug).first<Row>();
+  const row = await c.env.DB.prepare("SELECT id, name, catalogue_version FROM studios WHERE slug = ? AND deleted_at IS NULL").bind(slug).first<Row>();
   if (!row) throw notFound("Studio");
-  return { id: row.id as string, version: Number(row.catalogue_version ?? 0) };
+  return { id: row.id as string, version: Number(row.catalogue_version ?? 0), name: row.name as string };
 }
 
 // ------------------------------------------------------------------ colour
@@ -79,10 +83,9 @@ const sizesOf = (meta: Row): number[] => {
   return raw.map((s) => Number((s as Row)?.width)).filter((w) => WIDTHS.has(w)).sort((a, b) => a - b);
 };
 
-function publicWork(slug: string, a: Row, files: Row[]): z.infer<typeof PublicArtwork> {
-  const priced = a.status === "available" && a.price_cents !== null && a.price_cents !== undefined;
-  const cover = a.primary_file_id as string | null;
-  const images = files
+/** A record's pictures that have web sizes: the cover first, then by position. */
+function imagesOf(slug: string, files: Row[], cover: string | null): z.infer<typeof PublicArtwork>["images"] {
+  return files
     .map((f) => ({ f, meta: parse<Row>(f.meta, {}) }))
     .map((x) => ({ ...x, widths: sizesOf(x.meta) }))
     .filter((x) => x.widths.length > 0)
@@ -99,6 +102,12 @@ function publicWork(slug: string, a: Row, files: Row[]): z.infer<typeof PublicAr
         sizes: widths.map((w) => ({ width: w as 480 | 960 | 1600, url: imageUrl(slug, f.id as string, w) })),
       };
     });
+}
+
+function publicWork(slug: string, a: Row, files: Row[]): z.infer<typeof PublicArtwork> {
+  const priced = a.status === "available" && a.price_cents !== null && a.price_cents !== undefined;
+  const cover = a.primary_file_id as string | null;
+  const images = imagesOf(slug, files, cover);
   return {
     slug: a.slug as string,
     title: a.title as string,
@@ -124,14 +133,17 @@ function publicWork(slug: string, a: Row, files: Row[]): z.infer<typeof PublicAr
 /** The ready, unlocked, undeleted pictures of these works, in one query. */
 async function filesOf(c: Context<AppEnv>, studioId: string, ids: string[]): Promise<Map<string, Row[]>> {
   const out = new Map<string, Row[]>();
-  if (!ids.length) return out;
-  const { results } = await c.env.DB.prepare(
-    `SELECT id, entity_id, position, alt_text, meta FROM files WHERE studio_id = ? AND entity_type = 'artwork' AND status = 'ready'
-     AND locked = 0 AND kind = 'photo' AND deleted_at IS NULL AND entity_id IN (${ids.map(() => "?").join(",")})`,
-  ).bind(studioId, ...ids).all<Row>();
-  for (const f of results) {
-    const k = f.entity_id as string;
-    out.set(k, [...(out.get(k) ?? []), f]);
+  // D1 binds at most 100 values a query; a page of works is 48, a site's places up to 480 ids.
+  for (let i = 0; i < ids.length; i += 90) {
+    const part = ids.slice(i, i + 90);
+    const { results } = await c.env.DB.prepare(
+      `SELECT id, entity_id, position, alt_text, meta FROM files WHERE studio_id = ? AND entity_type = 'artwork' AND status = 'ready'
+       AND locked = 0 AND kind = 'photo' AND deleted_at IS NULL AND entity_id IN (${part.map(() => "?").join(",")})`,
+    ).bind(studioId, ...part).all<Row>();
+    for (const f of results) {
+      const k = f.entity_id as string;
+      out.set(k, [...(out.get(k) ?? []), f]);
+    }
   }
   return out;
 }
@@ -146,6 +158,8 @@ const COLS = "id, title, medium, year, width, height, depth, size_unit, price_ce
 // ------------------------------------------------------------------ routes
 
 const Query = z.object({
+  /** Works by default; site photos (D-118) only when asked. */
+  kind: ArtworkKind.default("work"),
   status: ArtworkStatus.optional(),
   collection: z.string().max(80).optional(),
   tag: z.string().max(40).optional(),
@@ -163,8 +177,8 @@ publicRoutes.openapi(
     const { slug } = c.req.valid("param");
     const q = c.req.valid("query");
     const studio = await studioOf(c, slug);
-    const where = ["studio_id = ?", "public = 1", "deleted_at IS NULL"];
-    const args: unknown[] = [studio.id];
+    const where = ["studio_id = ?", "public = 1", "deleted_at IS NULL", "kind = ?"];
+    const args: unknown[] = [studio.id, q.kind];
     if (q.status) { where.push("status = ?"); args.push(q.status); }
     if (q.collection) { where.push("collection = ?"); args.push(q.collection); }
     if (q.tag) { where.push("EXISTS (SELECT 1 FROM json_each(tags) WHERE value = ?)"); args.push(q.tag.trim().toLowerCase()); }
@@ -210,7 +224,7 @@ publicRoutes.openapi(
   async (c) => {
     const { slug, artworkSlug } = c.req.valid("param");
     const studio = await studioOf(c, slug);
-    const work = await c.env.DB.prepare(`SELECT ${COLS} FROM artworks WHERE studio_id = ? AND slug = ? AND public = 1 AND deleted_at IS NULL`)
+    const work = await c.env.DB.prepare(`SELECT ${COLS} FROM artworks WHERE studio_id = ? AND slug = ? AND public = 1 AND deleted_at IS NULL AND kind = 'work'`)
       .bind(studio.id, artworkSlug).first<Row>();
     if (!work) throw notFound("Work");
     const files = await filesOf(c, studio.id, [work.id as string]);
@@ -227,7 +241,7 @@ publicRoutes.openapi(
   async (c) => {
     const studio = await studioOf(c, c.req.valid("param").slug);
     const { results } = await c.env.DB.prepare(
-      `SELECT collection AS name, COUNT(*) AS n FROM artworks WHERE studio_id = ? AND public = 1 AND deleted_at IS NULL AND collection IS NOT NULL
+      `SELECT collection AS name, COUNT(*) AS n FROM artworks WHERE studio_id = ? AND public = 1 AND deleted_at IS NULL AND kind = 'work' AND collection IS NOT NULL
        GROUP BY collection ORDER BY name COLLATE NOCASE`,
     ).bind(studio.id).all<Row>();
     return reply(c, { items: results.map((r) => ({ name: r.name as string, count: Number(r.n) })) }, studio.version);
@@ -262,5 +276,79 @@ publicRoutes.openapi(
     return new Response(obj.body, {
       headers: { "content-type": "image/webp", "x-content-type-options": "nosniff", "cache-control": "public, max-age=86400" },
     }) as never;
+  },
+);
+
+// ------------------------------------------------------------------ the site (D-118, D-119)
+
+/** The studio's site profile as stored, or an empty one if it was never set or no longer parses. */
+async function siteOf(c: Context<AppEnv>, studioId: string): Promise<{ site: z.infer<typeof SiteProfile>; timezone: string }> {
+  const row = await c.env.DB.prepare("SELECT meta, timezone FROM studio_settings WHERE studio_id = ? AND deleted_at IS NULL")
+    .bind(studioId).first<Row>();
+  const meta = parse<Row>(row?.meta, {});
+  const ok = SiteProfile.safeParse(meta.site ?? {});
+  return { site: ok.success ? ok.data : {}, timezone: (row?.timezone as string | undefined) ?? "America/New_York" };
+}
+
+publicRoutes.openapi(
+  createRoute({
+    method: "get", path: P, tags: ["public"],
+    summary: "A studio's public profile: its site's words and how to reach it, nothing else of its settings (no sign-in)",
+    security: [], request: { params: SlugParam },
+    responses: { 200: json(PublicStudio), 404: errors[404] },
+  }),
+  async (c) => {
+    const { slug } = c.req.valid("param");
+    const studio = await studioOf(c, slug);
+    const { site, timezone } = await siteOf(c, studio.id);
+    // Field by field: a new SiteProfile field stays private until it is added here (photo places never leave).
+    return reply(c, {
+      slug,
+      name: site.name ?? studio.name,
+      tagline: site.tagline ?? null,
+      description: site.description ?? null,
+      phone: site.phone ?? null,
+      email: site.email ?? null,
+      hours: site.hours ? { from: site.hours.from, to: site.hours.to } : null,
+      timezone,
+      pages: site.pages ?? {},
+    } satisfies Omit<z.infer<typeof PublicStudio>, "catalogueVersion">, studio.version);
+  },
+);
+
+publicRoutes.openapi(
+  createRoute({
+    method: "get", path: `${P}/site-photos`, tags: ["public"],
+    summary: "The photos each place on the studio's site pages shows, in order; only public ones (no sign-in)",
+    security: [], request: { params: SlugParam, query: z.object({ place: SitePlace.optional() }) },
+    responses: { 200: json(PublicSitePhotos), 400: errors[400], 404: errors[404] },
+  }),
+  async (c) => {
+    const { slug } = c.req.valid("param");
+    const { place } = c.req.valid("query");
+    const studio = await studioOf(c, slug);
+    const { site } = await siteOf(c, studio.id);
+    const wanted = Object.entries(site.photos ?? {}).filter(([k]) => !place || k === place);
+    const ids = [...new Set(wanted.flatMap(([, v]) => v))];
+    const rows = new Map<string, Row>();
+    for (let i = 0; i < ids.length; i += 90) {
+      const part = ids.slice(i, i + 90);
+      const { results } = await c.env.DB.prepare(
+        `SELECT id, title, slug, kind, primary_file_id FROM artworks WHERE studio_id = ? AND public = 1 AND deleted_at IS NULL
+         AND id IN (${part.map(() => "?").join(",")})`,
+      ).bind(studio.id, ...part).all<Row>();
+      for (const r of results) rows.set(r.id as string, r);
+    }
+    const files = await filesOf(c, studio.id, [...rows.keys()]);
+    const places: Record<string, z.infer<typeof PublicSitePhotos>["places"][string]> = {};
+    for (const [name, list] of wanted) {
+      places[name] = list.flatMap((id) => {
+        const a = rows.get(id);
+        const img = a ? imagesOf(slug, files.get(id) ?? [], a.primary_file_id as string | null)[0] : undefined;
+        if (!a || !img) return [];
+        return [{ ...img, title: a.title as string, workSlug: a.kind === "work" && a.slug ? (a.slug as string) : null }];
+      });
+    }
+    return reply(c, { places }, studio.version);
   },
 );

@@ -2,7 +2,7 @@
 // studio_id from the session, so another studio's id is simply "not found" (D-016).
 import {
   ArtworkInput, ArtworkPatch, ClientInput, ClientPatch, Id, PlacementInput, PlacementPatch, SaleInput, SalePatch,
-  SettingsPatch, ShowInput, ShowPatch, db as schema, newId,
+  SettingsPatch, ShowInput, ShowPatch, SiteProfile, db as schema, newId,
 } from "@studio/core";
 import { and, eq, isNull } from "drizzle-orm";
 import type { SQLiteColumn, SQLiteTable } from "drizzle-orm/sqlite-core";
@@ -41,6 +41,7 @@ export const artworkEntity = define({
     ...recordDefaults, inventoryCode: null, medium: null, year: null, width: null, height: null, depth: null,
     sizeUnit: "in", priceCents: null, currency: "USD", status: "available", description: null, primaryFileId: null,
     public: false, publishedAt: null, slug: null, collection: null, tags: [], palette: [], editionSize: null, draftedFields: [],
+    kind: "work",
   },
 });
 
@@ -302,7 +303,29 @@ export const settingsUpdate = defineAction({
   plan: async (ctx, { version, patch }) => {
     const before = await getRecord(ctx.db, settingsEntity, ctx.actor.studioId, ctx.actor.studioId);
     checkVersion(before, version);
-    return { writes: [updateWrite(ctx, settingsEntity, before, clientFields(patch))] };
+    // The site's words and photo places are public (D-119, D-122): checked here, on the way in, and stored as
+    // parsed. A meta patch without `site` keeps the site as it is (meta is otherwise replaced whole).
+    const oldSite = (before.meta as Record<string, unknown> | undefined)?.site;
+    let changes: Snapshot = clientFields(patch);
+    if (patch.meta) {
+      let site: unknown = "site" in patch.meta ? patch.meta.site : oldSite;
+      if ("site" in patch.meta) {
+        const ok = SiteProfile.safeParse(patch.meta.site);
+        if (!ok.success) {
+          throw new HttpError("bad_request", "The site's profile isn't valid", {
+            issues: ok.error.issues.map((i) => ({ path: ["meta", "site", ...i.path.map(String)].join("."), message: i.message })),
+          });
+        }
+        site = ok.data;
+      }
+      changes = { ...changes, meta: site === undefined ? patch.meta : { ...patch.meta, site } };
+    }
+    const newSite = (changes.meta as Record<string, unknown> | undefined)?.site ?? oldSite;
+    const siteChanged = JSON.stringify(newSite ?? null) !== JSON.stringify(oldSite ?? null);
+    // What the public site says is the artist's to change, like publishing (D-110).
+    if (siteChanged && ctx.source === "assistant") throw new HttpError("forbidden", "Only the artist can change the site's words and photos");
+    const publicChange = siteChanged || ("timezone" in changes && changes.timezone !== before.timezone);
+    return { writes: [updateWrite(ctx, settingsEntity, before, changes), ...(publicChange ? [bumpCatalogue(ctx)] : [])] };
   },
   respond: (_c, a) => a[0] as Snapshot,
 });

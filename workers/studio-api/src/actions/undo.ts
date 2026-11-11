@@ -55,8 +55,8 @@ export const undoAction = defineAction({
         expectOne: true,
       });
     }
-    // A public page may have shown what this undoes (migration 0010).
-    if (entries.some((e) => e.entity_type === "artwork" || e.entity_type === "file")) writes.push(bumpCatalogue(ctx));
+    // A public page may have shown what this undoes (migration 0010). Settings too: the public profile shows the site's words and the time zone (D-119).
+    if (entries.some((e) => ["artwork", "file", "settings"].includes(e.entity_type))) writes.push(bumpCatalogue(ctx));
     return { writes };
   },
   respond: (_c, afters) => ({ record: afters[0] as Snapshot, records: afters as Snapshot[] }),

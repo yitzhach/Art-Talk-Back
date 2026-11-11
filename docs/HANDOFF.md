@@ -1,27 +1,31 @@
-# Handoff — 2026-10-24
+# Handoff — 2026-11-11
 
 Read this first, then `CLAUDE.md`, then `docs/phase-3.md` (assistant) or `docs/phase-5-booth.md`
 (Booth Studio) or `docs/phase-5-studio-wall.md` (Studio Wall), whichever your task is.
 
 ## Where things stand
 
-- **Site 3.0 stage 1 (the catalogue) is built and on staging; its gate is nearly done (2026-11-11, D-107…D-115,
-  `docs/phase-6-site.md`).** Site repo `yitzhach/IA-ART-SITE-REPO` (Workers `studio-site`, `studio-site-staging`).
-  Both repos on branch `claude/gallant-thompson-91hmzi`, **not merged, no PRs yet**.
-  - Staging: https://studio-site-staging.bobdylan2000.workers.dev/studio (studio slug `isaac-anderson-art-sbtwkm`;
-    public list `/v1/public/studios/isaac-anderson-art-sbtwkm/artworks`). Isaac did the first deploy; later
-    redeploys are "Deploy staging" run on the branch (Claude may run it).
-  - Isaac imported all 65 photos of his current site (40 works + 25 site photos, D-114) and approved 7 by hand.
-    For testing he wants every photo public: the Works screen has **Approve all drafts** (D-115); his tap.
-  - Gate passed (2026-11-11): the public list returned exactly what he approved (7, then all 65 after Approve all
-    drafts), and a work added from his iPhone camera ("Door Test upload test") got the assistant's live draft and
-    WebP sizes.
-  - Then ship: platform PR first (CI green on the branch), then the site's PR (its CI runs only on PRs). Merging the
-    platform deploys production (migration 0010, additive). The production import needs Isaac's OK; production
-    `studio-site` has never been deployed (its first deploy is Isaac's).
-  - Isaac's clicks still to do on the site repo: Allow auto-merge; the `ci` ruleset after its first CI run.
-  - Known: 20 of the 65 photos exist only below 960 px on the old site (soft when large); Green Horizon is the title
-    of two different works (old site said the abstract one was sold; Isaac set it available).
+- **Site 3.0 stage 2 (the public site) built, at its gate on staging (2026-11-11, D-116…D-123, `docs/phase-6-site.md`).**
+  Site repo `yitzhach/IA-ART-SITE-REPO` (Workers `studio-site`, `studio-site-staging`); both repos on
+  `claude/gallant-thompson-91hmzi`.
+  - Platform: migration 0011 (`artworks.kind`), `SiteProfile` in `settings.meta.site`, public routes
+    `GET /v1/public/studios/{slug}` and `…/site-photos`. Site: public pages from `worker/site/`, the Plaster template,
+    the Site screen `/studio/site`, the import's words-and-photos step. Checks: `npm run test:site` (scripts off,
+    budgets, Lighthouse mobile ≥ 95) in the site's CI.
+  - Staging: https://studio-site-staging.bobdylan2000.workers.dev/ (owner's area `/studio`), studio slug
+    `isaac-anderson-art-sbtwkm`. Staging's words and photo places appear once Isaac taps "Bring in the words and
+    photos" on the Site screen (the stage 1 import already ran there, so it won't start by itself).
+  - Isaac's OK on staging given (2026-11-11). Then production, all at once, in order: merge Art-Talk-Back's PR
+    (0011 runs with "Deploy production API"), then the site's PR; "Deploy production assistant" (Claude, confirm
+    word `studio-assistant`; adds `/assistant/draft`); "Deploy production site" (new; Isaac's first deploy, confirm
+    word `studio-site`, site name left empty); Isaac signs in at production `/studio`, the import and its words step
+    run; he copies the site name from the Site screen; Claude reruns "Deploy production site" with it (D-123).
+  - Stage 1 production restore points still apply: bookmark `000000f2-00000004-00005120-c36ac75ce1c0bb4915fab086971db40b`,
+    previous Worker `f552dcf1` (before 0010).
+  - Known: 20 of the 65 photos exist only below 960 px on the old site; Green Horizon names two different works; the
+    old site's `object-009.webp` never came in, so "Home — close-up 2" starts empty; Previous / Next on a piece only
+    knows the newest 48 works.
+  - Isaac's clicks still to do on the site repo: Allow auto-merge; the `ci` ruleset.
 
 - **Studio Wall stage 5: client links on the platform (2026-11-02, D-090…D-095, `docs/phase-5-studio-wall.md`).**
   Migration 0009 (`shares`, `share_sessions`, `share_attempts`); owner routes `/v1/shares`; public routes

@@ -243,6 +243,13 @@
             "minimum": 1,
             "maximum": 100000
           },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "work",
+              "site_photo"
+            ]
+          },
           "public": {
             "type": "boolean"
           },
@@ -293,6 +300,7 @@
           "tags",
           "palette",
           "editionSize",
+          "kind",
           "public",
           "publishedAt",
           "draftedFields"
@@ -490,6 +498,13 @@
             "minimum": 1,
             "maximum": 100000
           },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "work",
+              "site_photo"
+            ]
+          },
           "public": {
             "type": "boolean"
           },
@@ -670,6 +685,7 @@
           "tags",
           "palette",
           "editionSize",
+          "kind",
           "public",
           "publishedAt",
           "draftedFields",
@@ -3268,6 +3284,13 @@
                     "minimum": 1,
                     "maximum": 100000
                   },
+                  "kind": {
+                    "type": "string",
+                    "enum": [
+                      "work",
+                      "site_photo"
+                    ]
+                  },
                   "meta": {
                     "type": "object",
                     "additionalProperties": {}
@@ -3565,6 +3588,13 @@
                     ],
                     "minimum": 1,
                     "maximum": 100000
+                  },
+                  "kind": {
+                    "type": "string",
+                    "enum": [
+                      "work",
+                      "site_photo"
+                    ]
                   },
                   "meta": {
                     "type": "object",
@@ -11765,6 +11795,19 @@
             "schema": {
               "type": "string",
               "enum": [
+                "work",
+                "site_photo"
+              ],
+              "default": "work"
+            },
+            "required": false,
+            "name": "kind",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
                 "available",
                 "reserved",
                 "sold",
@@ -12453,6 +12496,460 @@
                 "schema": {
                   "type": "string",
                   "format": "binary"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (or in another studio)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/public/studios/{slug}": {
+      "get": {
+        "tags": [
+          "public"
+        ],
+        "summary": "A studio's public profile: its site's words and how to reach it, nothing else of its settings (no sign-in)",
+        "security": [],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "slug",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "slug": {
+                      "type": "string"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "tagline": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "description": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "phone": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "email": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "hours": {
+                      "type": [
+                        "object",
+                        "null"
+                      ],
+                      "properties": {
+                        "from": {
+                          "type": "string"
+                        },
+                        "to": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "from",
+                        "to"
+                      ]
+                    },
+                    "timezone": {
+                      "type": "string"
+                    },
+                    "pages": {
+                      "type": "object",
+                      "properties": {
+                        "home": {
+                          "type": "object",
+                          "properties": {
+                            "title": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 200
+                            },
+                            "lede": {
+                              "type": "string",
+                              "maxLength": 1000
+                            },
+                            "sections": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "key": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 60,
+                                    "pattern": "^[a-z0-9]+(?:[.-][a-z0-9]+)*$"
+                                  },
+                                  "heading": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 200
+                                  },
+                                  "body": {
+                                    "type": "string",
+                                    "maxLength": 5000
+                                  },
+                                  "place": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 60,
+                                    "pattern": "^[a-z0-9]+(?:[.-][a-z0-9]+)*$"
+                                  }
+                                },
+                                "additionalProperties": false
+                              },
+                              "maxItems": 30
+                            }
+                          },
+                          "additionalProperties": false
+                        },
+                        "commissions": {
+                          "type": "object",
+                          "properties": {
+                            "title": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 200
+                            },
+                            "lede": {
+                              "type": "string",
+                              "maxLength": 1000
+                            },
+                            "sections": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "key": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 60,
+                                    "pattern": "^[a-z0-9]+(?:[.-][a-z0-9]+)*$"
+                                  },
+                                  "heading": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 200
+                                  },
+                                  "body": {
+                                    "type": "string",
+                                    "maxLength": 5000
+                                  },
+                                  "place": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 60,
+                                    "pattern": "^[a-z0-9]+(?:[.-][a-z0-9]+)*$"
+                                  }
+                                },
+                                "additionalProperties": false
+                              },
+                              "maxItems": 30
+                            }
+                          },
+                          "additionalProperties": false
+                        },
+                        "process": {
+                          "type": "object",
+                          "properties": {
+                            "title": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 200
+                            },
+                            "lede": {
+                              "type": "string",
+                              "maxLength": 1000
+                            },
+                            "sections": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "key": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 60,
+                                    "pattern": "^[a-z0-9]+(?:[.-][a-z0-9]+)*$"
+                                  },
+                                  "heading": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 200
+                                  },
+                                  "body": {
+                                    "type": "string",
+                                    "maxLength": 5000
+                                  },
+                                  "place": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 60,
+                                    "pattern": "^[a-z0-9]+(?:[.-][a-z0-9]+)*$"
+                                  }
+                                },
+                                "additionalProperties": false
+                              },
+                              "maxItems": 30
+                            }
+                          },
+                          "additionalProperties": false
+                        },
+                        "about": {
+                          "type": "object",
+                          "properties": {
+                            "title": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 200
+                            },
+                            "lede": {
+                              "type": "string",
+                              "maxLength": 1000
+                            },
+                            "sections": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "key": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 60,
+                                    "pattern": "^[a-z0-9]+(?:[.-][a-z0-9]+)*$"
+                                  },
+                                  "heading": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 200
+                                  },
+                                  "body": {
+                                    "type": "string",
+                                    "maxLength": 5000
+                                  },
+                                  "place": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 60,
+                                    "pattern": "^[a-z0-9]+(?:[.-][a-z0-9]+)*$"
+                                  }
+                                },
+                                "additionalProperties": false
+                              },
+                              "maxItems": 30
+                            }
+                          },
+                          "additionalProperties": false
+                        }
+                      }
+                    },
+                    "catalogueVersion": {
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "slug",
+                    "name",
+                    "tagline",
+                    "description",
+                    "phone",
+                    "email",
+                    "hours",
+                    "timezone",
+                    "pages",
+                    "catalogueVersion"
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (or in another studio)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/public/studios/{slug}/site-photos": {
+      "get": {
+        "tags": [
+          "public"
+        ],
+        "summary": "The photos each place on the studio's site pages shows, in order; only public ones (no sign-in)",
+        "security": [],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "slug",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 60,
+              "pattern": "^[a-z0-9]+(?:[.-][a-z0-9]+)*$"
+            },
+            "required": false,
+            "name": "place",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "places": {
+                      "type": "object",
+                      "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "fileId": {
+                              "type": "string",
+                              "description": "ULID"
+                            },
+                            "altText": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "aspectRatio": {
+                              "type": [
+                                "number",
+                                "null"
+                              ],
+                              "exclusiveMinimum": 0
+                            },
+                            "sizes": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "width": {
+                                    "anyOf": [
+                                      {
+                                        "type": "number",
+                                        "enum": [
+                                          480
+                                        ]
+                                      },
+                                      {
+                                        "type": "number",
+                                        "enum": [
+                                          960
+                                        ]
+                                      },
+                                      {
+                                        "type": "number",
+                                        "enum": [
+                                          1600
+                                        ]
+                                      }
+                                    ]
+                                  },
+                                  "url": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "width",
+                                  "url"
+                                ]
+                              }
+                            },
+                            "title": {
+                              "type": "string"
+                            },
+                            "workSlug": {
+                              "type": [
+                                "string",
+                                "null"
+                              ],
+                              "minLength": 1,
+                              "maxLength": 80,
+                              "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+                            }
+                          },
+                          "required": [
+                            "fileId",
+                            "altText",
+                            "aspectRatio",
+                            "sizes",
+                            "title",
+                            "workSlug"
+                          ]
+                        }
+                      }
+                    },
+                    "catalogueVersion": {
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "places",
+                    "catalogueVersion"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
                 }
               }
             }

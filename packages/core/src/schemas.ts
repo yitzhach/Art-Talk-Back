@@ -28,6 +28,19 @@ export const RecordMeta = z.object({
 
 export const ArtworkStatus = z.enum(["available", "reserved", "sold", "not_for_sale", "archived"]);
 
+/** A work's address on the public site: lower case words joined by hyphens (Site 3.0, migration 0010). */
+export const Slug = z.string().min(1).max(80).regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, "Lower case letters, numbers and single hyphens");
+/** One colour of a work's cover, read by code in the owner's browser; `share` in basis points. */
+export const PaletteSwatch = z.object({
+  hex: z.string().regex(/^#[0-9a-fA-F]{6}$/, "#rrggbb").toLowerCase(),
+  share: z.number().int().min(0).max(10000),
+});
+export const ArtworkTag = z.string().trim().toLowerCase().min(1).max(40);
+/** Fields the assistant drafts; while a name is in `draftedFields`, that field still holds its unedited text. */
+export const DraftableField = z.enum(["description", "tags", "collection", "altText"]);
+export const MAX_TAGS = 20;
+export const MAX_PALETTE = 6;
+
 export const ArtworkFields = z.object({
   title: z.string().trim().min(1).max(300),
   inventoryCode: nullableText(100),
@@ -42,13 +55,36 @@ export const ArtworkFields = z.object({
   status: ArtworkStatus,
   description: nullableText(),
   primaryFileId: Id.nullable(),
+  slug: Slug.nullable(),
+  collection: z.string().trim().min(1).max(80).nullable(),
+  tags: z.array(ArtworkTag).max(MAX_TAGS),
+  palette: z.array(PaletteSwatch).max(MAX_PALETTE),
+  /** null = an original (D-102 question 8: ready for editions, unused for now). */
+  editionSize: z.number().int().min(1).max(100000).nullable(),
   meta: Meta,
 });
 export const ArtworkPatch = ArtworkFields.partial().strict()
   .refine((v) => Object.keys(v).length > 0, "Send at least one field");
 export const ArtworkInput = ArtworkFields.partial().required({ title: true })
   .extend({ id: Id.optional() }).strict();
-export const Artwork = RecordMeta.extend(ArtworkFields.shape);
+/** Set only by the server: `public` and `publishedAt` by publish/unpublish (D-104), `draftedFields` by the assistant's draft. */
+export const Artwork = RecordMeta.extend(ArtworkFields.shape).extend({
+  public: z.boolean(),
+  publishedAt: z.string().nullable(),
+  draftedFields: z.array(DraftableField),
+});
+
+export const PublishRequest = z.object({ slug: Slug.optional() }).strict();
+
+/** What the assistant's draft job writes (artwork.applyDraft): only empty or still-drafted fields change. */
+export const DraftResult = z.object({
+  description: z.string().trim().min(1).max(5000).optional(),
+  tags: z.array(ArtworkTag).max(12).optional(),
+  collection: z.string().trim().min(1).max(80).optional(),
+  altText: z.string().trim().min(1).max(500).optional(),
+  /** What the draft cost, for the studio's assistant budget (D-100). */
+  usage: z.object({ model: z.string().max(80), inputTokens: z.number().int().min(0), outputTokens: z.number().int().min(0) }).optional(),
+}).strict();
 
 // ----------------------------------------------------------------- clients
 
@@ -95,12 +131,23 @@ export const Settings = SettingsFields.extend({
 export const FileKind = z.enum(["photo", "reference", "agreement", "coa", "receipt", "document", "other"]);
 export const MAX_FILE_BYTES = 100 * 1024 * 1024;
 
+/** Widths the owner's browser makes of a picture (D-106); a size is never wider than the original. */
+export const IMAGE_WIDTHS = [480, 960, 1600] as const;
+export const ImageWidth = z.union([z.literal(480), z.literal(960), z.literal(1600)]);
+export const MAX_SIZE_BYTES = 10 * 1024 * 1024;
+
 export const UploadRequest = z.object({
   name: z.string().trim().min(1).max(200),
   contentType: z.string().min(1).max(200),
   size: z.number().int().min(1).max(MAX_FILE_BYTES),
   kind: FileKind.optional(),
-}).strict();
+  /** WebP copies the browser made, each uploaded to its own signed link (D-106). Pictures only. */
+  sizes: z.array(z.object({ width: ImageWidth, size: z.number().int().min(1).max(MAX_SIZE_BYTES) }).strict()).min(1).max(3).optional(),
+  /** The original's pixel size, so pages can reserve the space before the picture loads. */
+  pixels: z.object({ width: z.number().int().min(1).max(100000), height: z.number().int().min(1).max(100000) }).strict().optional(),
+}).strict()
+  .refine((v) => !v.sizes || new Set(v.sizes.map((s) => s.width)).size === v.sizes.length, "Each width once")
+  .refine((v) => !v.sizes || v.contentType.toLowerCase().startsWith("image/"), "Sizes are for pictures");
 
 export const AttachableType = z.enum(["artwork", "client", "placement", "pin"]);
 export const AttachRequest = z.object({ entityType: AttachableType, entityId: Id }).strict();
@@ -114,7 +161,72 @@ export const FileRecord = RecordMeta.extend({
   entityType: z.string().nullable(),
   entityId: z.string().nullable(),
   locked: z.boolean(),
+  /** Order among a record's pictures, lowest first (migration 0010). */
+  position: z.number().int(),
+  altText: z.string().nullable(),
 });
+
+export const FilePatch = z.object({
+  altText: z.string().trim().max(500).nullable(),
+  position: z.number().int().min(0).max(10000),
+  locked: z.boolean(),
+}).partial().strict().refine((v) => Object.keys(v).length > 0, "Send at least one field");
+
+export const FileReorder = z.object({
+  entityType: z.literal("artwork"),
+  entityId: Id,
+  /** The record's files in their new order; files not named keep their place after these. */
+  fileIds: z.array(Id).min(1).max(50),
+}).strict();
+
+/** An artwork with its pictures in order (owner view). */
+export const ArtworkDetail = Artwork.extend({ images: z.array(FileRecord) });
+
+// ---------------------------------------------------------------- public catalogue (Site 3.0, D-104, D-106)
+
+export const PublicImage = z.object({
+  fileId: Id,
+  altText: z.string().nullable(),
+  /** Original width ÷ height, when known. */
+  aspectRatio: z.number().positive().nullable(),
+  /** Each size the picture has, as a path on this API (`/v1/public/studios/{slug}/images/{fileId}/{width}.webp`). */
+  sizes: z.array(z.object({ width: ImageWidth, url: z.string() })),
+});
+
+/** What anyone may see of a public work. Never its id, inventory code, notes, meta or who made the record. */
+export const PublicArtwork = z.object({
+  slug: Slug,
+  title: z.string(),
+  medium: z.string().nullable(),
+  year: z.number().int().nullable(),
+  width: z.number().nullable(),
+  height: z.number().nullable(),
+  depth: z.number().nullable(),
+  sizeUnit: SizeUnit,
+  editionSize: z.number().int().nullable(),
+  collection: z.string().nullable(),
+  tags: z.array(z.string()),
+  palette: z.array(PaletteSwatch),
+  description: z.string().nullable(),
+  status: ArtworkStatus,
+  /** Only for an available work with a price (D-102 question 6); otherwise null. */
+  priceCents: z.number().int().nullable(),
+  currency: Currency.nullable(),
+  images: z.array(PublicImage),
+  publishedAt: z.string().nullable(),
+});
+
+export const PublicArtworkList = z.object({
+  items: z.array(PublicArtwork),
+  nextCursor: z.string().nullable(),
+  /** Goes up whenever the studio's public catalogue may have changed; key caches on it. */
+  catalogueVersion: z.number().int(),
+});
+export const PublicCollections = z.object({
+  items: z.array(z.object({ name: z.string(), count: z.number().int() })),
+  catalogueVersion: z.number().int(),
+});
+export const PublicArtworkDetail = PublicArtwork.extend({ catalogueVersion: z.number().int() });
 
 // ---------------------------------------------------------------- activity
 

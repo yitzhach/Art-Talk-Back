@@ -10,7 +10,7 @@ import { z } from "zod";
 import type { Permission } from "../auth/permissions";
 import type { Db } from "../env";
 import { HttpError, notFound, versionConflict } from "../lib/errors";
-import { type ActionCtx, type Snapshot, type Write, defineAction } from "./runner";
+import { type ActionCtx, type Snapshot, type Write, defineAction, rawSql } from "./runner";
 
 /** Fields the server owns; a client can never set them through a create or patch. */
 const SYSTEM_FIELDS = ["id", "studioId", "createdAt", "updatedAt", "createdBy", "actorType", "version", "deletedAt"] as const;
@@ -40,6 +40,7 @@ export const artworkEntity = define({
   defaults: {
     ...recordDefaults, inventoryCode: null, medium: null, year: null, width: null, height: null, depth: null,
     sizeUnit: "in", priceCents: null, currency: "USD", status: "available", description: null, primaryFileId: null,
+    public: false, publishedAt: null, slug: null, collection: null, tags: [], palette: [], editionSize: null, draftedFields: [],
   },
 });
 
@@ -62,7 +63,7 @@ export const fileEntity = define({
   type: "file", table: schema.files, key: schema.files.id, studio: schema.files.studioId,
   version: schema.files.version, deletedAt: schema.files.deletedAt, perm: "files",
   defaults: { ...recordDefaults, thumbKey: null, contentType: null, size: null, kind: "other", status: "pending",
-    entityType: null, entityId: null, locked: false },
+    entityType: null, entityId: null, locked: false, position: 0, altText: null },
 });
 
 export const showEntity = define({
@@ -164,11 +165,17 @@ interface CrudOptions {
   /** More writes in the same batch as a delete or restore, e.g. a board's cards (D-084). May throw to refuse. */
   onDelete?: (ctx: ActionCtx, before: Snapshot) => Promise<Write[]>;
   onRestore?: (ctx: ActionCtx, before: Snapshot) => Promise<Write[]>;
+  /** Server-side changes to what a create (before = null) or an update writes, e.g. the artwork's drafted fields. */
+  shape?: (ctx: ActionCtx, before: Snapshot | null, fields: Snapshot) => Snapshot;
+  /** More writes in the same batch as every create, update, delete and restore (e.g. the catalogue version). */
+  touch?: (ctx: ActionCtx) => Write[];
 }
 
 /** create / update / delete actions for one record type. */
-export function crudActions(e: EntityDef, input: z.ZodType<Snapshot>, patch: z.ZodType<Snapshot>, { refs, risk = "auto", updateRisk = risk, apps, about, onDelete, onRestore }: CrudOptions = {}) {
+export function crudActions(e: EntityDef, input: z.ZodType<Snapshot>, patch: z.ZodType<Snapshot>, { refs, risk = "auto", updateRisk = risk, apps, about, onDelete, onRestore, shape, touch }: CrudOptions = {}) {
   const more = about ? ` ${about}` : "";
+  const shaped = (ctx: ActionCtx, before: Snapshot | null, fields: Snapshot) => (shape ? shape(ctx, before, fields) : fields);
+  const touched = (ctx: ActionCtx) => touch?.(ctx) ?? [];
   const one = (_c: ActionCtx, afters: (Snapshot | null)[]) => afters[0] as Snapshot;
   return {
     create: defineAction({
@@ -180,7 +187,7 @@ export function crudActions(e: EntityDef, input: z.ZodType<Snapshot>, patch: z.Z
       ...(apps ? { apps } : {}),
       plan: async (ctx, data) => {
         await refs?.(ctx, data);
-        return { writes: [insertWrite(ctx, e, { ...clientFields(data), id: data.id ?? newId() })] };
+        return { writes: [insertWrite(ctx, e, shaped(ctx, null, { ...clientFields(data), id: data.id ?? newId() })), ...touched(ctx)] };
       },
       respond: one,
     }),
@@ -195,7 +202,7 @@ export function crudActions(e: EntityDef, input: z.ZodType<Snapshot>, patch: z.Z
         const before = await getRecord(ctx.db, e, ctx.actor.studioId, id);
         checkVersion(before, version);
         await refs?.(ctx, p);
-        return { writes: [updateWrite(ctx, e, before, clientFields(p))] };
+        return { writes: [updateWrite(ctx, e, before, shaped(ctx, before, clientFields(p))), ...touched(ctx)] };
       },
       respond: one,
     }),
@@ -209,7 +216,7 @@ export function crudActions(e: EntityDef, input: z.ZodType<Snapshot>, patch: z.Z
       plan: async (ctx, { id, version }) => {
         const before = await getRecord(ctx.db, e, ctx.actor.studioId, id);
         checkVersion(before, version);
-        return { writes: [updateWrite(ctx, e, before, { deletedAt: ctx.now }), ...(await onDelete?.(ctx, before) ?? [])] };
+        return { writes: [updateWrite(ctx, e, before, { deletedAt: ctx.now }), ...(await onDelete?.(ctx, before) ?? []), ...touched(ctx)] };
       },
       respond: one,
     }),
@@ -226,14 +233,39 @@ export function crudActions(e: EntityDef, input: z.ZodType<Snapshot>, patch: z.Z
         if (!before.deletedAt) throw new HttpError("bad_request", `That ${e.type} isn't deleted`);
         // Who removed it no longer applies once it's back.
         const back = "deletedBy" in e.defaults ? { deletedAt: null, deletedBy: null } : { deletedAt: null };
-        return { writes: [updateWrite(ctx, e, before, back), ...(await onRestore?.(ctx, before) ?? [])] };
+        return { writes: [updateWrite(ctx, e, before, back), ...(await onRestore?.(ctx, before) ?? []), ...touched(ctx)] };
       },
       respond: one,
     }),
   };
 }
 
-export const artworkActions = crudActions(artworkEntity, ArtworkInput, ArtworkPatch);
+/** The studio's public catalogue may have changed: caches keyed on the version move on (migration 0010). */
+export const bumpCatalogue = (ctx: ActionCtx): Write => ({
+  query: rawSql("UPDATE studios SET catalogue_version = catalogue_version + 1 WHERE id = ?", ctx.actor.studioId),
+  expectOne: false,
+});
+
+/** Fields the assistant drafts that live on the artwork row (alt text lives on the cover file). */
+const DRAFTED_ON_ARTWORK = ["description", "tags", "collection"] as const;
+
+export const artworkActions = crudActions(artworkEntity, ArtworkInput, ArtworkPatch, {
+  // A cover must be a file of this studio: a public page serves it (D-106).
+  refs: async (ctx, f) => {
+    if (f.primaryFileId) await getRecord(ctx.db, fileEntity, ctx.actor.studioId, f.primaryFileId as string);
+  },
+  shape: (_ctx, before, fields) => {
+    if (!before) return fields;
+    // Editing a drafted field makes it the artist's own (D-104): it is no longer "drafted by the assistant".
+    const drafted = (before.draftedFields as string[] | undefined) ?? [];
+    const edited = DRAFTED_ON_ARTWORK.filter((k) => k in fields);
+    if (before.public && "slug" in fields && !fields.slug) throw new HttpError("bad_request", "A public work needs its address (slug); unpublish it first");
+    return edited.some((k) => drafted.includes(k))
+      ? { ...fields, draftedFields: drafted.filter((k) => !(edited as readonly string[]).includes(k)) }
+      : fields;
+  },
+  touch: (ctx) => [bumpCatalogue(ctx)],
+});
 export const clientActions = crudActions(clientEntity, ClientInput, ClientPatch);
 export const showActions = crudActions(showEntity, ShowInput, ShowPatch, {
   apps: ["show-tracker"],

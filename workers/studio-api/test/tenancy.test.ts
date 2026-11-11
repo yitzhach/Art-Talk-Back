@@ -23,7 +23,7 @@ async function snapshotB() {
 beforeAll(async () => {
   A = await makeStudio("A");
   B = await makeStudio("B");
-  b.artwork = (await call("/v1/artworks", { method: "POST", cookie: B.cookie, json: { title: "B's heron" } })).data;
+  b.artwork = (await call("/v1/artworks", { method: "POST", cookie: B.cookie, json: { title: "B's heron", collection: "B's collection" } })).data;
   b.client = (await call("/v1/clients", { method: "POST", cookie: B.cookie, json: { name: "B's client" } })).data;
   b.show = (await call("/v1/shows", { method: "POST", cookie: B.cookie, json: { name: "B's show" } })).data;
   b.sale = (await call("/v1/sales", { method: "POST", cookie: B.cookie, json: { showId: b.show.id, title: "B's sale" } })).data;
@@ -131,6 +131,12 @@ attempt("post", "/assistant/act", () => call("/v1/assistant/act", { method: "POS
   json: { action: "show.update", input: { id: b.show.id, patch: { name: "pwned" } }, summary: "x" } }));
 cases.push(["post", "/assistant/act (sale naming B's show)", () => call("/v1/assistant/act", { method: "POST", cookie: A.cookie, headers: ASSISTANT,
   json: { action: "sale.create", input: { title: "x", showId: b.show.id }, summary: "x" } })]);
+// The catalogue (Site 3.0 stage 1): A can't publish, draft, reorder or relabel B's works and pictures.
+attempt("post", "/artworks/{id}/publish", () => call(`/v1/artworks/${b.artwork.id}/publish`, { method: "POST", cookie: A.cookie, headers: { "If-Match": "1" } }));
+attempt("post", "/artworks/{id}/unpublish", () => call(`/v1/artworks/${b.artwork.id}/unpublish`, { method: "POST", cookie: A.cookie, headers: { "If-Match": "1" } }));
+attempt("post", "/artworks/{id}/draft", () => call(`/v1/artworks/${b.artwork.id}/draft`, { method: "POST", cookie: A.cookie, headers: ASSISTANT, json: { description: "pwned" } }));
+attempt("patch", "/files/{id}", () => call(`/v1/files/${b.file.id}`, { method: "PATCH", cookie: A.cookie, headers: { "If-Match": "2" }, json: { altText: "pwned" } }));
+attempt("post", "/files/reorder", () => call("/v1/files/reorder", { method: "POST", cookie: A.cookie, json: { entityType: "artwork", entityId: b.artwork.id, fileIds: [b.file.id] } }));
 attempt("post", "/auth/studio", () => call("/v1/auth/studio", { method: "POST", cookie: A.cookie, json: { studioId: B.studioId } }));
 
 describe("studio A can't reach studio B", () => {
@@ -296,6 +302,9 @@ describe("studio A can't reach studio B", () => {
     ["post", "/feedback", async () => {
       const board = (await call("/v1/boards", { method: "POST", cookie: A.cookie, json: { name: "A's" } })).data;
       expect((await call("/v1/feedback", { method: "POST", cookie: A.cookie, json: { boardId: board.id, text: "a" } })).data.studioId).toBe(A.studioId);
+    }],
+    ["get", "/artworks/collections", async () => {
+      expect((await call("/v1/artworks/collections", { cookie: A.cookie })).data.items.map((x: any) => x.name)).not.toContain("B's collection");
     }],
     ["post", "/clients", async () => expect((await call("/v1/clients", { method: "POST", cookie: A.cookie, json: { name: "A's" } })).data.studioId).toBe(A.studioId)],
     ["get", "/assistant/proposals", async () => expect((await call("/v1/assistant/proposals", { cookie: A.cookie })).data.items).toEqual([])],

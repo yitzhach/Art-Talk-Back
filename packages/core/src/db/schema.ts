@@ -36,6 +36,8 @@ export const studios = sqliteTable(
     name: text("name").notNull(),
     slug: text("slug").notNull().unique(),
     ...recordColumns("system"),
+    // Migration 0010 appends this after meta: goes up with every change a public page could show.
+    catalogueVersion: integer("catalogue_version").notNull().default(0),
   },
   () => [actorCheck("studios_actor"), metaCheck("studios_meta")],
 );
@@ -165,9 +167,20 @@ export const artworks = sqliteTable(
     description: text("description"),
     primaryFileId: text("primary_file_id"),
     ...recordColumns(),
+    // Migration 0010 (Site 3.0 stage 1) appends these after meta.
+    public: integer("public", { mode: "boolean" }).notNull().default(false),
+    publishedAt: text("published_at"),
+    slug: text("slug"),
+    collection: text("collection"),
+    tags: text("tags", { mode: "json" }).$type<string[]>().notNull().default(sql`'[]'`),
+    palette: text("palette", { mode: "json" }).$type<{ hex: string; share: number }[]>().notNull().default(sql`'[]'`),
+    editionSize: integer("edition_size"),
+    draftedFields: text("drafted_fields", { mode: "json" }).$type<string[]>().notNull().default(sql`'[]'`),
   },
   (t) => [
     index("artworks_studio_updated").on(t.studioId, t.updatedAt),
+    uniqueIndex("artworks_studio_slug").on(t.studioId, t.slug).where(sql`slug IS NOT NULL AND deleted_at IS NULL`),
+    index("artworks_studio_public").on(t.studioId, t.public, t.status),
     index("artworks_studio_status").on(t.studioId, t.status),
     index("artworks_studio_title").on(t.studioId, sql`title COLLATE NOCASE`),
     uniqueIndex("artworks_studio_code")
@@ -276,6 +289,9 @@ export const files = sqliteTable(
     entityId: text("entity_id"),
     locked: integer("locked", { mode: "boolean" }).notNull().default(false),
     ...recordColumns(),
+    // Migration 0010 appends these after meta.
+    position: integer("position").notNull().default(0),
+    altText: text("alt_text"),
   },
   (t) => [
     index("files_studio_entity").on(t.studioId, t.entityType, t.entityId),

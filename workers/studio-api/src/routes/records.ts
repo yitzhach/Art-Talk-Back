@@ -1,5 +1,5 @@
 import {
-  Artwork, ArtworkInput, Board, BoardInput, BoardPatch, Feedback, FeedbackInput, FeedbackPatch, Id, Pin, PinInput, PinKind,
+  Artwork, ArtworkDetail, ArtworkInput, Board, DraftResult, PublishRequest, BoardInput, BoardPatch, Feedback, FeedbackInput, FeedbackPatch, Id, Pin, PinInput, PinKind,
   PinPatch, ArtworkPatch, ArtworkStatus, Client, ClientInput, ClientPatch, Placement, PlacementInput,
   PlacementPatch, Settings, SettingsPatch, Sale, SaleInput, SalePatch, Show, ShowDetail, ShowInput, ShowPatch, ShowStatus,
   db as schema,
@@ -15,11 +15,12 @@ import {
 import { boothSummary } from "../actions/booth";
 import { boardEntity, feedbackEntity, pinEntity } from "../actions/boards";
 import { HttpError } from "../lib/errors";
-import type { Snapshot } from "../actions/runner";
+import { type Snapshot, getAction, runAction } from "../actions/runner";
+import { publicFile } from "../actions/files";
 import type { Db } from "../env";
 import { type Permission, requirePermission } from "../auth/permissions";
 import { requireActor } from "../auth/session";
-import { IdempotencyHeader, IfMatchHeader, PageQuery, PathId, body, errors, ifMatch, json, newApp, run, send } from "./common";
+import { IdempotencyHeader, IfMatchHeader, PageQuery, PathId, body, errors, ifMatch, json, newApp, opId, run, send } from "./common";
 
 export const recordRoutes = newApp();
 
@@ -121,10 +122,89 @@ function mountRecordRoutes({ entity: e, path, tag, record, input, patch, filters
   );
 }
 
+// ------------------------------------------------------------ the catalogue (Site 3.0 stage 1, D-104…D-110)
+const ArtworkOut = Artwork.meta({ id: "Artwork" });
+
+// Registered before /artworks/{id} so "collections" isn't an id.
+recordRoutes.openapi(
+  createRoute({
+    method: "get", path: "/artworks/collections", tags: ["records"], summary: "The studio's collections and how many works each has",
+    description: "Every undeleted work, public or not. The assistant's draft picks a collection from this list.",
+    responses: { 200: json(z.object({ items: z.array(z.object({ name: z.string(), count: z.number().int() })) })), 401: errors[401], 403: errors[403] },
+  }),
+  async (c) => {
+    const actor = requireActor(c);
+    requirePermission(actor.role, "artworks:read");
+    const t = schema.artworks;
+    const rows = await drizzle(c.env.DB).select({ name: t.collection, count: sql<number>`count(*)` }).from(t)
+      .where(and(eq(t.studioId, actor.studioId), isNull(t.deletedAt), sql`${t.collection} IS NOT NULL`))
+      .groupBy(t.collection).orderBy(t.collection);
+    return send(c, { items: rows });
+  },
+);
+
 mountRecordRoutes({
-  entity: artworkEntity, path: "artworks", tag: "records", record: Artwork.meta({ id: "Artwork" }),
-  input: ArtworkInput, patch: ArtworkPatch, filters: z.object({ status: ArtworkStatus.optional() }),
+  entity: artworkEntity, path: "artworks", tag: "records", record: ArtworkOut,
+  input: ArtworkInput, patch: ArtworkPatch,
+  filters: z.object({ status: ArtworkStatus.optional(), collection: z.string().max(80).optional() }),
+  detail: {
+    schema: ArtworkDetail.meta({ id: "ArtworkDetail" }),
+    // The work's pictures in order: the owner's screens and the assistant's draft read them here.
+    load: async (db, studioId, row) => {
+      const t = schema.files;
+      const images = (await db.select().from(t).where(and(
+        eq(t.studioId, studioId), eq(t.entityType, "artwork"), eq(t.entityId, row.id as string), eq(t.status, "ready"), isNull(t.deletedAt),
+      )).orderBy(t.position, t.id)) as Snapshot[];
+      return { ...row, images: images.map(publicFile) };
+    },
+  },
 });
+
+recordRoutes.openapi(
+  createRoute({
+    method: "post", path: "/artworks/{id}/publish", tags: ["records"], summary: "Approve a work: make it public (D-104)",
+    description: "Needs a title and a cover picture with its web sizes. Makes the slug from the title unless one is sent or set. Clears draftedFields: approving accepts the assistant's words as they stand.",
+    request: { params: PathId, headers: IfMatchHeader.extend(IdempotencyHeader.shape), body: { required: false, content: { "application/json": { schema: PublishRequest } } } },
+    responses: { 200: json(ArtworkOut), 400: errors[400], 404: errors[404], 409: errors[409] },
+  }),
+  async (c) => {
+    const raw = await c.req.json().catch(() => ({}));
+    const extra = PublishRequest.safeParse(raw ?? {});
+    if (!extra.success) throw new HttpError("bad_request", "Invalid input", { issues: extra.error.issues });
+    const { result } = await run(c, "artwork.publish", { id: c.req.valid("param").id, version: ifMatch(c), ...extra.data });
+    return send(c, result);
+  },
+);
+
+recordRoutes.openapi(
+  createRoute({
+    method: "post", path: "/artworks/{id}/unpublish", tags: ["records"], summary: "Take a work off the public site",
+    request: { params: PathId, headers: IfMatchHeader.extend(IdempotencyHeader.shape) },
+    responses: { 200: json(ArtworkOut), 400: errors[400], 404: errors[404], 409: errors[409] },
+  }),
+  async (c) => {
+    const { result } = await run(c, "artwork.unpublish", { id: c.req.valid("param").id, version: ifMatch(c) });
+    return send(c, result);
+  },
+);
+
+recordRoutes.openapi(
+  createRoute({
+    method: "post", path: "/artworks/{id}/draft", tags: ["assistant"], summary: "The assistant writes its draft of a work's words (studio-assistant only)",
+    description: "studio-assistant's draft job calls this with the person's session and its key (D-046, D-108). Writes description, tags, collection and the cover's alt text only where the field is empty or still the assistant's earlier draft. Never publishes.",
+    request: { params: PathId, headers: IdempotencyHeader, body: body(DraftResult) },
+    responses: { 200: json(ArtworkOut), 400: errors[400], 403: errors[403], 404: errors[404], 409: errors[409] },
+  }),
+  async (c) => {
+    const actor = requireActor(c);
+    if (!actor.viaAssistant) throw new HttpError("forbidden", "Only the assistant writes drafts");
+    const def = getAction("artwork.applyDraft")!;
+    const { result } = await runAction(def, { ...c.req.valid("json"), id: c.req.valid("param").id }, {
+      env: c.env, actor, origin: new URL(c.req.url).origin, opId: opId(c), source: "assistant",
+    });
+    return send(c, result);
+  },
+);
 mountRecordRoutes({
   entity: clientEntity, path: "clients", tag: "records", record: Client.meta({ id: "Client" }),
   input: ClientInput, patch: ClientPatch,

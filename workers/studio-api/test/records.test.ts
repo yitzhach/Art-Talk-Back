@@ -14,7 +14,8 @@ describe("artworks and clients", () => {
       const id = created.data.id;
 
       const got = await call(`/v1/${path}/${id}`, { cookie: a.cookie });
-      expect(got.data).toEqual(created.data);
+      // A work's GET also lists its pictures (Site 3.0, ArtworkDetail).
+      expect(got.data).toEqual(path === "artworks" ? { ...created.data, images: [] } : created.data);
 
       expect((await call(`/v1/${path}/${id}`, { method: "PATCH", cookie: a.cookie, json: patch })).status).toBe(400); // no If-Match
       const edited = await call(`/v1/${path}/${id}`, { method: "PATCH", cookie: a.cookie, headers: { "If-Match": "1" }, json: patch });

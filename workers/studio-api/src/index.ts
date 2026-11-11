@@ -9,6 +9,7 @@ import "./actions/assistant";
 import "./actions/booth";
 import "./actions/boards";
 import "./actions/shares";
+import "./actions/catalogue";
 import { loadAuth } from "./auth/session";
 import type { AppEnv } from "./env";
 import { safeEqual, sha256 } from "./lib/crypto";

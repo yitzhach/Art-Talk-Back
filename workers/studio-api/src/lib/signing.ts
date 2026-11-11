@@ -5,17 +5,20 @@ import { hmac, safeEqual } from "./crypto";
 
 export const LINK_TTL_SECONDS = 15 * 60;
 
-export async function signFileLink(key: string, origin: string, method: "PUT" | "GET", fileId: string, now = Date.now()) {
+/** `width`: one of the picture's WebP copies (D-106); the signature names file and width together. */
+export async function signFileLink(key: string, origin: string, method: "PUT" | "GET", fileId: string, now = Date.now(), width?: number) {
   const exp = Math.floor(now / 1000) + LINK_TTL_SECONDS;
-  const sig = await hmac(key, `${method}\n${fileId}\n${exp}`);
+  const subject = width ? `${fileId}@${width}` : fileId;
+  const sig = await hmac(key, `${method}\n${subject}\n${exp}`);
   return {
-    url: `${origin}/v1/files/${fileId}/content?exp=${exp}&sig=${sig}`,
+    url: `${origin}/v1/files/${fileId}/content?${width ? `w=${width}&` : ""}exp=${exp}&sig=${sig}`,
     expiresAt: new Date(exp * 1000).toISOString(),
   };
 }
 
-export async function verifyFileLink(key: string, method: "PUT" | "GET", fileId: string, exp: string | undefined, sig: string | undefined, now = Date.now()) {
+export async function verifyFileLink(key: string, method: "PUT" | "GET", fileId: string, exp: string | undefined, sig: string | undefined, now = Date.now(), width?: number) {
   if (!exp || !sig || !/^\d+$/.test(exp)) return false;
   if (Number(exp) * 1000 < now) return false;
-  return safeEqual(await hmac(key, `${method}\n${fileId}\n${exp}`), sig);
+  const subject = width ? `${fileId}@${width}` : fileId;
+  return safeEqual(await hmac(key, `${method}\n${subject}\n${exp}`), sig);
 }

@@ -309,7 +309,7 @@ A and the contract come first; B–G build to it in parallel.
   model multiplies; locally 1.5–1.8 s. Largest picture: imported photos ≤ 120 KB at phone size; the one iPhone upload's
   960 px size is 303 KB (budget 200 KB). Left as known: re-check on Isaac's phone; if it feels slow, lower the upload's
   WebP quality (0.82) for new photos.
-- [ ] Isaac taps "Bring in the words and photos" on the Site screen; his look and OK on his phone.
+- [x] Isaac's look and OK on his phone on staging (2026-11-11: "looked at the staging site on my phone and it's OK").
 - [ ] Production, in order: merge both PRs (platform first: 0011 runs with "Deploy production API"); "Deploy production assistant" (Claude); "Deploy production site" (Isaac's first deploy, D-123); he signs in, the import runs; Claude reruns "Deploy production site" with the site name he copies.
 
 **Changes from the plan.** The import's site step publishes only the site photos it places; a work placed on a page waits

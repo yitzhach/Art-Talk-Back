@@ -15,7 +15,7 @@ Read this first, then `CLAUDE.md`, then `docs/phase-3.md` (assistant) or `docs/p
   - Staging: https://studio-site-staging.bobdylan2000.workers.dev/ (owner's area `/studio`), studio slug
     `isaac-anderson-art-sbtwkm`. Staging's words and photo places appear once Isaac taps "Bring in the words and
     photos" on the Site screen (the stage 1 import already ran there, so it won't start by itself).
-  - Waiting: Isaac's look and OK on his phone. Then production, all at once, in order: merge Art-Talk-Back's PR
+  - Isaac's OK on staging given (2026-11-11). Then production, all at once, in order: merge Art-Talk-Back's PR
     (0011 runs with "Deploy production API"), then the site's PR; "Deploy production assistant" (Claude, confirm
     word `studio-assistant`; adds `/assistant/draft`); "Deploy production site" (new; Isaac's first deploy, confirm
     word `studio-site`, site name left empty); Isaac signs in at production `/studio`, the import and its words step

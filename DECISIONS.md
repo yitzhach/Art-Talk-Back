@@ -446,20 +446,20 @@ Isaac asked to include all the photos from his current site automatically and th
 ### D-115 · "Approve all drafts" for testing · 2026-11-11 · Isaac
 For the testing phase Isaac wants every imported photo on the site, approved or not, and keeps one-by-one approval for new work later. The Works screen gets **Approve all N drafts**: after a confirm, it publishes each draft one at a time through the same `artwork.publish` as the work's own button (a cover is still required; any that fail are listed). It is still the artist's tap; the assistant still can't publish (D-110). Stage 2 decides how site photos (status not for sale) show on public pages.
 
-### D-116 · Site pages are made by the site's Worker in plain TypeScript, no framework · 2026-11-11 · default (stage 2 plan, waiting for Isaac's OK)
+### D-116 · Site pages are made by the site's Worker in plain TypeScript, no framework · 2026-11-11 · Isaac (approved with the stage 2 plan)
 The brief proposed Astro. The Worker exists, the pages are few, and plain templates add nothing to download or update. Pages are cached at the edge under a key that carries the studio's catalogue version, so a publish shows at once.
 
-### D-117 · Which studio a site shows comes from the Worker's settings until stage 7 · 2026-11-11 · default (stage 2 plan)
+### D-117 · Which studio a site shows comes from the Worker's settings until stage 7 · 2026-11-11 · Isaac (approved with the stage 2 plan)
 `STUDIO_SLUG` per environment. The platform record mapping an address to a studio waits for the second studio, when it is first needed.
 
-### D-118 · Site photos are not works on the public site · 2026-11-11 · default (stage 2 plan; answers D-115's open point)
+### D-118 · Site photos are not works on the public site · 2026-11-11 · Isaac (approved with the stage 2 plan)
 The 25 imported site photos show only where a page uses them (hero, process, about, rooms), never in Works. Migration 0011 adds `artworks.kind` (`work` | `site_photo`, additive; the imported ones set from their import record). The public list shows works only; a public route gives a page its site photos. Isaac picks which photo goes where on a "Site" screen, defaulting to the old site's places.
 
-### D-119 · The site's words and contact live in the studio's settings · 2026-11-11 · default (stage 2 plan)
+### D-119 · The site's words and contact live in the studio's settings · 2026-11-11 · Isaac (approved with the stage 2 plan)
 `settings.meta.site` (`SiteProfile`: name, tagline, phone, email, hours, the pages' text, photo places), filled once from the old site by the import page, edited on the "Site" screen. `GET /v1/public/studios/{slug}` returns only that, never the rest of the settings.
 
-### D-120 · Text, email and call are links in stage 2, not a form · 2026-11-11 · default (stage 2 plan)
+### D-120 · Text, email and call are links in stage 2, not a form · 2026-11-11 · Isaac (approved with the stage 2 plan)
 `sms:`, `mailto:`, `tel:` with the piece written in. Nothing goes through the platform until stage 3's lead card.
 
-### D-121 · The first template, "Plaster", is the current site's look · 2026-11-11 · default (stage 2 plan)
+### D-121 · The first template, "Plaster", is the current site's look · 2026-11-11 · Isaac (approved with the stage 2 plan)
 Palette, fonts (self-hosted), numbered index, both themes, with colours and fonts in one file so a second template is a copy.

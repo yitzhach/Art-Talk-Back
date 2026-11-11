@@ -1,6 +1,6 @@
 # Phase 6, the site — Site 3.0: a public studio site with a visitor assistant
 
-**Status: stage 1 shipped (2026-11-11, #47; production import waits for Isaac's OK). Stage 2 planned, waiting for Isaac's OK.** Isaac asked on 2026-11-10 for a ground-up rebuild of
+**Status: stage 1 shipped (2026-11-11, #47; production import waits for Isaac's OK). Stage 2 approved by Isaac (2026-11-11), to build.** Isaac asked on 2026-11-10 for a ground-up rebuild of
 isaacandersonart.com that he can later sell to other artists, galleries and art shows (D-096…D-101).
 The drawing he reviewed (eight phone screens, ideas, stages, questions):
 https://claude.ai/artifact/TjfVTjJFCHcaGEc2gjEpTw (private to Isaac).
@@ -293,7 +293,7 @@ A and the contract come first; B–G build to it in parallel.
 4. During review: sizes, prices and statuses for the works he approves (typed on his phone).
 5. OK to run the import on production once staging looks right.
 
-## Stage 2 — the site (plan written 2026-11-11, waiting for Isaac's OK)
+## Stage 2 — the site (approved by Isaac 2026-11-11)
 
 **Goal.** Anyone can visit Isaac's site on staging and browse it fast on a phone: home, works, a piece,
 commissions, process, about. Each page arrives finished (readable with scripts off), in both themes, in the
@@ -324,7 +324,7 @@ Search engines and link previews: a real `<title>` and description on every page
 and each piece marked up as an artwork. Old addresses (`available.html`, `collection-abstract.html`, …) send the
 visitor to the matching new page, ready for when the domain moves.
 
-### Decisions taken as defaults (D-116…D-121; change any before the build starts)
+### Decisions (D-116…D-121, approved with the plan)
 
 - **D-116 · Pages are made by the site's Worker in plain TypeScript, no framework.** The brief proposed Astro. The
   Worker already exists, the pages are few and simple, and plain templates add nothing to download and nothing
@@ -395,8 +395,9 @@ A first (the contract); B–F in parallel against it.
 
 ### Needs Isaac, in order
 
-1. OK this plan (or change D-116…D-121).
-2. Before the production import (stage 1's last step): his OK. Then the "Deploy production assistant" run.
+1. ~~OK this plan~~ (done 2026-11-11).
+2. Production all at once at stage 2's end (Isaac, 2026-11-11): "Deploy production assistant" (Claude), the first deploy
+   of production `studio-site` (Isaac), then the import runs on his first visit to its studio (D-114).
 3. At the gate: a look on his phone on staging; then the first deploy of production `studio-site`.
 4. Later, his choice: moving isaacandersonart.com to the new site.
 

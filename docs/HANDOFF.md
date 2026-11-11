@@ -5,13 +5,13 @@ Read this first, then `CLAUDE.md`, then `docs/phase-3.md` (assistant) or `docs/p
 
 ## Where things stand
 
-- **Site 3.0 stage 1 (the catalogue) shipped; stage 2 planned, waiting for Isaac's OK (2026-11-11, D-107…D-121,
+- **Site 3.0 stage 1 (the catalogue) shipped; stage 2 approved, next to build (2026-11-11, D-107…D-121,
   `docs/phase-6-site.md`).** Site repo `yitzhach/IA-ART-SITE-REPO` (Workers `studio-site`, `studio-site-staging`).
   - Gate passed on staging: public list = what Isaac approved (7, then all 65 via Approve all drafts, D-115); a work
     from his iPhone camera got the assistant's draft and WebP sizes.
   - #47 merged → "Deploy production API" run 190: 0010 on `studio-db-prod`, `studio-api` `124f16b5`; restore bookmark
     `000000f2-00000004-00005120-c36ac75ce1c0bb4915fab086971db40b`, previous Worker `f552dcf1`. IA-ART-SITE-REPO#1 merged.
-  - Production still to do, in order: "Deploy production assistant" (by hand, confirm word `studio-assistant`; adds
+  - Isaac wants production done all at once at stage 2's end. Still to do, in order: "Deploy production assistant" (by hand, confirm word `studio-assistant`; adds
     `/assistant/draft`), the import (Isaac's OK), production `studio-site`'s first deploy (Isaac's; planned at stage
     2's gate).
   - Staging (both repos): https://studio-site-staging.bobdylan2000.workers.dev/studio, studio slug

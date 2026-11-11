@@ -5,13 +5,23 @@ Read this first, then `CLAUDE.md`, then `docs/phase-3.md` (assistant) or `docs/p
 
 ## Where things stand
 
-- **Site 3.0 stage 1 (the catalogue) is built and at its gate (2026-11-11, D-107…D-113, `docs/phase-6-site.md`).**
-  The site's repo is `yitzhach/IA-ART-SITE-REPO` (Workers `studio-site`, `studio-site-staging`). Platform: migration
-  0010, publish/unpublish, the assistant's drafts (`POST /assistant/draft` → `POST /v1/artworks/{id}/draft`), picture
-  sizes, public routes `/v1/public/studios/{slug}/…`. Site: `/studio` owner screens and `/studio/import` (40 works
-  from the current site, descriptions pre-drafted). Both on branch `claude/gallant-thompson-91hmzi`, not merged.
-  Waiting on Isaac: the first deploy of `studio-site-staging` (Actions → Deploy staging, on that branch), then his
-  phone check. Then: platform PR first, then the site's; production import only with his OK.
+- **Site 3.0 stage 1 (the catalogue) is built and on staging; its gate is nearly done (2026-11-11, D-107…D-115,
+  `docs/phase-6-site.md`).** Site repo `yitzhach/IA-ART-SITE-REPO` (Workers `studio-site`, `studio-site-staging`).
+  Both repos on branch `claude/gallant-thompson-91hmzi`, **not merged, no PRs yet**.
+  - Staging: https://studio-site-staging.bobdylan2000.workers.dev/studio (studio slug `isaac-anderson-art-sbtwkm`;
+    public list `/v1/public/studios/isaac-anderson-art-sbtwkm/artworks`). Isaac did the first deploy; later
+    redeploys are "Deploy staging" run on the branch (Claude may run it).
+  - Isaac imported all 65 photos of his current site (40 works + 25 site photos, D-114) and approved 7 by hand.
+    For testing he wants every photo public: the Works screen has **Approve all drafts** (D-115); his tap.
+  - Gate left: (1) the public list returns exactly what he approved (checked at 7: correct); (2) one work added from
+    his phone's camera, which is the first live test of the assistant's draft (`POST /assistant/draft`, Haiku 5.5)
+    and of Safari's WebP fallback. Isaac chose to keep it simple and skip it for now: do it before shipping.
+  - Then ship: platform PR first (CI green on the branch), then the site's PR (its CI runs only on PRs). Merging the
+    platform deploys production (migration 0010, additive). The production import needs Isaac's OK; production
+    `studio-site` has never been deployed (its first deploy is Isaac's).
+  - Isaac's clicks still to do on the site repo: Allow auto-merge; the `ci` ruleset after its first CI run.
+  - Known: 20 of the 65 photos exist only below 960 px on the old site (soft when large); Green Horizon is the title
+    of two different works (old site said the abstract one was sold; Isaac set it available).
 
 - **Studio Wall stage 5: client links on the platform (2026-11-02, D-090…D-095, `docs/phase-5-studio-wall.md`).**
   Migration 0009 (`shares`, `share_sessions`, `share_attempts`); owner routes `/v1/shares`; public routes

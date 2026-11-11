@@ -153,7 +153,9 @@ Still Isaac's: secrets, spending, a new Worker's first deploy, deleting anything
 - [x] F — sizes and palette in the browser, WebAssembly WebP fallback for Safari (Sonnet 5.5).
 - [x] G — the import page and its manifest: every photo of the current site (65 entries from 129 files: 40 works, 25 site photos), starting by itself on the first visit; all 65 descriptions drafted by Haiku 5.5 helpers from the pictures (Sonnet 5.5 + Haiku 5.5). D-112, D-114.
 - [x] Checked locally end to end in a real browser against a local studio-api: sign in, add from a photo, publish, public list and picture, import (idempotent).
-- [ ] Gate 1–2: Isaac on his phone on staging (first deploy of `studio-site-staging` is his click).
+- [x] First deploy of `studio-site-staging` (Isaac, 2026-11-11). Import of all 65 photos run by Isaac on staging.
+- [x] Gate 2 checked at 7 approved: the public list returned exactly those 7. Isaac then asked for every photo public for testing: **Approve all drafts** (D-115).
+- [ ] Gate 1: one work added from the phone's camera with the assistant's live draft (Isaac deferred it).
 - [ ] Ship: platform PR, then the site's; production import with Isaac's OK.
 
 **Repo name.** The brief's `studio-site` is the repo `yitzhach/IA-ART-SITE-REPO` (D-107); the Workers keep the

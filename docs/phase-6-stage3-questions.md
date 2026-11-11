@@ -1,5 +1,7 @@
 # Stage 3 (the visitor assistant): questions for Isaac
 
+**Answered 2026-11-11 (D-125…D-131), except 1, 3, 19, the facts for 15 and the deposit wording for 12, which Isaac sends later.**
+
 Answer by voice, by letter, or "default" (the first choice). A build session asks these with multiple-choice buttons
 and records the answers in DECISIONS.md. Nothing here is decided until Isaac answers.
 

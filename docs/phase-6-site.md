@@ -421,6 +421,109 @@ A first (the contract); B–F in parallel against it.
 3. At the gate: a look on his phone on staging; then the first deploy of production `studio-site`.
 4. Later, his choice: moving isaacandersonart.com to the new site.
 
+## Stage 3 — the visitor assistant (plan, waiting for Isaac's OK)
+
+### Where it stands (2026-11-11)
+
+- [x] Isaac's answers to `docs/phase-6-stage3-questions.md` 2, 4–18, 20–35 (D-125…D-131).
+- [ ] His own visitor questions (1), the oddest one (3), where his work can be seen (19), the general facts (15) and
+  the deposit wording (12): he sends them in a day or so. They become the test set.
+- [ ] Isaac's OK on this plan. Nothing is built before it.
+
+**Goal.** On any page of the site, a visitor taps **Ask**, chats with "Isaac's studio assistant, an AI", and gets short
+answers with real pieces as cards. Everything it says about a work or a price comes from the catalogue; everything
+else from the studio's own answers (D-126, D-128); anything it can't answer goes to Isaac by text, email or call.
+It can make a page of the pieces it suggested, keep the chat across devices with an email, take an inquiry or a
+48-hour hold request (a lead), and it stops spending at the studio's $10 a month.
+
+**Not in this stage:** checkout and deposits (4), "on my wall" (5), follow / first look (6), other languages.
+
+### What a visitor sees (phone first)
+
+1. **Ask** in the header and on each piece ("Ask about this piece"). A sheet opens over the page: the greeting
+   (D-125), three suggested questions, a text box. With scripts off the button is a link to `/ask`, a plain search
+   form that works without the chat.
+2. **Answers**: one or two sentences, then up to six **cards** (picture, title, size, price or "price on request",
+   a link to the piece). Cards are drawn from tool results by id, never from the model's text.
+3. **"Open these as a page"** under any answer with cards: a page at `/p/{id}` with a title, the pieces and the
+   question, to send to a partner or client. Read-only, unlisted (`noindex`).
+4. **Ask Isaac** (always on screen, and offered whenever it can't answer): Text, Email, Call with the conversation's
+   pieces written in, or **Send to Isaac** (name and email or phone, only if the visitor gives them, D-129): a lead.
+5. **Hold request** on an available piece (D-127): "Ask Isaac to hold this for 48 hours" → a lead marked hold.
+6. **Keep this chat**: an email, a six-digit code, then the chat opens on any device with that email.
+7. At the budget cap, or after 27 messages in a day: the sheet becomes plain search plus Ask Isaac, with one line
+   saying why.
+
+### What Isaac sees
+
+- **Leads** in `/studio` (new screen): who, how to reach them, the pieces they looked at, the chat, hold requests with
+  **Approve hold** (sets `reserved`, expires in 48 hours) and **Decline**. A lead creates or matches a client.
+- **Emails**: one per lead at once; one daily summary of all chats (count, questions it couldn't answer, leads).
+- **Texts** for leads: need a text-message service (see Needs Isaac). Until then, email only.
+- **Site screen → Assistant**: the answers of D-126 / D-128 (commission range, timeline, deposit, shipping, trade,
+  visits, general facts, where to see the work), the greeting, the monthly budget, this month's spend.
+
+### Shape (proposals; each becomes a decision when built)
+
+- **Path.** Site Worker `POST /ask/chat` → `studio-assistant` `POST /assistant/visitor` (service binding, as
+  `/assistant/*` today) → studio-api **public visitor routes** only. The visitor mode never holds an owner session and
+  never sees owner tools; the studio is the site's `STUDIO_SLUG` (D-117), never the request.
+- **Visitor identity.** A random per-browser id in an HttpOnly cookie, actor `guest:<id>` (D-092). With a verified
+  email, the visitor's chats follow the email.
+- **Read tools** (public data only): `search_works` (words, colour, size range, status, collection), `get_work`,
+  `studio_answers` (D-126/D-128 text, hours, where to see the work). One cached **catalogue digest** per catalogue
+  version (title, slug, size, status, price, collection, tags, colours; about 40 works ≈ 4k tokens) sits in the
+  cached prompt prefix, so most questions need no tool call.
+- **Writes** (internal actions, validate → check → write → `activity_log`, D-092 style): `visitor_page.create`,
+  `lead.create` (inquiry or hold request), `visitor.verify_email`. Nothing else.
+- **No invented work or price.** Cards come only from tool results; before a reply is shown, every price and title
+  in its text is checked against the works the turn read, and a mismatch is replaced with "price on request" and
+  logged (the gate counts these).
+- **Cost.** Each turn records its tokens and cost (Haiku 5.5 list prices) per studio per month; the cap check runs
+  before the model call. Per visitor: 27 messages a day; per address: a short burst limit.
+- **Daily summary.** A daily scheduled run in `studio-assistant` asks studio-api for yesterday's chats and leads and
+  sends one email (Resend, as the sign-in code).
+
+### Data (migration 0012, additive)
+
+`visitors` (studio, guest id, email, verified at), `visitor_messages` (thread, role, content; like
+`assistant_messages` but keyed by visitor), `visitor_pages` (title, question, artwork ids, unguessable id),
+`leads` (visitor, client, kind `inquiry`|`hold`, artwork ids, contact, status, expires), `assistant_usage`
+(studio, month, tokens, cents). `SiteProfile` gains `assistant` (the answers, greeting, budget cents).
+
+### Gate
+
+1. **Test set**: Isaac's own questions (20+) plus questions written to cover the eleven topics of question 2, the
+   oddest question, off-topic, other artists, prompt-injection tries (≥ 30 in all), run against staging's
+   catalogue: no invented work, no wrong or invented price, every "I don't know" offers Ask Isaac. Replayed in CI;
+   live by hand ("Assistant eval (live)").
+2. **Cost per chat measured** on that set; the $10 cap holds (a test with a tiny cap falls back to search and
+   emails Isaac once).
+3. **Limits**: the 28th message in a day gets search; one visitor can't read another's chat, page or lead; nothing
+   from another studio or a private field ever reaches a visitor (tenancy tests).
+4. `/security-review` on both diffs (public chat).
+5. Isaac's look on his phone on staging, with a short checklist, then his OK.
+
+### Task cards
+
+| # | Card | Who | Repo |
+|---|---|---|---|
+| A | 0012 tables, `SiteProfile.assistant`, public visitor routes and actions, usage and caps, tests, openapi | Lead (Opus 5.5), `backend-builder` | Art-Talk-Back |
+| B | Visitor mode in `studio-assistant`: prompt (D-125/D-126), digest, read tools, the price and title check, daily summary | Lead | Art-Talk-Back |
+| C | Test set and eval harness: Isaac's questions + coverage set, replay in CI | Sonnet 5.5 (Haiku 5.5 to draft variants) | Art-Talk-Back |
+| D | The Ask sheet, cards, `/ask` without scripts, made pages `/p/{id}`, keep-this-chat | Sonnet 5.5 | site |
+| E | Leads screen, Site screen → Assistant, hold approve / decline | Sonnet 5.5 | site |
+
+A first (the contract); B–E in parallel against it.
+
+### Needs Isaac, in order
+
+1. His visitor questions, the oddest one, where his work can be seen, the general facts, the deposit wording.
+2. OK this plan.
+3. **Texts for leads** need a text-message service (for example Twilio: an account, a number, about $1–2 a month
+   plus about a cent a text). Spending and a secret are his call; until then leads come by email only.
+4. At the gate: a look on his phone on staging.
+
 ## Open questions — answered 2026-11-10 (D-102, D-103)
 
 Isaac: "default on all, except number 10."

@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+### Site 3.0 · stage 3 plan (D-125…D-131)
+- Isaac's answers to the stage 3 questions recorded; `docs/phase-6-site.md` → Stage 3: the visitor assistant's screens, shape, migration 0012, the gate and task cards. Waiting for his visitor questions and OK; no code changed.
+
 ### Site 3.0 · stage 2: "Deploy production site" (D-123)
 - New manual workflow: deploys production `studio-site` from IA-ART-SITE-REPO `main`, confirm word `studio-site`, input `studio_slug` for the public pages; notes the live version first for a rollback.
 

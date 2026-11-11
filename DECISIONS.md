@@ -472,3 +472,24 @@ Production's studio slug isn't written down anywhere and nothing but studio-api 
 
 ### D-124 · The site's pages show a publish within 10 seconds; pictures are kept at the edge for a day · 2026-11-11 · default
 Measured on staging with the real photos, each page spent 0.4–1 s asking studio-api for the catalogue version before its cache could answer, and every picture went through studio-api and R2. The site Worker now keeps the studio's profile (which carries the version) at the edge for 10 s, so a publish shows within 10 s rather than at once (D-116), and keeps each public picture for a day (the browser already did). A picture taken off the site can stay reachable at its address for up to a day, as it already could in a browser's cache.
+
+### D-125 · How the visitor assistant sounds · 2026-11-11 · Isaac (stage 3 questions 4–8, 25, 26, 30, 34, 35)
+Warm and brief: one or two sentences, then the pieces. It calls him "Isaac". Emoji and exclamation marks rarely; never the word "affordable". English only. Off-topic questions are turned politely back to the art; it never comments on other artists or galleries. Greeting: "I'm Isaac's studio assistant, an AI. Ask about any piece, size, colour or commission." No line it must always add.
+
+### D-126 · What it may say about prices and terms · 2026-11-11 · Isaac (questions 9–14, 17, 18)
+A piece's listed price, otherwise "price on request" (sold: hidden, "commission one like this", D-102). Commissions: "most run $2,000–$15,000, depending on size and scale"; "usually 8–12 weeks". Deposit: usually 50% up front; larger commissions and projects can be structured differently, with payments at set points (for example a quarter or a third of the way in) — Isaac's own words, wording to confirm. Shipping: flat rate for small works, a quote within two working days for large (D-102). Returns: the assistant doesn't bring them up and hands a returns question to Isaac (the stage 4 checkout's terms, D-102, are unchanged). Trade: "yes, Isaac offers trade terms; ask him". Studio visits: by appointment, through Isaac. These sentences live in the studio's settings (`settings.meta.site.assistant`, on the Site screen), not in code, so a second studio sets its own.
+
+### D-127 · It may offer a 48-hour hold request; Isaac approves · 2026-11-11 · Isaac (question 16)
+Never a discount. On an available piece it may offer to ask Isaac for a 48-hour hold. That sends Isaac a lead marked "hold request"; nothing is reserved until he approves it in the studio, which sets the piece `reserved` with a 48-hour expiry (the stage 4 hold, brought forward as an owner tap). The visitor is told it is a request.
+
+### D-128 · General facts on materials, outdoor use, weight, hanging and care · 2026-11-11 · Isaac (question 15)
+Isaac chose to give it general facts as well as each piece's record. Until he supplies them it says only what a piece's record holds and hands the rest to him. They go in the same settings as D-126; a piece's own record wins over a general fact.
+
+### D-129 · Handing off to Isaac, and what he hears · 2026-11-11 · Isaac (questions 20–24)
+When it can't answer it offers text, email and call (all three, as the site does). It takes a name and contact only if the visitor offers them. Leads reach Isaac by text and email; every day he also gets one summary of all conversations. It says "Isaac usually replies within a day."
+
+### D-130 · Limits, budget and model · 2026-11-11 · Isaac (questions 27–29)
+27 messages per visitor per day. At the studio's $10 monthly budget the chat becomes plain catalogue search plus "ask Isaac", and Isaac is told. Haiku 5.5 (D-102); move up only if stage 3's test answers aren't good enough.
+
+### D-131 · In stage 3: made pages and saved chats; the wall view stays in stage 5 · 2026-11-11 · Isaac (questions 31–33)
+"Open these as a page" and saving a chat across devices with an email (a code, no password) are built in stage 3. "On my wall" from chat waits for stage 5. Isaac picked all eleven topics in question 2 (price, size, colour, shipping, commission timeline, materials, care, hanging, payment plans, trade, seeing it in person) as common; the test set covers each. His own visitor questions (1, 3) and where to see his work (19) come later; the gate waits for them.

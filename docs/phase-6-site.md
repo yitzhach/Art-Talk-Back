@@ -151,7 +151,7 @@ Still Isaac's: secrets, spending, a new Worker's first deploy, deleting anything
 - [x] D — `IA-ART-SITE-REPO` scaffold: Worker, sign-in, bindings, CI (Sonnet 5.5). D-111.
 - [x] E — owner screens: works, add, a work, review drafts; screenshots at 390/1280 px in both themes (Sonnet 5.5).
 - [x] F — sizes and palette in the browser, WebAssembly WebP fallback for Safari (Sonnet 5.5).
-- [x] G — the import page and its manifest: 40 works from 129 pictures, 7 cross-page duplicates merged; the 40 descriptions drafted by Haiku 5.5 helpers from the pictures (Sonnet 5.5 + Haiku 5.5). D-112.
+- [x] G — the import page and its manifest: every photo of the current site (65 entries from 129 files: 40 works, 25 site photos), starting by itself on the first visit; all 65 descriptions drafted by Haiku 5.5 helpers from the pictures (Sonnet 5.5 + Haiku 5.5). D-112, D-114.
 - [x] Checked locally end to end in a real browser against a local studio-api: sign in, add from a photo, publish, public list and picture, import (idempotent).
 - [ ] Gate 1–2: Isaac on his phone on staging (first deploy of `studio-site-staging` is his click).
 - [ ] Ship: platform PR, then the site's; production import with Isaac's OK.

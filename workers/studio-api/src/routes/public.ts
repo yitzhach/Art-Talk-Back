@@ -35,11 +35,11 @@ const reply = (c: Context<AppEnv>, data: unknown, version: number): never =>
     status: 200, headers: { "content-type": "application/json", "cache-control": "public, max-age=60" },
   }) as never;
 
-async function studioOf(c: Context<AppEnv>, slug: string): Promise<{ id: string; version: number }> {
+async function studioOf(c: Context<AppEnv>, slug: string): Promise<{ id: string; version: number; name: string }> {
   if (!Slug.safeParse(slug).success && !/^[A-Za-z0-9_-]{1,100}$/.test(slug)) throw notFound("Studio");
-  const row = await c.env.DB.prepare("SELECT id, catalogue_version FROM studios WHERE slug = ? AND deleted_at IS NULL").bind(slug).first<Row>();
+  const row = await c.env.DB.prepare("SELECT id, name, catalogue_version FROM studios WHERE slug = ? AND deleted_at IS NULL").bind(slug).first<Row>();
   if (!row) throw notFound("Studio");
-  return { id: row.id as string, version: Number(row.catalogue_version ?? 0) };
+  return { id: row.id as string, version: Number(row.catalogue_version ?? 0), name: row.name as string };
 }
 
 // ------------------------------------------------------------------ colour
@@ -133,14 +133,17 @@ function publicWork(slug: string, a: Row, files: Row[]): z.infer<typeof PublicAr
 /** The ready, unlocked, undeleted pictures of these works, in one query. */
 async function filesOf(c: Context<AppEnv>, studioId: string, ids: string[]): Promise<Map<string, Row[]>> {
   const out = new Map<string, Row[]>();
-  if (!ids.length) return out;
-  const { results } = await c.env.DB.prepare(
-    `SELECT id, entity_id, position, alt_text, meta FROM files WHERE studio_id = ? AND entity_type = 'artwork' AND status = 'ready'
-     AND locked = 0 AND kind = 'photo' AND deleted_at IS NULL AND entity_id IN (${ids.map(() => "?").join(",")})`,
-  ).bind(studioId, ...ids).all<Row>();
-  for (const f of results) {
-    const k = f.entity_id as string;
-    out.set(k, [...(out.get(k) ?? []), f]);
+  // D1 binds at most 100 values a query; a page of works is 48, a site's places up to 480 ids.
+  for (let i = 0; i < ids.length; i += 90) {
+    const part = ids.slice(i, i + 90);
+    const { results } = await c.env.DB.prepare(
+      `SELECT id, entity_id, position, alt_text, meta FROM files WHERE studio_id = ? AND entity_type = 'artwork' AND status = 'ready'
+       AND locked = 0 AND kind = 'photo' AND deleted_at IS NULL AND entity_id IN (${part.map(() => "?").join(",")})`,
+    ).bind(studioId, ...part).all<Row>();
+    for (const f of results) {
+      const k = f.entity_id as string;
+      out.set(k, [...(out.get(k) ?? []), f]);
+    }
   }
   return out;
 }
@@ -297,12 +300,11 @@ publicRoutes.openapi(
   async (c) => {
     const { slug } = c.req.valid("param");
     const studio = await studioOf(c, slug);
-    const named = await c.env.DB.prepare("SELECT name FROM studios WHERE id = ?").bind(studio.id).first<Row>();
     const { site, timezone } = await siteOf(c, studio.id);
     // Field by field: a new SiteProfile field stays private until it is added here (photo places never leave).
     return reply(c, {
       slug,
-      name: site.name ?? (named?.name as string),
+      name: site.name ?? studio.name,
       tagline: site.tagline ?? null,
       description: site.description ?? null,
       phone: site.phone ?? null,

@@ -4,7 +4,7 @@
 
 ### Site 3.0 · stage 2, A: site photos and the public studio profile (D-118, D-119, D-122)
 - Migration 0011: `artworks.kind` (`work` default, `site_photo`), index `(studio_id, kind, public)`; the stage 1 import's site photos are marked from `meta.importedFrom.page` and their version bumped. Drizzle mirror; drift test; `migration-0011.test.ts` checks the backfill.
-- `SiteProfile` in `settings.meta.site`, checked by `settings.update` (400 with each issue's path); a change bumps the catalogue version.
+- `SiteProfile` in `settings.meta.site`, checked by `settings.update` (400 with each issue's path), stored as parsed, kept when a `meta` patch leaves it out, never changed by the assistant; it or a new time zone bumps the catalogue version, and so does undoing a settings change. Public picture lookups go in batches of 90 (D1's limit).
 - Public routes: `GET /v1/public/studios/{slug}` (the site profile only, plus the time zone), `GET …/site-photos[?place=]`; `GET …/artworks` takes `kind` (default `work`); one work and collections show works only. Tests: `test/site.test.ts`, tenancy sweep. `docs/openapi.json` regenerated (additive).
 
 ### Site 3.0 · stage 2 plan (D-116…D-121)

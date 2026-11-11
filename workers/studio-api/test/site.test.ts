@@ -1,7 +1,7 @@
 // The site (Site 3.0 stage 2, D-118, D-119): site photos are not works, and the studio's public
 // profile shows its site's words and contact, never the rest of its settings or another studio's.
 import { beforeAll, describe, expect, it } from "vitest";
-import { call, countingEnv, makeStudio, type Studio } from "./helpers";
+import { ASSISTANT, call, countingEnv, makeStudio, type Studio } from "./helpers";
 import { makeWork, studioSlug } from "./catalogue-helpers";
 
 let A: Studio, B: Studio, slugA: string, slugB: string;
@@ -170,6 +170,39 @@ describe("the public profile (D-119)", () => {
     expect(r.status).toBe(200);
     expect(await version(slugA)).toBeGreaterThan(v0);
     expect((await call(P(slugA))).data.tagline).toBe("New line");
+  });
+
+  it("is stored cleaned up; a meta patch without `site` keeps it", async () => {
+    const cur = await settings(A);
+    const r = await putSite(A, { ...cur.meta.site, tagline: "  Spaced out  " });
+    expect(r.data.meta.site.tagline).toBe("Spaced out");
+    const next = await settings(A);
+    const { site, ...rest } = next.meta;
+    const kept = await call("/v1/settings", { method: "PATCH", cookie: A.cookie, headers: { "If-Match": String(next.version) }, json: { meta: { ...rest, other: 1 } } });
+    expect(kept.status).toBe(200);
+    expect(kept.data.meta.other).toBe(1);
+    expect(kept.data.meta.site).toEqual(site);
+  });
+
+  it("a new time zone moves the catalogue version (the profile shows it)", async () => {
+    const v0 = await version(slugA);
+    const cur = await settings(A);
+    await call("/v1/settings", { method: "PATCH", cookie: A.cookie, headers: { "If-Match": String(cur.version) }, json: { timezone: "America/Los_Angeles" } });
+    expect(await version(slugA)).toBeGreaterThan(v0);
+    expect((await call(P(slugA))).data.timezone).toBe("America/Los_Angeles");
+  });
+
+  it("the assistant can't change what the site says", async () => {
+    const cur = await settings(A);
+    const res = await call("/v1/assistant/act", { method: "POST", cookie: A.cookie, headers: ASSISTANT,
+      json: { action: "settings.update", input: { version: cur.version, patch: { meta: { ...cur.meta, site: { ...cur.meta.site, tagline: "From the assistant" } } } }, summary: "x" } });
+    if (res.data.proposal) {
+      const ok = await call(`/v1/assistant/proposals/${res.data.proposal.id}/confirm`, { method: "POST", cookie: A.cookie });
+      expect(ok.status).toBe(403);
+    } else {
+      expect(res.status).toBe(403);
+    }
+    expect((await settings(A)).meta.site.tagline).toBe(cur.meta.site.tagline);
   });
 
   it("a guest can't write the profile", async () => {

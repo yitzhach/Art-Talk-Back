@@ -155,7 +155,7 @@ Still Isaac's: secrets, spending, a new Worker's first deploy, deleting anything
 - [x] Checked locally end to end in a real browser against a local studio-api: sign in, add from a photo, publish, public list and picture, import (idempotent).
 - [x] First deploy of `studio-site-staging` (Isaac, 2026-11-11). Import of all 65 photos run by Isaac on staging.
 - [x] Gate 2 checked at 7 approved: the public list returned exactly those 7. Isaac then asked for every photo public for testing: **Approve all drafts** (D-115).
-- [ ] Gate 1: one work added from the phone's camera with the assistant's live draft (Isaac deferred it).
+- [x] Gate 1: one work added from Isaac's iPhone camera ("Door Test upload test", 2026-11-11): the assistant's live draft arrived (description, tags, collection, alt text) and its sizes are WebP (960×1280). Public list then held 66: the 65 imported plus this one.
 - [ ] Ship: platform PR, then the site's; production import with Isaac's OK.
 
 **Repo name.** The brief's `studio-site` is the repo `yitzhach/IA-ART-SITE-REPO` (D-107); the Workers keep the

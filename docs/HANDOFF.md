@@ -13,9 +13,9 @@ Read this first, then `CLAUDE.md`, then `docs/phase-3.md` (assistant) or `docs/p
     redeploys are "Deploy staging" run on the branch (Claude may run it).
   - Isaac imported all 65 photos of his current site (40 works + 25 site photos, D-114) and approved 7 by hand.
     For testing he wants every photo public: the Works screen has **Approve all drafts** (D-115); his tap.
-  - Gate left: (1) the public list returns exactly what he approved (checked at 7: correct); (2) one work added from
-    his phone's camera, which is the first live test of the assistant's draft (`POST /assistant/draft`, Haiku 5.5)
-    and of Safari's WebP fallback. Isaac chose to keep it simple and skip it for now: do it before shipping.
+  - Gate passed (2026-11-11): the public list returned exactly what he approved (7, then all 65 after Approve all
+    drafts), and a work added from his iPhone camera ("Door Test upload test") got the assistant's live draft and
+    WebP sizes.
   - Then ship: platform PR first (CI green on the branch), then the site's PR (its CI runs only on PRs). Merging the
     platform deploys production (migration 0010, additive). The production import needs Isaac's OK; production
     `studio-site` has never been deployed (its first deploy is Isaac's).

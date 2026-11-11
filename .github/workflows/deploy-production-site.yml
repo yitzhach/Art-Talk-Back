@@ -1,0 +1,70 @@
+name: Deploy production site
+
+# By hand only: Actions tab -> "Deploy production site" -> Run workflow, type studio-site to confirm.
+# Never runs by itself: a new Worker's first production deploy is Isaac's (CLAUDE.md -> Shipping, D-105).
+# Later runs (Claude may run them) redeploy the same Worker.
+#
+# Deploys `studio-site` (yitzhach/IA-ART-SITE-REPO, its `main` unless `site_ref` says otherwise) bound to the
+# production `studio-api` and `studio-assistant`. Its public pages show the studio named by `studio_slug`
+# (D-117); leave it empty on the first deploy and the pages say "not set up yet" until a run gives it (the
+# owner's Site screen at /studio/site shows the name to paste). Nothing here touches the database.
+# Needs CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID (the secrets "Deploy staging" uses).
+# Undo: Cloudflare -> Workers & Pages -> studio-site -> Deployments -> Rollback (the run summary names the
+# version that was live before).
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: "Type studio-site to deploy the production site"
+        required: true
+      studio_slug:
+        description: "The studio the public pages show (from /studio/site → Your site). Empty: pages say not set up yet"
+        default: ""
+      site_ref:
+        description: "IA-ART-SITE-REPO branch or tag to deploy"
+        default: main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-production-site
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    if: ${{ inputs.confirm == 'studio-site' }}
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      STUDIO_SLUG: ${{ inputs.studio_slug }}
+    steps:
+      - name: Check inputs and secrets
+        run: |
+          for v in CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID; do
+            [ -n "${!v}" ] || { echo "::error::Missing $v"; exit 1; }
+          done
+          if [ -n "$STUDIO_SLUG" ] && ! printf '%s' "$STUDIO_SLUG" | grep -Eq '^[a-z0-9]+(-[a-z0-9]+)*$'; then
+            echo "::error::studio_slug should look like isaac-anderson-art-abc123"; exit 1
+          fi
+      - uses: actions/checkout@v4
+        with:
+          repository: yitzhach/IA-ART-SITE-REPO
+          ref: ${{ inputs.site_ref }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck && npm test && npm run build
+      - name: Note the live version first (for a rollback)
+        run: |
+          version=$(npx wrangler deployments list --json 2>/dev/null | node -pe 'try { const d=JSON.parse(require("fs").readFileSync(0)); (d.at(-1)?.versions?.[0]?.version_id) ?? "none (first deploy)" } catch { "none (first deploy)" }')
+          echo "studio-site before this deploy: $version" | tee -a "$GITHUB_STEP_SUMMARY"
+      - name: Deploy studio-site
+        run: |
+          npx wrangler deploy --var "STUDIO_SLUG:$STUDIO_SLUG"
+          echo "Studio Site: https://studio-site.bobdylan2000.workers.dev/ (owner's area: /studio)" | tee -a "$GITHUB_STEP_SUMMARY"
+          [ -n "$STUDIO_SLUG" ] && echo "Public pages show studio $STUDIO_SLUG" | tee -a "$GITHUB_STEP_SUMMARY" || echo "No studio_slug: public pages say not set up yet" | tee -a "$GITHUB_STEP_SUMMARY"

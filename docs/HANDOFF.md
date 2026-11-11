@@ -5,23 +5,20 @@ Read this first, then `CLAUDE.md`, then `docs/phase-3.md` (assistant) or `docs/p
 
 ## Where things stand
 
-- **Site 3.0 stage 1 (the catalogue) is built and on staging; its gate is nearly done (2026-11-11, D-107…D-115,
+- **Site 3.0 stage 1 (the catalogue) shipped; stage 2 planned, waiting for Isaac's OK (2026-11-11, D-107…D-121,
   `docs/phase-6-site.md`).** Site repo `yitzhach/IA-ART-SITE-REPO` (Workers `studio-site`, `studio-site-staging`).
-  Both repos on branch `claude/gallant-thompson-91hmzi`, **not merged, no PRs yet**.
-  - Staging: https://studio-site-staging.bobdylan2000.workers.dev/studio (studio slug `isaac-anderson-art-sbtwkm`;
-    public list `/v1/public/studios/isaac-anderson-art-sbtwkm/artworks`). Isaac did the first deploy; later
-    redeploys are "Deploy staging" run on the branch (Claude may run it).
-  - Isaac imported all 65 photos of his current site (40 works + 25 site photos, D-114) and approved 7 by hand.
-    For testing he wants every photo public: the Works screen has **Approve all drafts** (D-115); his tap.
-  - Gate passed (2026-11-11): the public list returned exactly what he approved (7, then all 65 after Approve all
-    drafts), and a work added from his iPhone camera ("Door Test upload test") got the assistant's live draft and
-    WebP sizes.
-  - Then ship: platform PR first (CI green on the branch), then the site's PR (its CI runs only on PRs). Merging the
-    platform deploys production (migration 0010, additive). The production import needs Isaac's OK; production
-    `studio-site` has never been deployed (its first deploy is Isaac's).
-  - Isaac's clicks still to do on the site repo: Allow auto-merge; the `ci` ruleset after its first CI run.
-  - Known: 20 of the 65 photos exist only below 960 px on the old site (soft when large); Green Horizon is the title
-    of two different works (old site said the abstract one was sold; Isaac set it available).
+  - Gate passed on staging: public list = what Isaac approved (7, then all 65 via Approve all drafts, D-115); a work
+    from his iPhone camera got the assistant's draft and WebP sizes.
+  - #47 merged → "Deploy production API" run 190: 0010 on `studio-db-prod`, `studio-api` `124f16b5`; restore bookmark
+    `000000f2-00000004-00005120-c36ac75ce1c0bb4915fab086971db40b`, previous Worker `f552dcf1`. IA-ART-SITE-REPO#1 merged.
+  - Production still to do, in order: "Deploy production assistant" (by hand, confirm word `studio-assistant`; adds
+    `/assistant/draft`), the import (Isaac's OK), production `studio-site`'s first deploy (Isaac's; planned at stage
+    2's gate).
+  - Staging (both repos): https://studio-site-staging.bobdylan2000.workers.dev/studio, studio slug
+    `isaac-anderson-art-sbtwkm`. "Deploy staging" on the branch redeploys it (Claude may run it).
+  - CI: the Playwright jobs fall back to installing Chromium alone when Ubuntu's mirrors are down (2026-11-11 outage).
+  - Isaac's clicks still to do on the site repo: Allow auto-merge; the `ci` ruleset (its `check` has now run).
+  - Known: 20 of the 65 photos exist only below 960 px on the old site; Green Horizon names two different works.
 
 - **Studio Wall stage 5: client links on the platform (2026-11-02, D-090…D-095, `docs/phase-5-studio-wall.md`).**
   Migration 0009 (`shares`, `share_sessions`, `share_attempts`); owner routes `/v1/shares`; public routes

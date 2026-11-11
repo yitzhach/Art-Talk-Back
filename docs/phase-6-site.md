@@ -156,7 +156,8 @@ Still Isaac's: secrets, spending, a new Worker's first deploy, deleting anything
 - [x] First deploy of `studio-site-staging` (Isaac, 2026-11-11). Import of all 65 photos run by Isaac on staging.
 - [x] Gate 2 checked at 7 approved: the public list returned exactly those 7. Isaac then asked for every photo public for testing: **Approve all drafts** (D-115).
 - [x] Gate 1: one work added from Isaac's iPhone camera ("Door Test upload test", 2026-11-11): the assistant's live draft arrived (description, tags, collection, alt text) and its sizes are WebP (960×1280). Public list then held 66: the 65 imported plus this one.
-- [ ] Ship: platform PR, then the site's; production import with Isaac's OK.
+- [x] Shipped 2026-11-11: #47 merged; "Deploy production API" run 190 applied 0010 to `studio-db-prod`, `studio-api` `124f16b5`. Restore points: bookmark `000000f2-00000004-00005120-c36ac75ce1c0bb4915fab086971db40b`, previous Worker `f552dcf1`. Site: IA-ART-SITE-REPO#1 merged (nothing deploys from it).
+- [ ] Production: run "Deploy production assistant" (it has no `/assistant/draft` yet), then the import (Isaac's OK), then the first deploy of production `studio-site` (Isaac's, stage 2's gate).
 
 **Repo name.** The brief's `studio-site` is the repo `yitzhach/IA-ART-SITE-REPO` (D-107); the Workers keep the
 names `studio-site` and `studio-site-staging`.

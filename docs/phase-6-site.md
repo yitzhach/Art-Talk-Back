@@ -297,14 +297,17 @@ A and the contract come first; B–G build to it in parallel.
 
 ### Where it stands (2026-11-11)
 
-- [x] A — migration 0011 (`kind`), `SiteProfile`, `GET /v1/public/studios/{slug}`, `…/site-photos`, `kind` on the list; tests, openapi (lead). D-122.
-- [ ] Site skeleton: routes, data from `/v1/public`, layout contract (lead).
-- [ ] B+C — template, layout, home, works, a piece (Sonnet 5.5).
-- [ ] D — commissions, process, about; the old pages' words (`src/import/site-text.json`, Haiku 5.5) (Sonnet 5.5).
-- [ ] E — edge cache, sitemap, robots, old addresses, scripts-off and Lighthouse checks in CI (Sonnet 5.5).
-- [ ] F — the Site screen in `/studio` and the import's words-and-photos step (Sonnet 5.5).
-- [ ] Checks: both repos' tests, budgets, pictures in both themes, `/code-review`; staging deploy; Isaac's look.
-- [ ] Production, in order: "Deploy production assistant" (Claude), the first deploy of production `studio-site` (Isaac), the import on his first visit.
+- [x] A — migration 0011 (`kind`), `SiteProfile`, `GET /v1/public/studios/{slug}`, `…/site-photos`, `kind` on the list; tests, openapi; review fixes (lead). D-122.
+- [x] Site skeleton: `worker/site/` routes, data from `/v1/public`, the page contract, shared fake API and local server (lead).
+- [x] B+C+D — Plaster template (`plaster.ts`, self-hosted fonts), layout, home, works, a piece, commissions, process, about; theme, lightbox and inquiry scripts; the old pages' words in `src/import/site-text.json` (Haiku 5.5) (Sonnet 5.5).
+- [x] E — edge cache on the catalogue version, sitemap, robots, the old addresses (301), `npm run test:site` (scripts off, sideways scroll, budgets, Lighthouse mobile) in CI (Sonnet 5.5).
+- [x] F — the Site screen (`/studio/site`: contact, hours, time zone, pages' words, a photo per place, the site name to copy) and the import's words-and-photos step (Sonnet 5.5). D-123.
+- [x] Checks: platform 385 tests; site 183 tests; `npm run test:site` 70/70 locally (Lighthouse 99–100 in every category, largest paint 1.5–1.8 s); `/code-review` on both diffs, findings fixed.
+- [ ] Staging deployed ("Deploy staging" on the branch); Isaac taps "Bring in the words and photos" on the Site screen; Lighthouse on staging; Isaac's look and OK.
+- [ ] Production, in order: merge both PRs (platform first: 0011 runs with "Deploy production API"); "Deploy production assistant" (Claude); "Deploy production site" (Isaac's first deploy, D-123); he signs in, the import runs; Claude reruns "Deploy production site" with the site name he copies.
+
+**Changes from the plan.** The import's site step publishes only the site photos it places; a work placed on a page waits
+for Isaac's approval (D-122). The live site learns its studio on a second run of its deploy (D-123).
 
 **Goal.** Anyone can visit Isaac's site on staging and browse it fast on a phone: home, works, a piece,
 commissions, process, about. Each page arrives finished (readable with scripts off), in both themes, in the

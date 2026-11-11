@@ -69,7 +69,8 @@ jobs:
         run: |
           npm install --prefix "$RUNNER_TEMP/pw" --no-save --no-package-lock playwright@1.56.1
           echo "NODE_PATH=$RUNNER_TEMP/pw/node_modules" >> "$GITHUB_ENV"
-          "$RUNNER_TEMP/pw/node_modules/.bin/playwright" install --with-deps chromium
+          # The runner image already has Chromium's libraries; when apt's mirrors can't be reached, install the browser alone.
+          "$RUNNER_TEMP/pw/node_modules/.bin/playwright" install --with-deps chromium || "$RUNNER_TEMP/pw/node_modules/.bin/playwright" install chromium
       - name: Two devices, offline, against this API
         working-directory: .show-tracker
         env: { HTTPS_PROXY: "http://127.0.0.1:9", HTTP_PROXY: "http://127.0.0.1:9", NO_PROXY: "127.0.0.1,localhost", STUDIO_PLATFORM: ".." }
@@ -121,7 +122,7 @@ jobs:
       - name: Build Booth Studio
         if: steps.on.outputs.yes == 'true'
         working-directory: .booth-studio
-        run: npm ci && npm run build && npx playwright install --with-deps chromium
+        run: npm ci && npm run build && { npx playwright install --with-deps chromium || npx playwright install chromium; }
       - name: workers/studio-api/src/vendor/booth-scene.js is this app's scene build (D-070)
         if: steps.on.outputs.yes == 'true'
         working-directory: .booth-studio
@@ -182,7 +183,7 @@ jobs:
       - name: Build Studio Wall
         if: steps.on.outputs.yes == 'true'
         working-directory: .studio-wall
-        run: npm ci && npm run build && npx playwright install --with-deps chromium
+        run: npm ci && npm run build && { npx playwright install --with-deps chromium || npx playwright install chromium; }
       - name: Two devices, offline, against this API
         if: steps.on.outputs.yes == 'true'
         working-directory: .studio-wall

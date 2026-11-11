@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+### CI · browser install survives an apt outage
+- The three Playwright jobs install Chromium with `--with-deps`, and if Ubuntu's mirrors can't be reached, the browser alone (the runner image has its libraries).
+
 ### Site 3.0 · stage 1: the catalogue (D-107…D-112)
 - Migration 0010: artworks gain `public`, `published_at`, `slug` (unique per studio), `collection`, `tags`, `palette`, `edition_size`, `drafted_fields`; files gain `position`, `alt_text`; studios gain `catalogue_version`. Drizzle mirror; drift test.
 - Actions: `artwork.publish` / `artwork.unpublish` (the artist's tap; the assistant never), `artwork.applyDraft` (internal, assistant only, never overwrites the artist's words), `file.update`, `file.reorder`; artwork edits clear their drafted mark; every catalogue write bumps the catalogue version.

@@ -1,6 +1,7 @@
 // studio-assistant (Phase 3): POST /assistant/chat streams one turn as
 // server-sent events. Reaches studio-api only through its service binding,
 // as the signed-in person (D-046); never touches the database.
+import { makeDraftHandler } from "./draft";
 import type { Env } from "./env";
 import { type Model, anthropicModel, modelSettings } from "./model";
 import { StudioError, studioFor } from "./studio";
@@ -83,9 +84,11 @@ function parse(body: ChatBody): TurnInput | string {
 
 /** Builds the Worker; tests pass their own model. */
 export function makeHandler(modelFor: (env: Env) => Model = anthropicModel) {
+  const draft = makeDraftHandler(modelFor);
   return {
     async fetch(req: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
       const url = new URL(req.url);
+      if (url.pathname === "/assistant/draft") return draft(req, env, ctx);
       if (url.pathname !== "/assistant/chat") return json(404, "not_found", "No such route");
       if (req.method !== "POST") return json(405, "bad_request", "POST a message");
       const input = parse((await req.json().catch(() => ({}))) as ChatBody);

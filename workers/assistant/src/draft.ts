@@ -106,6 +106,8 @@ export function makeDraftHandler(modelFor: (env: Env) => Model) {
     }
     const cover = artwork.primaryFileId ? artwork.images?.find((i) => i.id === artwork.primaryFileId) : undefined;
     if (!cover) return json(400, "bad_request", "Add a cover picture first");
+    // studio-api refuses a draft on a public work too; say so now rather than after the model call.
+    if ((artwork as { public?: boolean }).public) return json(400, "bad_request", "This work is public: unpublish it to ask for a new draft");
 
     if (prepared) {
       try {

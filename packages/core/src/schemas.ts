@@ -39,6 +39,8 @@ export const ArtworkTag = z.string().trim().toLowerCase().min(1).max(40);
 /** Fields the assistant drafts; while a name is in `draftedFields`, that field still holds its unedited text. */
 export const DraftableField = z.enum(["description", "tags", "collection", "altText"]);
 export const MAX_TAGS = 20;
+/** A work, or a photo the studio's site pages use (a banner, a process or room photo), never listed in Works (D-118). */
+export const ArtworkKind = z.enum(["work", "site_photo"]);
 export const MAX_PALETTE = 6;
 
 export const ArtworkFields = z.object({
@@ -61,6 +63,7 @@ export const ArtworkFields = z.object({
   palette: z.array(PaletteSwatch).max(MAX_PALETTE),
   /** null = an original (D-102 question 8: ready for editions, unused for now). */
   editionSize: z.number().int().min(1).max(100000).nullable(),
+  kind: ArtworkKind,
   meta: Meta,
 });
 export const ArtworkPatch = ArtworkFields.partial().strict()
@@ -125,6 +128,47 @@ export const Settings = SettingsFields.extend({
   version: z.number().int().min(1),
   updatedAt: z.string(),
 });
+
+// ------------------------------------------------------------ the site (D-119)
+
+/** A place on a site page that shows photos, e.g. `home.hero`, `process.surface`. The site names its places. */
+export const SitePlace = z.string().min(1).max(60).regex(/^[a-z0-9]+(?:[.-][a-z0-9]+)*$/, "Lower case words joined by dots or hyphens");
+const siteText = (max: number) => z.string().trim().min(1).max(max);
+/** One block of a page's text: a heading and plain-text paragraphs (blank lines between them, no markup). */
+export const SiteSection = z.object({
+  /** Stable name for the site's template, e.g. `surface` for the first process stage. */
+  key: SitePlace.optional(),
+  heading: siteText(200).optional(),
+  body: z.string().trim().max(5000).optional(),
+  /** The photo place shown beside this section, if any. */
+  place: SitePlace.optional(),
+}).strict();
+export const SitePage = z.object({
+  title: siteText(200).optional(),
+  /** The line under the title. */
+  lede: z.string().trim().max(1000).optional(),
+  sections: z.array(SiteSection).max(30).optional(),
+}).strict();
+export const SitePageKey = z.enum(["home", "commissions", "process", "about"]);
+/** Calls taken between these times, studio time (`settings.timezone`); 24-hour HH:MM. */
+const Hhmm = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, "HH:MM, 24-hour");
+/**
+ * The public face of a studio's site: its words, how to reach it, and which photos go where. Kept in
+ * `settings.meta.site`, written through `settings.update` and checked there. Everything here is public.
+ */
+export const SiteProfile = z.object({
+  name: siteText(120).optional(),
+  tagline: z.string().trim().max(300).optional(),
+  /** For search engines and link previews. */
+  description: z.string().trim().max(300).optional(),
+  /** For text and call links; digits with an optional leading +. */
+  phone: z.string().trim().regex(/^\+?[0-9]{7,15}$/, "Digits only, with an optional leading +").optional(),
+  email: z.email().max(200).optional(),
+  hours: z.object({ from: Hhmm, to: Hhmm }).strict().optional(),
+  pages: z.partialRecord(SitePageKey, SitePage).optional(),
+  /** Each place's photos, in order: ids of the studio's artworks (site photos or works). Only public ones ever show. */
+  photos: z.record(SitePlace, z.array(Id).max(12)).refine((p) => Object.keys(p).length <= 40, "At most 40 places").optional(),
+}).strict();
 
 // ------------------------------------------------------------------- files
 
@@ -227,6 +271,31 @@ export const PublicCollections = z.object({
   catalogueVersion: z.number().int(),
 });
 export const PublicArtworkDetail = PublicArtwork.extend({ catalogueVersion: z.number().int() });
+
+/** What anyone may see of a studio (D-119): its site profile, minus the photo places, plus its time zone. */
+export const PublicStudio = z.object({
+  slug: z.string(),
+  name: z.string(),
+  tagline: z.string().nullable(),
+  description: z.string().nullable(),
+  phone: z.string().nullable(),
+  email: z.string().nullable(),
+  hours: z.object({ from: z.string(), to: z.string() }).nullable(),
+  timezone: z.string(),
+  pages: z.partialRecord(SitePageKey, SitePage),
+  catalogueVersion: z.number().int(),
+});
+
+/** A photo a site page shows: a public site photo or work, in its place's order (D-118). */
+export const PublicSitePhoto = PublicImage.extend({
+  title: z.string(),
+  /** Set when the photo is a public work, so the page can link to it. */
+  workSlug: Slug.nullable(),
+});
+export const PublicSitePhotos = z.object({
+  places: z.record(z.string(), z.array(PublicSitePhoto)),
+  catalogueVersion: z.number().int(),
+});
 
 // ---------------------------------------------------------------- activity
 

@@ -55,6 +55,11 @@ beforeAll(async () => {
   b.thread = thread;
   // B's public work, with a picture: A's studio slug must never return it.
   b.public = await makeWork(B, { title: "B's public heron", collection: "B's birds", tags: ["b-tag"] }, { publish: true });
+  // B's site (Site 3.0 stage 2): a public site photo in a place, and a profile.
+  b.banner = await makeWork(B, { title: "B's banner", kind: "site_photo" }, { publish: true });
+  const bs = (await call("/v1/settings", { cookie: B.cookie })).data;
+  await call("/v1/settings", { method: "PATCH", cookie: B.cookie, headers: { "If-Match": String(bs.version) },
+    json: { meta: { ...bs.meta, site: { name: "B's site", phone: "5551234567", photos: { "home.hero": [b.banner.work.id, b.public.work.id] } } } } });
   b.opKey = newId();
   await call("/v1/artworks", { method: "POST", cookie: B.cookie, headers: { "Idempotency-Key": b.opKey }, json: { title: "B keyed" } });
 });
@@ -281,6 +286,22 @@ describe("studio A can't reach studio B", () => {
     ["get", "/public/studios/{slug}/images/{fileId}/{file}", async () => {
       expect((await call(`/v1/public/studios/${await studioSlug(A.studioId)}/images/${b.public.file.id}/480.webp`)).status).toBe(404);
       expect((await call(`/v1/public/studios/${await studioSlug(B.studioId)}/images/${b.public.file.id}/480.webp`)).status).toBe(200);
+    }],
+    ["get", "/public/studios/{slug}", async () => {
+      const got = (await call(`/v1/public/studios/${await studioSlug(A.studioId)}`)).data;
+      expect(JSON.stringify(got)).not.toContain("B's");
+      expect(got.phone).toBeNull();
+    }],
+    ["get", "/public/studios/{slug}/site-photos", async () => {
+      // Even when A's own settings name B's works, A's site never shows them.
+      const as = (await call("/v1/settings", { cookie: A.cookie })).data;
+      const put = await call("/v1/settings", { method: "PATCH", cookie: A.cookie, headers: { "If-Match": String(as.version) },
+        json: { meta: { ...as.meta, site: { photos: { "home.hero": [b.banner.work.id, b.public.work.id] } } } } });
+      expect(put.status).toBe(200);
+      const got = (await call(`/v1/public/studios/${await studioSlug(A.studioId)}/site-photos`)).data;
+      expect(got.places).toEqual({ "home.hero": [] });
+      const theirs = (await call(`/v1/public/studios/${await studioSlug(B.studioId)}/site-photos`)).data;
+      expect(theirs.places["home.hero"].map((p: any) => p.title)).toEqual(["B's banner", "B's public heron"]);
     }],
     ["get", "/artworks", async () => expect((await call("/v1/artworks", { cookie: A.cookie })).data.items).toEqual([])],
     ["get", "/clients", async () => expect((await call("/v1/clients", { cookie: A.cookie })).data.items).toEqual([])],

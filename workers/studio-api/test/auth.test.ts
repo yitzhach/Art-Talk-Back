@@ -29,6 +29,7 @@ describe("sign in by email code", () => {
     expect(me.data.user.email).toBe("owner@studio-a.test");
     expect(me.data.memberships).toHaveLength(1);
     expect(me.data.memberships[0]).toMatchObject({ role: "owner", studioName: "Dev Studio" });
+    expect(me.data.memberships[0].studioSlug).toMatch(/^dev-studio-[0-9a-z]{6}$/);
     expect(me.data.activeStudioId).toBe(me.data.memberships[0].studioId);
 
     // The session works on studio routes, and settings were created with the studio.

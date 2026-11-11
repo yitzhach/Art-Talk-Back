@@ -226,12 +226,12 @@ async function meFor(env: Env, userId: string, activeStudioId: string | null): P
   const { password_hash, ...user } = (await env.DB.prepare("SELECT id, email, name, password_hash FROM users WHERE id = ?").bind(userId)
     .first<{ id: string; email: string; name: string | null; password_hash: string | null }>())!;
   const rows = await env.DB.prepare(
-    `SELECT m.studio_id, s.name, m.role, m.client_id FROM memberships m JOIN studios s ON s.id = m.studio_id
+    `SELECT m.studio_id, s.name, s.slug, m.role, m.client_id FROM memberships m JOIN studios s ON s.id = m.studio_id
       WHERE m.user_id = ? AND m.deleted_at IS NULL AND s.deleted_at IS NULL ORDER BY m.created_at, m.id`,
-  ).bind(userId).all<{ studio_id: string; name: string; role: "owner" | "staff" | "client"; client_id: string | null }>();
+  ).bind(userId).all<{ studio_id: string; name: string; slug: string; role: "owner" | "staff" | "client"; client_id: string | null }>();
   return {
     user,
-    memberships: rows.results.map((r) => ({ studioId: r.studio_id, studioName: r.name, role: r.role, clientId: r.client_id })),
+    memberships: rows.results.map((r) => ({ studioId: r.studio_id, studioName: r.name, studioSlug: r.slug, role: r.role, clientId: r.client_id })),
     activeStudioId,
     hasPassword: password_hash != null,
   };

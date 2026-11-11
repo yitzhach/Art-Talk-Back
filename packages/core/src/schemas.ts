@@ -259,6 +259,8 @@ export const Me = z.object({
   memberships: z.array(z.object({
     studioId: Id,
     studioName: z.string(),
+    /** The studio's address in the public catalogue routes (`/v1/public/studios/{slug}/…`, Site 3.0). */
+    studioSlug: z.string().optional(),
     role: Role,
     clientId: z.string().nullable(),
   })),

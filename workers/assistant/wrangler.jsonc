@@ -13,6 +13,8 @@
     // One model for v0 (D-054); Haiku routing comes when the eval shows it holds up.
     "ASSISTANT_MODEL": "claude-sonnet-5-5",
     "ASSISTANT_EFFORT": "low",
+    // The draft job looks at a work's cover and drafts its words (Site 3.0).
+    "DRAFT_MODEL": "claude-haiku-5-5",
     // https://gateway.ai.cloudflare.com/v1/<account id>/<gateway>/anthropic — empty = straight to the API.
     "AI_GATEWAY_URL": ""
   },
@@ -25,12 +27,12 @@
     "staging": {
       "name": "studio-assistant-staging",
       "services": [{ "binding": "STUDIO_API", "service": "studio-api-staging" }],
-      "vars": { "ASSISTANT_MODEL": "claude-sonnet-5-5", "ASSISTANT_EFFORT": "low", "AI_GATEWAY_URL": "" }
+      "vars": { "ASSISTANT_MODEL": "claude-sonnet-5-5", "ASSISTANT_EFFORT": "low", "DRAFT_MODEL": "claude-haiku-5-5", "AI_GATEWAY_URL": "" }
     },
     "production": {
       "name": "studio-assistant",
       "services": [{ "binding": "STUDIO_API", "service": "studio-api" }],
-      "vars": { "ASSISTANT_MODEL": "claude-sonnet-5-5", "ASSISTANT_EFFORT": "low", "AI_GATEWAY_URL": "" }
+      "vars": { "ASSISTANT_MODEL": "claude-sonnet-5-5", "ASSISTANT_EFFORT": "low", "DRAFT_MODEL": "claude-haiku-5-5", "AI_GATEWAY_URL": "" }
     }
   }
 }

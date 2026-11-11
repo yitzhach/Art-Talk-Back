@@ -5,7 +5,7 @@
 import { Id } from "@studio/core";
 import { z } from "zod";
 import { HttpError, notFound } from "../lib/errors";
-import { getEntity, getRecord, updateWrite } from "./records";
+import { bumpCatalogue, getEntity, getRecord, updateWrite } from "./records";
 import { type Snapshot, type Write, defineAction, rawSql } from "./runner";
 
 /** Fields an undo leaves alone; identity and bookkeeping stay as they are. */
@@ -55,6 +55,8 @@ export const undoAction = defineAction({
         expectOne: true,
       });
     }
+    // A public page may have shown what this undoes (migration 0010).
+    if (entries.some((e) => e.entity_type === "artwork" || e.entity_type === "file")) writes.push(bumpCatalogue(ctx));
     return { writes };
   },
   respond: (_c, afters) => ({ record: afters[0] as Snapshot, records: afters as Snapshot[] }),

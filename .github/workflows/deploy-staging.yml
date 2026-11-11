@@ -9,7 +9,9 @@ name: Deploy staging
 #   variables: AI_GATEWAY_URL (https://gateway.ai.cloudflare.com/v1/<account id>/<gateway>/anthropic)
 # Deploys studio-api-staging, then the Show Tracker (yitzhach/art-show-tracker, branch
 # `app_ref`) as studio-show-tracker-staging, then Booth Studio (yitzhach/booth-studio,
-# branch `booth_ref`) as studio-booth-studio-staging (D-067).
+# branch `booth_ref`) as studio-booth-studio-staging (D-067), then Studio Site
+# (yitzhach/IA-ART-SITE-REPO, the brief's `studio-site`) as studio-site-staging (D-105):
+# its branch of the same name as this run's branch if there is one, else its main.
 # Production is not deployed from here (docs/phase-2.md, step 8).
 on:
   workflow_dispatch:
@@ -20,6 +22,9 @@ on:
       booth_ref:
         description: "booth-studio branch to deploy as studio-booth-studio-staging"
         default: main
+      site_ref:
+        description: "IA-ART-SITE-REPO branch to deploy as studio-site-staging (empty: the branch named like this one, else main)"
+        default: ""
       assistant_model:
         description: "Model for studio-assistant-staging (to compare models on staging)"
         type: choice
@@ -146,3 +151,32 @@ jobs:
         if: steps.booth.outputs.yes == 'true'
         working-directory: .booth-studio
         run: npm ci && npm run build && npx wrangler deploy --env staging
+      # Studio Site lives in its own repo too (D-042, D-097). Its `staging` env is
+      # studio-site-staging, bound to studio-api-staging and studio-assistant-staging.
+      # Its first deploy is Isaac's click on this workflow (D-105).
+      # The site is bound to studio-assistant-staging, which exists only once there is a model key.
+      - name: Pick the Studio Site branch
+        id: site
+        if: env.ANTHROPIC_API_KEY != ''
+        working-directory: .
+        env:
+          SITE_REF: ${{ inputs.site_ref }}
+        run: |
+          ref="$SITE_REF"
+          if [ -z "$ref" ]; then
+            if git ls-remote --exit-code --heads https://github.com/yitzhach/IA-ART-SITE-REPO "$GITHUB_REF_NAME" >/dev/null 2>&1; then ref="$GITHUB_REF_NAME"; else ref=main; fi
+          fi
+          echo "ref=$ref" >> "$GITHUB_OUTPUT"
+          echo "Studio Site from IA-ART-SITE-REPO@$ref" | tee -a "$GITHUB_STEP_SUMMARY"
+      - uses: actions/checkout@v4
+        if: env.ANTHROPIC_API_KEY != ''
+        with:
+          repository: yitzhach/IA-ART-SITE-REPO
+          ref: ${{ steps.site.outputs.ref }}
+          path: .studio-site
+      - name: Deploy studio-site-staging
+        if: env.ANTHROPIC_API_KEY != ''
+        working-directory: .studio-site
+        run: |
+          npm ci && npm run build && npx wrangler deploy --env staging
+          echo "Studio Site staging: https://studio-site-staging.bobdylan2000.workers.dev/studio" | tee -a "$GITHUB_STEP_SUMMARY"

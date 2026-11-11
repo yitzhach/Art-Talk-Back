@@ -4,6 +4,7 @@
 import { env } from "cloudflare:test";
 import { SYNC_PUSH_MAX_OPS, newId } from "@studio/core";
 import { beforeAll, describe, expect, it } from "vitest";
+import { makeWork, studioSlug } from "./catalogue-helpers";
 import { ASSISTANT, BASE, call, makeStudio, type Studio } from "./helpers";
 
 let A: Studio;
@@ -23,7 +24,7 @@ async function snapshotB() {
 beforeAll(async () => {
   A = await makeStudio("A");
   B = await makeStudio("B");
-  b.artwork = (await call("/v1/artworks", { method: "POST", cookie: B.cookie, json: { title: "B's heron" } })).data;
+  b.artwork = (await call("/v1/artworks", { method: "POST", cookie: B.cookie, json: { title: "B's heron", collection: "B's collection" } })).data;
   b.client = (await call("/v1/clients", { method: "POST", cookie: B.cookie, json: { name: "B's client" } })).data;
   b.show = (await call("/v1/shows", { method: "POST", cookie: B.cookie, json: { name: "B's show" } })).data;
   b.sale = (await call("/v1/sales", { method: "POST", cookie: B.cookie, json: { showId: b.show.id, title: "B's sale" } })).data;
@@ -52,6 +53,8 @@ beforeAll(async () => {
   await call("/v1/assistant/thread/messages", { method: "POST", cookie: B.cookie, headers: ASSISTANT,
     json: { threadId: thread, app: null, messages: [{ role: "user", content: "B's words" }] } });
   b.thread = thread;
+  // B's public work, with a picture: A's studio slug must never return it.
+  b.public = await makeWork(B, { title: "B's public heron", collection: "B's birds", tags: ["b-tag"] }, { publish: true });
   b.opKey = newId();
   await call("/v1/artworks", { method: "POST", cookie: B.cookie, headers: { "Idempotency-Key": b.opKey }, json: { title: "B keyed" } });
 });
@@ -131,6 +134,12 @@ attempt("post", "/assistant/act", () => call("/v1/assistant/act", { method: "POS
   json: { action: "show.update", input: { id: b.show.id, patch: { name: "pwned" } }, summary: "x" } }));
 cases.push(["post", "/assistant/act (sale naming B's show)", () => call("/v1/assistant/act", { method: "POST", cookie: A.cookie, headers: ASSISTANT,
   json: { action: "sale.create", input: { title: "x", showId: b.show.id }, summary: "x" } })]);
+// The catalogue (Site 3.0 stage 1): A can't publish, draft, reorder or relabel B's works and pictures.
+attempt("post", "/artworks/{id}/publish", () => call(`/v1/artworks/${b.artwork.id}/publish`, { method: "POST", cookie: A.cookie, headers: { "If-Match": "1" } }));
+attempt("post", "/artworks/{id}/unpublish", () => call(`/v1/artworks/${b.artwork.id}/unpublish`, { method: "POST", cookie: A.cookie, headers: { "If-Match": "1" } }));
+attempt("post", "/artworks/{id}/draft", () => call(`/v1/artworks/${b.artwork.id}/draft`, { method: "POST", cookie: A.cookie, headers: ASSISTANT, json: { description: "pwned" } }));
+attempt("patch", "/files/{id}", () => call(`/v1/files/${b.file.id}`, { method: "PATCH", cookie: A.cookie, headers: { "If-Match": "2" }, json: { altText: "pwned" } }));
+attempt("post", "/files/reorder", () => call("/v1/files/reorder", { method: "POST", cookie: A.cookie, json: { entityType: "artwork", entityId: b.artwork.id, fileIds: [b.file.id] } }));
 attempt("post", "/auth/studio", () => call("/v1/auth/studio", { method: "POST", cookie: A.cookie, json: { studioId: B.studioId } }));
 
 describe("studio A can't reach studio B", () => {
@@ -254,6 +263,25 @@ describe("studio A can't reach studio B", () => {
     ["delete", "/public/shares/{token}/pins/{id}", async () => {
       expect((await call(`/v1/public/shares/${await mine()}/pins/${b.pin.id}`, { method: "DELETE", headers: guest })).status).toBe(404);
     }],
+    // Public catalogue (Site 3.0): no sign-in; A's studio slug never returns B's works or pictures.
+    ["get", "/public/studios/{slug}/artworks", async () => {
+      const slug = await studioSlug(A.studioId);
+      for (const q of ["", "?collection=B's%20birds", "?tag=b-tag"]) {
+        const got = await call(`/v1/public/studios/${slug}/artworks${q}`);
+        expect(got.status).toBe(200);
+        expect(got.data.items).toEqual([]);
+      }
+    }],
+    ["get", "/public/studios/{slug}/artworks/{artworkSlug}", async () => {
+      expect((await call(`/v1/public/studios/${await studioSlug(A.studioId)}/artworks/${b.public.work.slug}`)).status).toBe(404);
+    }],
+    ["get", "/public/studios/{slug}/collections", async () => {
+      expect((await call(`/v1/public/studios/${await studioSlug(A.studioId)}/collections`)).data.items).toEqual([]);
+    }],
+    ["get", "/public/studios/{slug}/images/{fileId}/{file}", async () => {
+      expect((await call(`/v1/public/studios/${await studioSlug(A.studioId)}/images/${b.public.file.id}/480.webp`)).status).toBe(404);
+      expect((await call(`/v1/public/studios/${await studioSlug(B.studioId)}/images/${b.public.file.id}/480.webp`)).status).toBe(200);
+    }],
     ["get", "/artworks", async () => expect((await call("/v1/artworks", { cookie: A.cookie })).data.items).toEqual([])],
     ["get", "/clients", async () => expect((await call("/v1/clients", { cookie: A.cookie })).data.items).toEqual([])],
     ["get", "/activity", async () => {
@@ -296,6 +324,9 @@ describe("studio A can't reach studio B", () => {
     ["post", "/feedback", async () => {
       const board = (await call("/v1/boards", { method: "POST", cookie: A.cookie, json: { name: "A's" } })).data;
       expect((await call("/v1/feedback", { method: "POST", cookie: A.cookie, json: { boardId: board.id, text: "a" } })).data.studioId).toBe(A.studioId);
+    }],
+    ["get", "/artworks/collections", async () => {
+      expect((await call("/v1/artworks/collections", { cookie: A.cookie })).data.items.map((x: any) => x.name)).not.toContain("B's collection");
     }],
     ["post", "/clients", async () => expect((await call("/v1/clients", { method: "POST", cookie: A.cookie, json: { name: "A's" } })).data.studioId).toBe(A.studioId)],
     ["get", "/assistant/proposals", async () => expect((await call("/v1/assistant/proposals", { cookie: A.cookie })).data.items).toEqual([])],

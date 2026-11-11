@@ -217,7 +217,8 @@ export async function runAction<R>(def: ActionDef<z.ZodType, R>, rawInput: unkno
       const replay = await findReplay(ctx, def, opId);
       if (replay) return replay;
     }
-    const unique = /UNIQUE constraint failed: (\w+)\.(\w+)/.exec(msg);
+    // A composite index (studio_id, slug) names its columns in order: the last is the one the caller chose.
+    const unique = /UNIQUE constraint failed: ((?:\w+\.\w+, )*\w+\.(\w+))/.exec(msg);
     if (unique) throw new HttpError("bad_request", `That ${unique[2]} is already in use`, { field: unique[2] });
     throw err;
   }

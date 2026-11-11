@@ -186,6 +186,83 @@
               "null"
             ],
             "description": "ULID"
+          },
+          "slug": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 1,
+            "maxLength": 80,
+            "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+          },
+          "collection": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 40
+            },
+            "maxItems": 20
+          },
+          "palette": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "hex": {
+                  "type": "string",
+                  "pattern": "^#[0-9a-fA-F]{6}$"
+                },
+                "share": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 10000
+                }
+              },
+              "required": [
+                "hex",
+                "share"
+              ]
+            },
+            "maxItems": 6
+          },
+          "editionSize": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 1,
+            "maximum": 100000
+          },
+          "public": {
+            "type": "boolean"
+          },
+          "publishedAt": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "draftedFields": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "description",
+                "tags",
+                "collection",
+                "altText"
+              ]
+            }
           }
         },
         "required": [
@@ -210,7 +287,393 @@
           "currency",
           "status",
           "description",
-          "primaryFileId"
+          "primaryFileId",
+          "slug",
+          "collection",
+          "tags",
+          "palette",
+          "editionSize",
+          "public",
+          "publishedAt",
+          "draftedFields"
+        ]
+      },
+      "ArtworkDetail": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "ULID"
+          },
+          "studioId": {
+            "type": "string",
+            "description": "ULID"
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string"
+          },
+          "createdBy": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "actorType": {
+            "type": "string",
+            "enum": [
+              "user",
+              "assistant",
+              "system",
+              "api"
+            ]
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "deletedAt": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "meta": {
+            "type": "object",
+            "additionalProperties": {}
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 300
+          },
+          "inventoryCode": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 100
+          },
+          "medium": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 300
+          },
+          "year": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 0,
+            "maximum": 3000
+          },
+          "width": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "minimum": 0
+          },
+          "height": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "minimum": 0
+          },
+          "depth": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "minimum": 0
+          },
+          "sizeUnit": {
+            "type": "string",
+            "enum": [
+              "in",
+              "cm"
+            ]
+          },
+          "priceCents": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 0
+          },
+          "currency": {
+            "type": "string",
+            "pattern": "^[A-Z]{3}$"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "available",
+              "reserved",
+              "sold",
+              "not_for_sale",
+              "archived"
+            ]
+          },
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 5000
+          },
+          "primaryFileId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "ULID"
+          },
+          "slug": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 1,
+            "maxLength": 80,
+            "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+          },
+          "collection": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 40
+            },
+            "maxItems": 20
+          },
+          "palette": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "hex": {
+                  "type": "string",
+                  "pattern": "^#[0-9a-fA-F]{6}$"
+                },
+                "share": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 10000
+                }
+              },
+              "required": [
+                "hex",
+                "share"
+              ]
+            },
+            "maxItems": 6
+          },
+          "editionSize": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 1,
+            "maximum": 100000
+          },
+          "public": {
+            "type": "boolean"
+          },
+          "publishedAt": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "draftedFields": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "description",
+                "tags",
+                "collection",
+                "altText"
+              ]
+            }
+          },
+          "images": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "description": "ULID"
+                },
+                "studioId": {
+                  "type": "string",
+                  "description": "ULID"
+                },
+                "createdAt": {
+                  "type": "string"
+                },
+                "updatedAt": {
+                  "type": "string"
+                },
+                "createdBy": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "actorType": {
+                  "type": "string",
+                  "enum": [
+                    "user",
+                    "assistant",
+                    "system",
+                    "api"
+                  ]
+                },
+                "version": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "deletedAt": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "meta": {
+                  "type": "object",
+                  "additionalProperties": {}
+                },
+                "name": {
+                  "type": "string"
+                },
+                "contentType": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "size": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ]
+                },
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "photo",
+                    "reference",
+                    "agreement",
+                    "coa",
+                    "receipt",
+                    "document",
+                    "other"
+                  ]
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "pending",
+                    "ready"
+                  ]
+                },
+                "entityType": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "entityId": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "locked": {
+                  "type": "boolean"
+                },
+                "position": {
+                  "type": "integer"
+                },
+                "altText": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              },
+              "required": [
+                "id",
+                "studioId",
+                "createdAt",
+                "updatedAt",
+                "createdBy",
+                "actorType",
+                "version",
+                "deletedAt",
+                "meta",
+                "name",
+                "contentType",
+                "size",
+                "kind",
+                "status",
+                "entityType",
+                "entityId",
+                "locked",
+                "position",
+                "altText"
+              ]
+            }
+          }
+        },
+        "required": [
+          "id",
+          "studioId",
+          "createdAt",
+          "updatedAt",
+          "createdBy",
+          "actorType",
+          "version",
+          "deletedAt",
+          "meta",
+          "title",
+          "inventoryCode",
+          "medium",
+          "year",
+          "width",
+          "height",
+          "depth",
+          "sizeUnit",
+          "priceCents",
+          "currency",
+          "status",
+          "description",
+          "primaryFileId",
+          "slug",
+          "collection",
+          "tags",
+          "palette",
+          "editionSize",
+          "public",
+          "publishedAt",
+          "draftedFields",
+          "images"
         ]
       },
       "Client": {
@@ -1596,6 +2059,133 @@
           "limits"
         ]
       },
+      "FileRecord": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "ULID"
+          },
+          "studioId": {
+            "type": "string",
+            "description": "ULID"
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string"
+          },
+          "createdBy": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "actorType": {
+            "type": "string",
+            "enum": [
+              "user",
+              "assistant",
+              "system",
+              "api"
+            ]
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "deletedAt": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "meta": {
+            "type": "object",
+            "additionalProperties": {}
+          },
+          "name": {
+            "type": "string"
+          },
+          "contentType": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "size": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "photo",
+              "reference",
+              "agreement",
+              "coa",
+              "receipt",
+              "document",
+              "other"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "ready"
+            ]
+          },
+          "entityType": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "entityId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "locked": {
+            "type": "boolean"
+          },
+          "position": {
+            "type": "integer"
+          },
+          "altText": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "studioId",
+          "createdAt",
+          "updatedAt",
+          "createdBy",
+          "actorType",
+          "version",
+          "deletedAt",
+          "meta",
+          "name",
+          "contentType",
+          "size",
+          "kind",
+          "status",
+          "entityType",
+          "entityId",
+          "locked",
+          "position",
+          "altText"
+        ]
+      },
       "Share": {
         "type": "object",
         "properties": {
@@ -1801,6 +2391,9 @@
                           "studioName": {
                             "type": "string"
                           },
+                          "studioSlug": {
+                            "type": "string"
+                          },
                           "role": {
                             "type": "string",
                             "enum": [
@@ -1939,6 +2532,9 @@
                             "description": "ULID"
                           },
                           "studioName": {
+                            "type": "string"
+                          },
+                          "studioSlug": {
                             "type": "string"
                           },
                           "role": {
@@ -2161,6 +2757,9 @@
                           "studioName": {
                             "type": "string"
                           },
+                          "studioSlug": {
+                            "type": "string"
+                          },
                           "role": {
                             "type": "string",
                             "enum": [
@@ -2275,6 +2874,9 @@
                           "studioName": {
                             "type": "string"
                           },
+                          "studioSlug": {
+                            "type": "string"
+                          },
                           "role": {
                             "type": "string",
                             "enum": [
@@ -2330,6 +2932,70 @@
         }
       }
     },
+    "/artworks/collections": {
+      "get": {
+        "tags": [
+          "records"
+        ],
+        "summary": "The studio's collections and how many works each has",
+        "description": "Every undeleted work, public or not. The assistant's draft picks a collection from this list.",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "name": {
+                            "type": "string"
+                          },
+                          "count": {
+                            "type": "integer"
+                          }
+                        },
+                        "required": [
+                          "name",
+                          "count"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "items"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not allowed for your role",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/artworks": {
       "get": {
         "tags": [
@@ -2369,6 +3035,15 @@
             },
             "required": false,
             "name": "status",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "maxLength": 80
+            },
+            "required": false,
+            "name": "collection",
             "in": "query"
           }
         ],
@@ -2537,6 +3212,62 @@
                     ],
                     "description": "ULID"
                   },
+                  "slug": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "minLength": 1,
+                    "maxLength": 80,
+                    "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+                  },
+                  "collection": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "minLength": 1,
+                    "maxLength": 80
+                  },
+                  "tags": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 40
+                    },
+                    "maxItems": 20
+                  },
+                  "palette": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "hex": {
+                          "type": "string",
+                          "pattern": "^#[0-9a-fA-F]{6}$"
+                        },
+                        "share": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 10000
+                        }
+                      },
+                      "required": [
+                        "hex",
+                        "share"
+                      ]
+                    },
+                    "maxItems": 6
+                  },
+                  "editionSize": {
+                    "type": [
+                      "integer",
+                      "null"
+                    ],
+                    "minimum": 1,
+                    "maximum": 100000
+                  },
                   "meta": {
                     "type": "object",
                     "additionalProperties": {}
@@ -2620,7 +3351,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Artwork"
+                  "$ref": "#/components/schemas/ArtworkDetail"
                 }
               }
             }
@@ -2779,6 +3510,62 @@
                     ],
                     "description": "ULID"
                   },
+                  "slug": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "minLength": 1,
+                    "maxLength": 80,
+                    "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+                  },
+                  "collection": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "minLength": 1,
+                    "maxLength": 80
+                  },
+                  "tags": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 40
+                    },
+                    "maxItems": 20
+                  },
+                  "palette": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "hex": {
+                          "type": "string",
+                          "pattern": "^#[0-9a-fA-F]{6}$"
+                        },
+                        "share": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 10000
+                        }
+                      },
+                      "required": [
+                        "hex",
+                        "share"
+                      ]
+                    },
+                    "maxItems": 6
+                  },
+                  "editionSize": {
+                    "type": [
+                      "integer",
+                      "null"
+                    ],
+                    "minimum": 1,
+                    "maximum": 100000
+                  },
                   "meta": {
                     "type": "object",
                     "additionalProperties": {}
@@ -2874,6 +3661,326 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Artwork"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (or in another studio)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The record changed since you loaded it",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/artworks/{id}/publish": {
+      "post": {
+        "tags": [
+          "records"
+        ],
+        "summary": "Approve a work: make it public (D-104)",
+        "description": "Needs a title and a cover picture with its web sizes. Makes the slug from the title unless one is sent or set. Clears draftedFields: approving accepts the assistant's words as they stand.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Record version the change was based on"
+            },
+            "required": false,
+            "description": "Record version the change was based on",
+            "name": "if-match",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Optional ULID; a repeat returns the first result"
+            },
+            "required": false,
+            "description": "Optional ULID; a repeat returns the first result",
+            "name": "idempotency-key",
+            "in": "header"
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "slug": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 80,
+                    "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Artwork"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (or in another studio)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The record changed since you loaded it",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/artworks/{id}/unpublish": {
+      "post": {
+        "tags": [
+          "records"
+        ],
+        "summary": "Take a work off the public site",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Record version the change was based on"
+            },
+            "required": false,
+            "description": "Record version the change was based on",
+            "name": "if-match",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Optional ULID; a repeat returns the first result"
+            },
+            "required": false,
+            "description": "Optional ULID; a repeat returns the first result",
+            "name": "idempotency-key",
+            "in": "header"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Artwork"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (or in another studio)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The record changed since you loaded it",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/artworks/{id}/draft": {
+      "post": {
+        "tags": [
+          "assistant"
+        ],
+        "summary": "The assistant writes its draft of a work's words (studio-assistant only)",
+        "description": "studio-assistant's draft job calls this with the person's session and its key (D-046, D-108). Writes description, tags, collection and the cover's alt text only where the field is empty or still the assistant's earlier draft. Never publishes.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Optional ULID; a repeat returns the first result"
+            },
+            "required": false,
+            "description": "Optional ULID; a repeat returns the first result",
+            "name": "idempotency-key",
+            "in": "header"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "description": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 5000
+                  },
+                  "tags": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 40
+                    },
+                    "maxItems": 12
+                  },
+                  "collection": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 80
+                  },
+                  "altText": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 500
+                  },
+                  "usage": {
+                    "type": "object",
+                    "properties": {
+                      "model": {
+                        "type": "string",
+                        "maxLength": 80
+                      },
+                      "inputTokens": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "outputTokens": {
+                        "type": "integer",
+                        "minimum": 0
+                      }
+                    },
+                    "required": [
+                      "model",
+                      "inputTokens",
+                      "outputTokens"
+                    ]
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Artwork"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not allowed for your role",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
                 }
               }
             }
@@ -7477,6 +8584,68 @@
                       "document",
                       "other"
                     ]
+                  },
+                  "sizes": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "width": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                              "enum": [
+                                480
+                              ]
+                            },
+                            {
+                              "type": "number",
+                              "enum": [
+                                960
+                              ]
+                            },
+                            {
+                              "type": "number",
+                              "enum": [
+                                1600
+                              ]
+                            }
+                          ]
+                        },
+                        "size": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 10485760
+                        }
+                      },
+                      "required": [
+                        "width",
+                        "size"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "minItems": 1,
+                    "maxItems": 3
+                  },
+                  "pixels": {
+                    "type": "object",
+                    "properties": {
+                      "width": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 100000
+                      },
+                      "height": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 100000
+                      }
+                    },
+                    "required": [
+                      "width",
+                      "height"
+                    ],
+                    "additionalProperties": false
                   }
                 },
                 "required": [
@@ -7491,139 +8660,65 @@
         },
         "responses": {
           "200": {
-            "description": "PUT the bytes to uploadUrl, then call attach",
+            "description": "PUT the bytes to uploadUrl (and each size to its link), then call attach",
             "content": {
               "application/json": {
                 "schema": {
                   "type": "object",
                   "properties": {
                     "file": {
-                      "type": "object",
-                      "properties": {
-                        "id": {
-                          "type": "string",
-                          "description": "ULID"
-                        },
-                        "studioId": {
-                          "type": "string",
-                          "description": "ULID"
-                        },
-                        "createdAt": {
-                          "type": "string"
-                        },
-                        "updatedAt": {
-                          "type": "string"
-                        },
-                        "createdBy": {
-                          "type": [
-                            "string",
-                            "null"
-                          ]
-                        },
-                        "actorType": {
-                          "type": "string",
-                          "enum": [
-                            "user",
-                            "assistant",
-                            "system",
-                            "api"
-                          ]
-                        },
-                        "version": {
-                          "type": "integer",
-                          "minimum": 1
-                        },
-                        "deletedAt": {
-                          "type": [
-                            "string",
-                            "null"
-                          ]
-                        },
-                        "meta": {
-                          "type": "object",
-                          "additionalProperties": {}
-                        },
-                        "name": {
-                          "type": "string"
-                        },
-                        "contentType": {
-                          "type": [
-                            "string",
-                            "null"
-                          ]
-                        },
-                        "size": {
-                          "type": [
-                            "integer",
-                            "null"
-                          ]
-                        },
-                        "kind": {
-                          "type": "string",
-                          "enum": [
-                            "photo",
-                            "reference",
-                            "agreement",
-                            "coa",
-                            "receipt",
-                            "document",
-                            "other"
-                          ]
-                        },
-                        "status": {
-                          "type": "string",
-                          "enum": [
-                            "pending",
-                            "ready"
-                          ]
-                        },
-                        "entityType": {
-                          "type": [
-                            "string",
-                            "null"
-                          ]
-                        },
-                        "entityId": {
-                          "type": [
-                            "string",
-                            "null"
-                          ]
-                        },
-                        "locked": {
-                          "type": "boolean"
-                        }
-                      },
-                      "required": [
-                        "id",
-                        "studioId",
-                        "createdAt",
-                        "updatedAt",
-                        "createdBy",
-                        "actorType",
-                        "version",
-                        "deletedAt",
-                        "meta",
-                        "name",
-                        "contentType",
-                        "size",
-                        "kind",
-                        "status",
-                        "entityType",
-                        "entityId",
-                        "locked"
-                      ]
+                      "$ref": "#/components/schemas/FileRecord"
                     },
                     "uploadUrl": {
                       "type": "string"
                     },
                     "expiresAt": {
                       "type": "string"
+                    },
+                    "sizeUrls": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "width": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                                "enum": [
+                                  480
+                                ]
+                              },
+                              {
+                                "type": "number",
+                                "enum": [
+                                  960
+                                ]
+                              },
+                              {
+                                "type": "number",
+                                "enum": [
+                                  1600
+                                ]
+                              }
+                            ]
+                          },
+                          "uploadUrl": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "width",
+                          "uploadUrl"
+                        ]
+                      },
+                      "description": "One link per requested size; empty without sizes"
                     }
                   },
                   "required": [
                     "file",
                     "uploadUrl",
-                    "expiresAt"
+                    "expiresAt",
+                    "sizeUrls"
                   ]
                 }
               }
@@ -7641,6 +8736,225 @@
           },
           "403": {
             "description": "Not allowed for your role",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/files/{id}": {
+      "patch": {
+        "tags": [
+          "files"
+        ],
+        "summary": "Change a file's alt text, place or lock",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Record version the change was based on"
+            },
+            "required": false,
+            "description": "Record version the change was based on",
+            "name": "if-match",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Optional ULID; a repeat returns the first result"
+            },
+            "required": false,
+            "description": "Optional ULID; a repeat returns the first result",
+            "name": "idempotency-key",
+            "in": "header"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "altText": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "maxLength": 500
+                  },
+                  "position": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 10000
+                  },
+                  "locked": {
+                    "type": "boolean"
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FileRecord"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (or in another studio)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The record changed since you loaded it",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/files/reorder": {
+      "post": {
+        "tags": [
+          "files"
+        ],
+        "summary": "Put a work's pictures in order; the first is its cover",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Optional ULID; a repeat returns the first result"
+            },
+            "required": false,
+            "description": "Optional ULID; a repeat returns the first result",
+            "name": "idempotency-key",
+            "in": "header"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "entityType": {
+                    "type": "string",
+                    "enum": [
+                      "artwork"
+                    ]
+                  },
+                  "entityId": {
+                    "type": "string",
+                    "description": "ULID"
+                  },
+                  "fileIds": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "description": "ULID"
+                    },
+                    "minItems": 1,
+                    "maxItems": 50
+                  }
+                },
+                "required": [
+                  "entityType",
+                  "entityId",
+                  "fileIds"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "records": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "additionalProperties": {}
+                      }
+                    }
+                  },
+                  "required": [
+                    "records"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (or in another studio)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The record changed since you loaded it",
             "content": {
               "application/json": {
                 "schema": {
@@ -7714,120 +9028,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "id": {
-                      "type": "string",
-                      "description": "ULID"
-                    },
-                    "studioId": {
-                      "type": "string",
-                      "description": "ULID"
-                    },
-                    "createdAt": {
-                      "type": "string"
-                    },
-                    "updatedAt": {
-                      "type": "string"
-                    },
-                    "createdBy": {
-                      "type": [
-                        "string",
-                        "null"
-                      ]
-                    },
-                    "actorType": {
-                      "type": "string",
-                      "enum": [
-                        "user",
-                        "assistant",
-                        "system",
-                        "api"
-                      ]
-                    },
-                    "version": {
-                      "type": "integer",
-                      "minimum": 1
-                    },
-                    "deletedAt": {
-                      "type": [
-                        "string",
-                        "null"
-                      ]
-                    },
-                    "meta": {
-                      "type": "object",
-                      "additionalProperties": {}
-                    },
-                    "name": {
-                      "type": "string"
-                    },
-                    "contentType": {
-                      "type": [
-                        "string",
-                        "null"
-                      ]
-                    },
-                    "size": {
-                      "type": [
-                        "integer",
-                        "null"
-                      ]
-                    },
-                    "kind": {
-                      "type": "string",
-                      "enum": [
-                        "photo",
-                        "reference",
-                        "agreement",
-                        "coa",
-                        "receipt",
-                        "document",
-                        "other"
-                      ]
-                    },
-                    "status": {
-                      "type": "string",
-                      "enum": [
-                        "pending",
-                        "ready"
-                      ]
-                    },
-                    "entityType": {
-                      "type": [
-                        "string",
-                        "null"
-                      ]
-                    },
-                    "entityId": {
-                      "type": [
-                        "string",
-                        "null"
-                      ]
-                    },
-                    "locked": {
-                      "type": "boolean"
-                    }
-                  },
-                  "required": [
-                    "id",
-                    "studioId",
-                    "createdAt",
-                    "updatedAt",
-                    "createdBy",
-                    "actorType",
-                    "version",
-                    "deletedAt",
-                    "meta",
-                    "name",
-                    "contentType",
-                    "size",
-                    "kind",
-                    "status",
-                    "entityType",
-                    "entityId",
-                    "locked"
-                  ]
+                  "$ref": "#/components/schemas/FileRecord"
                 }
               }
             }
@@ -7869,6 +9070,16 @@
             "required": true,
             "name": "id",
             "in": "path"
+          },
+          {
+            "schema": {
+              "type": "number",
+              "description": "A WebP copy instead of the original (D-106)"
+            },
+            "required": false,
+            "description": "A WebP copy instead of the original (D-106)",
+            "name": "width",
+            "in": "query"
           }
         ],
         "responses": {
@@ -7948,6 +9159,16 @@
             "required": false,
             "name": "sig",
             "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "One of the picture's WebP copies (480, 960 or 1600), D-106"
+            },
+            "required": false,
+            "description": "One of the picture's WebP copies (480, 960 or 1600), D-106",
+            "name": "w",
+            "in": "query"
           }
         ],
         "responses": {
@@ -8005,6 +9226,16 @@
             },
             "required": false,
             "name": "sig",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "One of the picture's WebP copies (480, 960 or 1600), D-106"
+            },
+            "required": false,
+            "description": "One of the picture's WebP copies (480, 960 or 1600), D-106",
+            "name": "w",
             "in": "query"
           }
         ],
@@ -10507,6 +11738,731 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/LinkError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/public/studios/{slug}/artworks": {
+      "get": {
+        "tags": [
+          "public"
+        ],
+        "summary": "A studio's public works, newest first (no sign-in)",
+        "security": [],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "slug",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "available",
+                "reserved",
+                "sold",
+                "not_for_sale",
+                "archived"
+              ]
+            },
+            "required": false,
+            "name": "status",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "maxLength": 80
+            },
+            "required": false,
+            "name": "collection",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "maxLength": 40
+            },
+            "required": false,
+            "name": "tag",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^#?[0-9a-fA-F]{6}$"
+            },
+            "required": false,
+            "name": "colour",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "maxLength": 500
+            },
+            "required": false,
+            "name": "cursor",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "slug": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 80,
+                            "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+                          },
+                          "title": {
+                            "type": "string"
+                          },
+                          "medium": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "year": {
+                            "type": [
+                              "integer",
+                              "null"
+                            ]
+                          },
+                          "width": {
+                            "type": [
+                              "number",
+                              "null"
+                            ]
+                          },
+                          "height": {
+                            "type": [
+                              "number",
+                              "null"
+                            ]
+                          },
+                          "depth": {
+                            "type": [
+                              "number",
+                              "null"
+                            ]
+                          },
+                          "sizeUnit": {
+                            "type": "string",
+                            "enum": [
+                              "in",
+                              "cm"
+                            ]
+                          },
+                          "editionSize": {
+                            "type": [
+                              "integer",
+                              "null"
+                            ]
+                          },
+                          "collection": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "tags": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          },
+                          "palette": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "hex": {
+                                  "type": "string",
+                                  "pattern": "^#[0-9a-fA-F]{6}$"
+                                },
+                                "share": {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 10000
+                                }
+                              },
+                              "required": [
+                                "hex",
+                                "share"
+                              ]
+                            }
+                          },
+                          "description": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "available",
+                              "reserved",
+                              "sold",
+                              "not_for_sale",
+                              "archived"
+                            ]
+                          },
+                          "priceCents": {
+                            "type": [
+                              "integer",
+                              "null"
+                            ]
+                          },
+                          "currency": {
+                            "type": [
+                              "string",
+                              "null"
+                            ],
+                            "pattern": "^[A-Z]{3}$"
+                          },
+                          "images": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "fileId": {
+                                  "type": "string",
+                                  "description": "ULID"
+                                },
+                                "altText": {
+                                  "type": [
+                                    "string",
+                                    "null"
+                                  ]
+                                },
+                                "aspectRatio": {
+                                  "type": [
+                                    "number",
+                                    "null"
+                                  ],
+                                  "exclusiveMinimum": 0
+                                },
+                                "sizes": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object",
+                                    "properties": {
+                                      "width": {
+                                        "anyOf": [
+                                          {
+                                            "type": "number",
+                                            "enum": [
+                                              480
+                                            ]
+                                          },
+                                          {
+                                            "type": "number",
+                                            "enum": [
+                                              960
+                                            ]
+                                          },
+                                          {
+                                            "type": "number",
+                                            "enum": [
+                                              1600
+                                            ]
+                                          }
+                                        ]
+                                      },
+                                      "url": {
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": [
+                                      "width",
+                                      "url"
+                                    ]
+                                  }
+                                }
+                              },
+                              "required": [
+                                "fileId",
+                                "altText",
+                                "aspectRatio",
+                                "sizes"
+                              ]
+                            }
+                          },
+                          "publishedAt": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "slug",
+                          "title",
+                          "medium",
+                          "year",
+                          "width",
+                          "height",
+                          "depth",
+                          "sizeUnit",
+                          "editionSize",
+                          "collection",
+                          "tags",
+                          "palette",
+                          "description",
+                          "status",
+                          "priceCents",
+                          "currency",
+                          "images",
+                          "publishedAt"
+                        ]
+                      }
+                    },
+                    "nextCursor": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "catalogueVersion": {
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "items",
+                    "nextCursor",
+                    "catalogueVersion"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (or in another studio)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/public/studios/{slug}/artworks/{artworkSlug}": {
+      "get": {
+        "tags": [
+          "public"
+        ],
+        "summary": "One public work (no sign-in)",
+        "security": [],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "slug",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "artworkSlug",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "slug": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 80,
+                      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "medium": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "year": {
+                      "type": [
+                        "integer",
+                        "null"
+                      ]
+                    },
+                    "width": {
+                      "type": [
+                        "number",
+                        "null"
+                      ]
+                    },
+                    "height": {
+                      "type": [
+                        "number",
+                        "null"
+                      ]
+                    },
+                    "depth": {
+                      "type": [
+                        "number",
+                        "null"
+                      ]
+                    },
+                    "sizeUnit": {
+                      "type": "string",
+                      "enum": [
+                        "in",
+                        "cm"
+                      ]
+                    },
+                    "editionSize": {
+                      "type": [
+                        "integer",
+                        "null"
+                      ]
+                    },
+                    "collection": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "tags": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "palette": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "hex": {
+                            "type": "string",
+                            "pattern": "^#[0-9a-fA-F]{6}$"
+                          },
+                          "share": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 10000
+                          }
+                        },
+                        "required": [
+                          "hex",
+                          "share"
+                        ]
+                      }
+                    },
+                    "description": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "available",
+                        "reserved",
+                        "sold",
+                        "not_for_sale",
+                        "archived"
+                      ]
+                    },
+                    "priceCents": {
+                      "type": [
+                        "integer",
+                        "null"
+                      ]
+                    },
+                    "currency": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "pattern": "^[A-Z]{3}$"
+                    },
+                    "images": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "fileId": {
+                            "type": "string",
+                            "description": "ULID"
+                          },
+                          "altText": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "aspectRatio": {
+                            "type": [
+                              "number",
+                              "null"
+                            ],
+                            "exclusiveMinimum": 0
+                          },
+                          "sizes": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "width": {
+                                  "anyOf": [
+                                    {
+                                      "type": "number",
+                                      "enum": [
+                                        480
+                                      ]
+                                    },
+                                    {
+                                      "type": "number",
+                                      "enum": [
+                                        960
+                                      ]
+                                    },
+                                    {
+                                      "type": "number",
+                                      "enum": [
+                                        1600
+                                      ]
+                                    }
+                                  ]
+                                },
+                                "url": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "width",
+                                "url"
+                              ]
+                            }
+                          }
+                        },
+                        "required": [
+                          "fileId",
+                          "altText",
+                          "aspectRatio",
+                          "sizes"
+                        ]
+                      }
+                    },
+                    "publishedAt": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "catalogueVersion": {
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "slug",
+                    "title",
+                    "medium",
+                    "year",
+                    "width",
+                    "height",
+                    "depth",
+                    "sizeUnit",
+                    "editionSize",
+                    "collection",
+                    "tags",
+                    "palette",
+                    "description",
+                    "status",
+                    "priceCents",
+                    "currency",
+                    "images",
+                    "publishedAt",
+                    "catalogueVersion"
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (or in another studio)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/public/studios/{slug}/collections": {
+      "get": {
+        "tags": [
+          "public"
+        ],
+        "summary": "A studio's collections, counting public works only (no sign-in)",
+        "security": [],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "slug",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "name": {
+                            "type": "string"
+                          },
+                          "count": {
+                            "type": "integer"
+                          }
+                        },
+                        "required": [
+                          "name",
+                          "count"
+                        ]
+                      }
+                    },
+                    "catalogueVersion": {
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "items",
+                    "catalogueVersion"
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (or in another studio)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/public/studios/{slug}/images/{fileId}/{file}": {
+      "get": {
+        "tags": [
+          "public"
+        ],
+        "summary": "One WebP size of a public work's picture, without hidden data; the path ends in {width}.webp (no sign-in)",
+        "security": [],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "slug",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "fileId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "`480.webp`, `960.webp` or `1600.webp`"
+            },
+            "required": true,
+            "description": "`480.webp`, `960.webp` or `1600.webp`",
+            "name": "file",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The picture",
+            "content": {
+              "image/webp": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (or in another studio)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
                 }
               }
             }

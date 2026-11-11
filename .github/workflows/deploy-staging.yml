@@ -154,8 +154,10 @@ jobs:
       # Studio Site lives in its own repo too (D-042, D-097). Its `staging` env is
       # studio-site-staging, bound to studio-api-staging and studio-assistant-staging.
       # Its first deploy is Isaac's click on this workflow (D-105).
+      # The site is bound to studio-assistant-staging, which exists only once there is a model key.
       - name: Pick the Studio Site branch
         id: site
+        if: env.ANTHROPIC_API_KEY != ''
         working-directory: .
         env:
           SITE_REF: ${{ inputs.site_ref }}
@@ -167,11 +169,13 @@ jobs:
           echo "ref=$ref" >> "$GITHUB_OUTPUT"
           echo "Studio Site from IA-ART-SITE-REPO@$ref" | tee -a "$GITHUB_STEP_SUMMARY"
       - uses: actions/checkout@v4
+        if: env.ANTHROPIC_API_KEY != ''
         with:
           repository: yitzhach/IA-ART-SITE-REPO
           ref: ${{ steps.site.outputs.ref }}
           path: .studio-site
       - name: Deploy studio-site-staging
+        if: env.ANTHROPIC_API_KEY != ''
         working-directory: .studio-site
         run: |
           npm ci && npm run build && npx wrangler deploy --env staging

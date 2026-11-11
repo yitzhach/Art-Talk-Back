@@ -70,7 +70,7 @@ export const fileAttach = defineAction({
       ));
       changes.position = row?.last == null ? 0 : row.last + 1;
     }
-    return { writes: [updateWrite(ctx, fileEntity, file, changes), ...(entityType === "artwork" ? [bumpCatalogue(ctx)] : [])] };
+    return { writes: [updateWrite(ctx, fileEntity, file, changes), ...(entityType === "artwork" || file.entityType === "artwork" ? [bumpCatalogue(ctx)] : [])] };
   },
   respond: (_c, a) => publicFile(a[0] as Snapshot),
 });

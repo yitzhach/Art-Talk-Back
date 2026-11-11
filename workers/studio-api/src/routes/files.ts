@@ -9,7 +9,7 @@ import { requirePermission } from "../auth/permissions";
 import { requireActor } from "../auth/session";
 import { HttpError, notFound } from "../lib/errors";
 import { signFileLink, verifyFileLink } from "../lib/signing";
-import { sniffImage } from "../lib/strip";
+import { sniffImage, stripMetadata } from "../lib/strip";
 import { IdempotencyHeader, IfMatchHeader, PathId, body, errors, ifMatch, json, newApp, run, send } from "./common";
 
 export const fileRoutes = newApp();
@@ -133,10 +133,12 @@ fileRoutes.openapi(
       // A WebP copy (D-106): exactly the declared bytes, and really WebP, since public pages serve it.
       const declared = fileSizes({ meta: JSON.parse(file.meta) }).find((s) => s.width === width);
       if (!declared) throw notFound("Size");
+      if (Number(c.req.header("Content-Length") ?? NaN) !== declared.size) throw new HttpError("bad_request", `Send exactly ${declared.size} bytes`);
       const bytes = new Uint8Array(await c.req.raw.arrayBuffer());
       if (bytes.length !== declared.size) throw new HttpError("bad_request", `Send exactly ${declared.size} bytes`);
       if (sniffImage(bytes) !== "image/webp") throw new HttpError("bad_request", "A size must be a WebP picture");
-      await c.env.FILES.put(sizeKey(file.r2_key, width), bytes, { httpMetadata: { contentType: "image/webp" } });
+      // Public pages serve sizes as stored, so hidden metadata goes now (D-094).
+      await c.env.FILES.put(sizeKey(file.r2_key, width), stripMetadata(bytes, "image/webp"), { httpMetadata: { contentType: "image/webp" } });
       return c.body(null, 204);
     }
     const declared = Number(c.req.header("Content-Length") ?? NaN);

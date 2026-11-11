@@ -9,7 +9,6 @@ import { z } from "zod";
 import { sizeKey } from "../actions/files";
 import type { AppEnv } from "../env";
 import { notFound } from "../lib/errors";
-import { sniffImage, stripMetadata } from "../lib/strip";
 import { errors, json, newApp } from "./common";
 
 export const publicRoutes = newApp();
@@ -128,7 +127,7 @@ async function filesOf(c: Context<AppEnv>, studioId: string, ids: string[]): Pro
   if (!ids.length) return out;
   const { results } = await c.env.DB.prepare(
     `SELECT id, entity_id, position, alt_text, meta FROM files WHERE studio_id = ? AND entity_type = 'artwork' AND status = 'ready'
-     AND locked = 0 AND deleted_at IS NULL AND entity_id IN (${ids.map(() => "?").join(",")})`,
+     AND locked = 0 AND kind = 'photo' AND deleted_at IS NULL AND entity_id IN (${ids.map(() => "?").join(",")})`,
   ).bind(studioId, ...ids).all<Row>();
   for (const f of results) {
     const k = f.entity_id as string;
@@ -253,15 +252,14 @@ publicRoutes.openapi(
     const width = Number(m[1]);
     const row = await c.env.DB.prepare(
       `SELECT f.r2_key AS r2_key, f.meta AS meta FROM files f JOIN artworks a ON a.id = f.entity_id AND a.studio_id = f.studio_id
-       WHERE f.id = ? AND f.studio_id = ? AND f.status = 'ready' AND f.deleted_at IS NULL AND f.locked = 0 AND f.entity_type = 'artwork'
+       WHERE f.id = ? AND f.studio_id = ? AND f.status = 'ready' AND f.deleted_at IS NULL AND f.locked = 0 AND f.kind = 'photo' AND f.entity_type = 'artwork'
        AND a.public = 1 AND a.deleted_at IS NULL`,
     ).bind(fileId, studio.id).first<Row>();
     if (!row || !sizesOf(parse<Row>(row.meta, {})).includes(width)) throw notFound("Picture");
     const obj = await c.env.FILES.get(sizeKey(row.r2_key as string, width));
     if (!obj) throw notFound("Picture");
-    const bytes = new Uint8Array(await obj.arrayBuffer());
-    if (sniffImage(bytes.subarray(0, 16)) !== "image/webp") throw notFound("Picture");
-    return new Response(stripMetadata(bytes, "image/webp"), {
+    // Checked as WebP and stripped of hidden metadata once, when it was uploaded (D-094, D-109).
+    return new Response(obj.body, {
       headers: { "content-type": "image/webp", "x-content-type-options": "nosniff", "cache-control": "public, max-age=86400" },
     }) as never;
   },

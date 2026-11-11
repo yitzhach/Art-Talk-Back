@@ -258,10 +258,12 @@ export const artworkActions = crudActions(artworkEntity, ArtworkInput, ArtworkPa
     if (!before) return fields;
     // Editing a drafted field makes it the artist's own (D-104): it is no longer "drafted by the assistant".
     const drafted = (before.draftedFields as string[] | undefined) ?? [];
-    const edited = DRAFTED_ON_ARTWORK.filter((k) => k in fields);
+    const edited: string[] = DRAFTED_ON_ARTWORK.filter((k) => k in fields);
+    // A new cover: the drafted alt text was the old cover's (alt text lives on the file).
+    if ("primaryFileId" in fields && fields.primaryFileId !== before.primaryFileId) edited.push("altText");
     if (before.public && "slug" in fields && !fields.slug) throw new HttpError("bad_request", "A public work needs its address (slug); unpublish it first");
     return edited.some((k) => drafted.includes(k))
-      ? { ...fields, draftedFields: drafted.filter((k) => !(edited as readonly string[]).includes(k)) }
+      ? { ...fields, draftedFields: drafted.filter((k) => !edited.includes(k)) }
       : fields;
   },
   touch: (ctx) => [bumpCatalogue(ctx)],

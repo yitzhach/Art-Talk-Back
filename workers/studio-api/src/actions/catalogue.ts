@@ -32,6 +32,8 @@ function checkCover(cover: Snapshot | null, artworkId: string) {
   if (cover.status !== "ready" || cover.entityType !== "artwork" || cover.entityId !== artworkId) {
     throw new HttpError("bad_request", "The cover picture hasn't finished uploading");
   }
+  // Only photos go public, never a receipt or a certificate attached to the work, nor a locked file.
+  if (cover.kind !== "photo" || cover.locked) throw new HttpError("bad_request", "The cover must be a photo that isn't locked to the studio");
   const sizes = (cover.meta as { sizes?: unknown[] } | undefined)?.sizes;
   if (!Array.isArray(sizes) || !sizes.length) throw new HttpError("bad_request", "The cover has no web sizes; add the picture again from the studio app");
 }
@@ -94,6 +96,8 @@ export const artworkApplyDraft = defineAction({
   plan: async (ctx, { id, usage, altText, ...fields }) => {
     if (ctx.source !== "assistant") throw new HttpError("forbidden", "Only the assistant writes drafts");
     const before = await getRecord(ctx.db, artworkEntity, ctx.actor.studioId, id);
+    // A public work's words are what the artist approved; a draft would go live unreviewed (D-104).
+    if (before.public) throw new HttpError("bad_request", "This work is public: unpublish it to ask for a new draft");
     const drafted = new Set((before.draftedFields as string[] | undefined) ?? []);
     const open = (field: string, current: unknown) => drafted.has(field) || isEmpty(current);
 
@@ -167,7 +171,11 @@ export const fileReorder = defineAction({
       const f = byId.get(fid)!;
       if (f.position !== position) writes.push(updateWrite(ctx, fileEntity, f, { position }));
     });
-    if (work.primaryFileId !== fileIds[0]) writes.push(updateWrite(ctx, artworkEntity, work, { primaryFileId: fileIds[0] }));
+    if (work.primaryFileId !== fileIds[0]) {
+      // The drafted alt text was the old cover's; the new cover's is the artist's.
+      const drafted = (work.draftedFields as string[]) ?? [];
+      writes.push(updateWrite(ctx, artworkEntity, work, { primaryFileId: fileIds[0], draftedFields: drafted.filter((f) => f !== "altText") }));
+    }
     writes.push(bumpCatalogue(ctx));
     return { writes };
   },

@@ -31,6 +31,7 @@ describe("the catalogue", () => {
     expect(twin.work.slug).toBe("heron-at-dusk-2");
     const taken = await call(`/v1/artworks/${twin.work.id}`, { method: "PATCH", cookie: s.cookie, headers: { "If-Match": String(twin.work.version) }, json: { slug: "heron-at-dusk" } });
     expect(taken.status).toBe(400);
+    expect(taken.data.error.details.field).toBe("slug");
 
     const un = await call(`/v1/artworks/${work.id}/unpublish`, { method: "POST", cookie: s.cookie, headers: { "If-Match": String(pub.data.version) } });
     expect(un.data).toMatchObject({ public: false, slug: "heron-at-dusk" });
@@ -70,11 +71,32 @@ describe("the catalogue", () => {
     expect(d2.data.draftedFields.sort()).toEqual(["collection", "tags"]);
     expect((await call(`/v1/artworks/${work.id}`, { cookie: s.cookie })).data.images[0].altText).toBe("Mine too");
 
-    // Approving accepts the drafts: after publishing, a new draft fills only empty fields.
+    // Approving accepts the drafts, and a public work takes no new draft: it would go live unreviewed.
     const pub = await call(`/v1/artworks/${work.id}/publish`, { method: "POST", cookie: s.cookie, headers: { "If-Match": String(d2.data.version) } });
     expect(pub.data.draftedFields).toEqual([]);
     const d3 = await call(`/v1/artworks/${work.id}/draft`, { method: "POST", cookie: s.cookie, headers: ASSISTANT, json: { tags: ["changed"] } });
-    expect(d3.data).toMatchObject({ tags: ["plaster"], public: true });
+    expect(d3.status).toBe(400);
+    expect((await call(`/v1/artworks/${work.id}`, { cookie: s.cookie })).data.tags).toEqual(["plaster"]);
+  });
+
+  it("a new cover's alt text is the artist's, and only an unlocked photo can be the public cover", async () => {
+    const s = await makeStudio();
+    const { work } = await makeWork(s);
+    await call(`/v1/artworks/${work.id}/draft`, { method: "POST", cookie: s.cookie, headers: ASSISTANT, json: { altText: "Drafted" } });
+    const second = await addPicture(s, work.id);
+    const mine = await call(`/v1/files/${second.id}`, { method: "PATCH", cookie: s.cookie, headers: { "If-Match": String(second.version) }, json: { altText: "Mine" } });
+    await call("/v1/files/reorder", { method: "POST", cookie: s.cookie, json: { entityType: "artwork", entityId: work.id, fileIds: [second.id] } });
+    const after = (await call(`/v1/artworks/${work.id}`, { cookie: s.cookie })).data;
+    expect(after.draftedFields).not.toContain("altText");
+    await call(`/v1/artworks/${work.id}/draft`, { method: "POST", cookie: s.cookie, headers: ASSISTANT, json: { altText: "Redrafted" } });
+    expect((await call(`/v1/artworks/${work.id}`, { cookie: s.cookie })).data.images[0].altText).toBe(mine.data.altText);
+
+    const locked = await call(`/v1/files/${second.id}`, { method: "PATCH", cookie: s.cookie, headers: { "If-Match": String(mine.data.version + 1) }, json: { locked: true } });
+    expect(locked.status).toBe(200);
+    const fresh = (await call(`/v1/artworks/${work.id}`, { cookie: s.cookie })).data;
+    const pub = await call(`/v1/artworks/${work.id}/publish`, { method: "POST", cookie: s.cookie, headers: { "If-Match": String(fresh.version) } });
+    expect(pub.status).toBe(400);
+    expect(pub.data.error.message).toMatch(/photo/);
   });
 
   it("the assistant can't publish, even through its own act route", async () => {

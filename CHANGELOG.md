@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+### Site 3.0 · stage 1: the catalogue (D-107…D-112)
+- Migration 0010: artworks gain `public`, `published_at`, `slug` (unique per studio), `collection`, `tags`, `palette`, `edition_size`, `drafted_fields`; files gain `position`, `alt_text`; studios gain `catalogue_version`. Drizzle mirror; drift test.
+- Actions: `artwork.publish` / `artwork.unpublish` (the artist's tap; the assistant never), `artwork.applyDraft` (internal, assistant only, never overwrites the artist's words), `file.update`, `file.reorder`; artwork edits clear their drafted mark; every catalogue write bumps the catalogue version.
+- Routes: `POST /v1/artworks/{id}/publish|unpublish|draft`, `GET /v1/artworks/collections`, `GET /v1/artworks/{id}` with `images`, `PATCH /v1/files/{id}`, `POST /v1/files/reorder`; upload-url takes `sizes` and `pixels` and answers a signed link per WebP size; `download-url?width=`; `/v1/me` gives `studioSlug`. Tests: `test/catalogue.test.ts`, tenancy sweep. `docs/openapi.json` regenerated (additive).
+- studio-assistant: `POST /assistant/draft` (Haiku 5.5, `DRAFT_MODEL`), or `prepared` words with no model call.
+- "Deploy staging" also deploys `studio-site-staging` from `yitzhach/IA-ART-SITE-REPO`.
+
 ### Site 3.0 · stage 1, B: the public catalogue routes (D-113)
 - `studio-api` `src/routes/public.ts`, no sign-in: `GET /v1/public/studios/{slug}/artworks` (filters `status`, `collection`, `tag`, `colour`; 48 a page, `cursor`), `/artworks/{artworkSlug}`, `/collections`, `/images/{fileId}/{width}.webp`. Public and undeleted works only; ready, unlocked pictures with that size only; price only on an available priced work; never ids, inventory code, meta or notes. Tests: `test/public.test.ts`, tenancy sweep. `docs/openapi.json` regenerated (additive).
 

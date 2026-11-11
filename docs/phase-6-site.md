@@ -1,6 +1,6 @@
 # Phase 6, the site — Site 3.0: a public studio site with a visitor assistant
 
-**Status: stage 0 done (2026-11-10): answers recorded, stage 1 planned and waiting for Isaac's OK. Nothing is built.** Isaac asked on 2026-11-10 for a ground-up rebuild of
+**Status: stage 1 built (2026-11-11), waiting at its gate for Isaac's look on staging. Stage 0 done (2026-11-10).** Isaac asked on 2026-11-10 for a ground-up rebuild of
 isaacandersonart.com that he can later sell to other artists, galleries and art shows (D-096…D-101).
 The drawing he reviewed (eight phone screens, ideas, stages, questions):
 https://claude.ai/artifact/TjfVTjJFCHcaGEc2gjEpTw (private to Isaac).
@@ -58,7 +58,7 @@ Surface, Layering, Color, Erosion, Finished), the "several pieces, one inquiry" 
 
 Proposals for the stage plans to confirm. Log each as a decision when taken.
 
-- **Two repos (D-042).** A new app repo for the site engine (working name `studio-site`, Worker
+- **Two repos (D-042).** A new app repo for the site engine (repo `yitzhach/IA-ART-SITE-REPO`, D-107; working name `studio-site`, Worker
   `studio-site`, staging `studio-site-staging`). Platform work stays here. Same branch name in both (D-056).
 - **One engine, many studios.** The site Worker serves every studio by hostname. It holds no data: it
   calls `studio-api` through a service binding, as Booth Studio and Studio Wall do. The studio comes
@@ -141,13 +141,35 @@ Still Isaac's: secrets, spending, a new Worker's first deploy, deleting anything
   until stage 1's first CI run, because a check can only be required once it has run.
 - Not needed yet: the Stripe account (stage 4), confirming the "Art Wall" repo (stage 5).
 
-## Stage 1 — the catalogue (plan, waiting for Isaac's OK)
+## Stage 1 — the catalogue (approved 2026-11-11; built, at the gate)
+
+### Where it stands (2026-11-11)
+
+- [x] A — migration 0010, Zod, actions (`artwork.publish`/`unpublish`/`applyDraft`, `file.update`/`reorder`), owner routes, openapi (lead). D-108…D-110.
+- [x] B — public routes, picture serving, caching, tenancy tests (Sonnet 5.5). D-113.
+- [x] C — the draft job, `POST /assistant/draft` in studio-assistant, `DRAFT_MODEL` Haiku 5.5 (Sonnet 5.5). D-108.
+- [x] D — `IA-ART-SITE-REPO` scaffold: Worker, sign-in, bindings, CI (Sonnet 5.5). D-111.
+- [x] E — owner screens: works, add, a work, review drafts; screenshots at 390/1280 px in both themes (Sonnet 5.5).
+- [x] F — sizes and palette in the browser, WebAssembly WebP fallback for Safari (Sonnet 5.5).
+- [x] G — the import page and its manifest: 40 works from 129 pictures, 7 cross-page duplicates merged; the 40 descriptions drafted by Haiku 5.5 helpers from the pictures (Sonnet 5.5 + Haiku 5.5). D-112.
+- [x] Checked locally end to end in a real browser against a local studio-api: sign in, add from a photo, publish, public list and picture, import (idempotent).
+- [ ] Gate 1–2: Isaac on his phone on staging (first deploy of `studio-site-staging` is his click).
+- [ ] Ship: platform PR, then the site's; production import with Isaac's OK.
+
+**Repo name.** The brief's `studio-site` is the repo `yitzhach/IA-ART-SITE-REPO` (D-107); the Workers keep the
+names `studio-site` and `studio-site-staging`.
+
+**Changes from the plan.** A draft is asked of studio-assistant (`POST /assistant/draft`), not of studio-api; the
+assistant writes it with `POST /v1/artworks/{id}/draft` (D-108). The import is a page in the studio, not a
+script (D-112).
+
+### The plan as approved
 
 **Goal.** Isaac can add a work from his phone, the assistant drafts its words, he approves it, and the
 platform can list his approved works to anyone. The current site's photographs come in as drafts.
 No public pages yet (stage 2); this stage is the data, the owner's screens and the read routes.
 
-**Repos.** Art-Talk-Back (platform, `backend-builder` skill) and `studio-site` (new; owner screens
+**Repos.** Art-Talk-Back (platform, `backend-builder` skill) and `studio-site` (`IA-ART-SITE-REPO`; owner screens
 only). Both on the same branch name (D-056). Platform merges first: the app needs the new contract.
 
 ### What Isaac sees (studio-site, `/studio`, phone first)

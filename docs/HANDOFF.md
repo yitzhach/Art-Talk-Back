@@ -5,12 +5,13 @@ Read this first, then `CLAUDE.md`, then `docs/phase-3.md` (assistant) or `docs/p
 
 ## Where things stand
 
-- **Site 3.0 is planned, not built (2026-11-10, D-096…D-101, `docs/phase-6-site.md`).** Isaac wants his
-  public site rebuilt from nothing as a product other artists can use: fast pages from one catalogue, a visitor
-  assistant that shows real works in the chat and makes a page of them, text/email/call to the artist, checkout,
-  the wall view, collector pages. He reviewed the drawing (link in the plan) and answered the first questions;
-  ten more were answered the same day (defaults; D-102, D-103). Stage 0 done: stage 1 (the catalogue) is
-  planned in the brief with D-104…D-106 and waits for Isaac's OK and the new `studio-site` repo. One stage per session.
+- **Site 3.0 stage 1 (the catalogue) is built and at its gate (2026-11-11, D-107…D-113, `docs/phase-6-site.md`).**
+  The site's repo is `yitzhach/IA-ART-SITE-REPO` (Workers `studio-site`, `studio-site-staging`). Platform: migration
+  0010, publish/unpublish, the assistant's drafts (`POST /assistant/draft` → `POST /v1/artworks/{id}/draft`), picture
+  sizes, public routes `/v1/public/studios/{slug}/…`. Site: `/studio` owner screens and `/studio/import` (40 works
+  from the current site, descriptions pre-drafted). Both on branch `claude/gallant-thompson-91hmzi`, not merged.
+  Waiting on Isaac: the first deploy of `studio-site-staging` (Actions → Deploy staging, on that branch), then his
+  phone check. Then: platform PR first, then the site's; production import only with his OK.
 
 - **Studio Wall stage 5: client links on the platform (2026-11-02, D-090…D-095, `docs/phase-5-studio-wall.md`).**
   Migration 0009 (`shares`, `share_sessions`, `share_attempts`); owner routes `/v1/shares`; public routes

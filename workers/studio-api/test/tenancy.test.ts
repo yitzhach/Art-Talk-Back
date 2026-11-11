@@ -4,6 +4,7 @@
 import { env } from "cloudflare:test";
 import { SYNC_PUSH_MAX_OPS, newId } from "@studio/core";
 import { beforeAll, describe, expect, it } from "vitest";
+import { makeWork, studioSlug } from "./catalogue-helpers";
 import { ASSISTANT, BASE, call, makeStudio, type Studio } from "./helpers";
 
 let A: Studio;
@@ -52,6 +53,8 @@ beforeAll(async () => {
   await call("/v1/assistant/thread/messages", { method: "POST", cookie: B.cookie, headers: ASSISTANT,
     json: { threadId: thread, app: null, messages: [{ role: "user", content: "B's words" }] } });
   b.thread = thread;
+  // B's public work, with a picture: A's studio slug must never return it.
+  b.public = await makeWork(B, { title: "B's public heron", collection: "B's birds", tags: ["b-tag"] }, { publish: true });
   b.opKey = newId();
   await call("/v1/artworks", { method: "POST", cookie: B.cookie, headers: { "Idempotency-Key": b.opKey }, json: { title: "B keyed" } });
 });
@@ -259,6 +262,25 @@ describe("studio A can't reach studio B", () => {
     }],
     ["delete", "/public/shares/{token}/pins/{id}", async () => {
       expect((await call(`/v1/public/shares/${await mine()}/pins/${b.pin.id}`, { method: "DELETE", headers: guest })).status).toBe(404);
+    }],
+    // Public catalogue (Site 3.0): no sign-in; A's studio slug never returns B's works or pictures.
+    ["get", "/public/studios/{slug}/artworks", async () => {
+      const slug = await studioSlug(A.studioId);
+      for (const q of ["", "?collection=B's%20birds", "?tag=b-tag"]) {
+        const got = await call(`/v1/public/studios/${slug}/artworks${q}`);
+        expect(got.status).toBe(200);
+        expect(got.data.items).toEqual([]);
+      }
+    }],
+    ["get", "/public/studios/{slug}/artworks/{artworkSlug}", async () => {
+      expect((await call(`/v1/public/studios/${await studioSlug(A.studioId)}/artworks/${b.public.work.slug}`)).status).toBe(404);
+    }],
+    ["get", "/public/studios/{slug}/collections", async () => {
+      expect((await call(`/v1/public/studios/${await studioSlug(A.studioId)}/collections`)).data.items).toEqual([]);
+    }],
+    ["get", "/public/studios/{slug}/images/{fileId}/{file}", async () => {
+      expect((await call(`/v1/public/studios/${await studioSlug(A.studioId)}/images/${b.public.file.id}/480.webp`)).status).toBe(404);
+      expect((await call(`/v1/public/studios/${await studioSlug(B.studioId)}/images/${b.public.file.id}/480.webp`)).status).toBe(200);
     }],
     ["get", "/artworks", async () => expect((await call("/v1/artworks", { cookie: A.cookie })).data.items).toEqual([])],
     ["get", "/clients", async () => expect((await call("/v1/clients", { cookie: A.cookie })).data.items).toEqual([])],

@@ -18,6 +18,7 @@ import { activityRoutes } from "./routes/activity";
 import { assistantRoutes } from "./routes/assistant";
 import { authRoutes } from "./routes/auth";
 import { fileRoutes } from "./routes/files";
+import { publicRoutes } from "./routes/public";
 import { recordRoutes } from "./routes/records";
 import { shareRoutes } from "./routes/shares";
 import { syncRoutes } from "./routes/sync";
@@ -47,6 +48,7 @@ v1.route("/", fileRoutes);
 v1.route("/", syncRoutes);
 v1.route("/", assistantRoutes);
 v1.route("/", shareRoutes);
+v1.route("/", publicRoutes);
 
 const docConfig = {
   openapi: "3.1.0",

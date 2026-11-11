@@ -53,5 +53,5 @@ export async function makeWork(s: Studio, fields: Record<string, unknown> = {}, 
 /** The studio's slug, for the public routes. */
 export async function studioSlug(studioId: string): Promise<string> {
   const { env } = await import("cloudflare:test");
-  return (await env.DB.prepare("SELECT slug FROM studios WHERE id = ?").bind(studioId).first<{ slug: string }>("slug"))!;
+  return (await env.DB.prepare("SELECT slug FROM studios WHERE id = ?").bind(studioId).first<string>("slug"))!;
 }

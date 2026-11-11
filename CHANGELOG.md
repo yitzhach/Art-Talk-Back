@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+### Site 3.0 · stage 1, B: the public catalogue routes (D-113)
+- `studio-api` `src/routes/public.ts`, no sign-in: `GET /v1/public/studios/{slug}/artworks` (filters `status`, `collection`, `tag`, `colour`; 48 a page, `cursor`), `/artworks/{artworkSlug}`, `/collections`, `/images/{fileId}/{width}.webp`. Public and undeleted works only; ready, unlocked pictures with that size only; price only on an available priced work; never ids, inventory code, meta or notes. Tests: `test/public.test.ts`, tenancy sweep. `docs/openapi.json` regenerated (additive).
+
 ### Site 3.0 · stage 0: answers and the stage 1 plan (D-102…D-106)
 - Isaac's answers to the ten open questions (defaults; the photo wall tool is his "Art Wall" repo, to confirm). Stage 1 (the catalogue) planned in `docs/phase-6-site.md`: migration 0010, publish = approve, public read routes, in-browser image sizes, assistant drafts on Haiku 5.5, the import, owner screens in the new `studio-site` repo. No code changed.
 

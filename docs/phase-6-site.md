@@ -303,7 +303,13 @@ A and the contract come first; B–G build to it in parallel.
 - [x] E — edge cache on the catalogue version, sitemap, robots, the old addresses (301), `npm run test:site` (scripts off, sideways scroll, budgets, Lighthouse mobile) in CI (Sonnet 5.5).
 - [x] F — the Site screen (`/studio/site`: contact, hours, time zone, pages' words, a photo per place, the site name to copy) and the import's words-and-photos step (Sonnet 5.5). D-123.
 - [x] Checks: platform 385 tests; site 183 tests; `npm run test:site` 70/70 locally (Lighthouse 99–100 in every category, largest paint 1.5–1.8 s); `/code-review` on both diffs, findings fixed.
-- [ ] Staging deployed ("Deploy staging" on the branch); Isaac taps "Bring in the words and photos" on the Site screen; Lighthouse on staging; Isaac's look and OK.
+- [x] Staging deployed ("Deploy staging" runs 23–25). Lighthouse mobile on staging with the real photos: performance 95–97,
+  accessibility, best practices and SEO 100 on home, works and a piece. Largest paint 2.6–2.9 s (budget 2.0 s) measured from
+  the build sandbox, where even a static file takes 0.2 s to arrive (a cached page 0.25 s), which Lighthouse's slow-phone
+  model multiplies; locally 1.5–1.8 s. Largest picture: imported photos ≤ 120 KB at phone size; the one iPhone upload's
+  960 px size is 303 KB (budget 200 KB). Left as known: re-check on Isaac's phone; if it feels slow, lower the upload's
+  WebP quality (0.82) for new photos.
+- [ ] Isaac taps "Bring in the words and photos" on the Site screen; his look and OK on his phone.
 - [ ] Production, in order: merge both PRs (platform first: 0011 runs with "Deploy production API"); "Deploy production assistant" (Claude); "Deploy production site" (Isaac's first deploy, D-123); he signs in, the import runs; Claude reruns "Deploy production site" with the site name he copies.
 
 **Changes from the plan.** The import's site step publishes only the site photos it places; a work placed on a page waits

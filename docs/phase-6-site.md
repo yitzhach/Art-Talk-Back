@@ -1,6 +1,6 @@
 # Phase 6, the site — Site 3.0: a public studio site with a visitor assistant
 
-**Status: stage 1 built (2026-11-11), waiting at its gate for Isaac's look on staging. Stage 0 done (2026-11-10).** Isaac asked on 2026-11-10 for a ground-up rebuild of
+**Status: stage 1 shipped (2026-11-11, #47; production import waits for Isaac's OK). Stage 2 planned, waiting for Isaac's OK.** Isaac asked on 2026-11-10 for a ground-up rebuild of
 isaacandersonart.com that he can later sell to other artists, galleries and art shows (D-096…D-101).
 The drawing he reviewed (eight phone screens, ideas, stages, questions):
 https://claude.ai/artifact/TjfVTjJFCHcaGEc2gjEpTw (private to Isaac).
@@ -141,7 +141,7 @@ Still Isaac's: secrets, spending, a new Worker's first deploy, deleting anything
   until stage 1's first CI run, because a check can only be required once it has run.
 - Not needed yet: the Stripe account (stage 4), confirming the "Art Wall" repo (stage 5).
 
-## Stage 1 — the catalogue (approved 2026-11-11; built, at the gate)
+## Stage 1 — the catalogue (approved 2026-11-11; gate passed, shipped)
 
 ### Where it stands (2026-11-11)
 
@@ -291,6 +291,113 @@ A and the contract come first; B–G build to it in parallel.
 3. In the stage 1 chat: the first deploy of `studio-site-staging` (one approval, D-105).
 4. During review: sizes, prices and statuses for the works he approves (typed on his phone).
 5. OK to run the import on production once staging looks right.
+
+## Stage 2 — the site (plan written 2026-11-11, waiting for Isaac's OK)
+
+**Goal.** Anyone can visit Isaac's site on staging and browse it fast on a phone: home, works, a piece,
+commissions, process, about. Each page arrives finished (readable with scripts off), in both themes, in the
+current site's look. A visitor reaches Isaac by text, email or call from any page or piece. Production goes live
+on its `workers.dev` address with Isaac's first deploy; the domain moves later, by his choice.
+
+**Not in this stage:** the assistant (3), checkout (4), the wall view (5), inquiry forms that create a lead
+(3: the lead card). The old site keeps running at isaacandersonart.com until he moves the domain.
+
+### What a visitor sees (studio-site, phone first, 390 px and up)
+
+1. **Home** (`/`): the name, a hero picture, three collection tiles, a few available works, the two "room" photos
+   ("A custom art piece for a lobby in Beverly Hills"), "Start a conversation" (text, email, call).
+2. **Works** (`/works`): every public work, newest first, a numbered index as today. Filters as plain links:
+   collection (Abstract, Figurative, Sculptural), Available / Sold. 48 a page, "More" is a link. No script needed.
+3. **A piece** (`/works/{slug}`): big picture (sizes chosen by the browser), title, size in in and cm, medium, year,
+   description; available with a price → the price; no price → "Price on request"; sold → "Sold — commission one
+   like this". Buttons: **Text**, **Email**, **Call**, each prefilled with the piece's title and link. More
+   pictures under it; tap to enlarge (the one small script, loaded only on tap). Previous / next.
+4. **Commissions**, **Process** (five stages: Surface, Layering, Color, Erosion, Finished), **About**: the current
+   site's words and photos, unchanged in substance. About keeps its gaps out of sight until Isaac fills them.
+5. **"Several pieces, one inquiry"**: on a piece, **Add to inquiry**; a small bar then offers "Text / Email about
+   N works" with the list written in. Kept in the visitor's browser only. With scripts off the button is hidden.
+6. Header and footer on every page: the name, Works, Commissions, Process, About, a theme switch (follows the phone
+   by default), text / email / call. `/studio` stays the owner's area, unchanged.
+
+Search engines and link previews: a real `<title>` and description on every page, a preview picture, a sitemap,
+and each piece marked up as an artwork. Old addresses (`available.html`, `collection-abstract.html`, …) send the
+visitor to the matching new page, ready for when the domain moves.
+
+### Decisions taken as defaults (D-116…D-121; change any before the build starts)
+
+- **D-116 · Pages are made by the site's Worker in plain TypeScript, no framework.** The brief proposed Astro. The
+  Worker already exists, the pages are few and simple, and plain templates add nothing to download and nothing
+  to update. Cached at Cloudflare's edge; the cache key carries the studio's catalogue version, so a publish
+  shows at once.
+- **D-117 · Which studio a site shows comes from the Worker's settings for now** (`STUDIO_SLUG` per environment:
+  staging and production both Isaac's). The platform-side "this address is this studio" record waits for
+  stage 7 (the second studio), when it is first needed.
+- **D-118 · Site photos are not works on the public site.** The 25 imported site photos (banners, process, rooms,
+  shows, references, thumbnails) show only where a page uses them (home hero, process stages, about, rooms),
+  never in Works. Platform: artworks gain `kind` (`work` or `site_photo`, migration 0011, additive; the 25
+  imported ones are set from the record the import left); the public list shows works only, and a new public
+  route gives the site photos a page asks for. Isaac changes which photo goes where in the studio (a "Site"
+  screen with a picker per place), defaulting to where each was on the old site.
+- **D-119 · The site's words and contact live in the studio's settings, not in code.** Name, tagline, phone,
+  email, call hours (9–6, D-102), and the Commissions, Process and About text, taken from the current site once
+  by the import page and editable on the "Site" screen. One public route returns only these
+  (`GET /v1/public/studios/{slug}`), never the rest of the settings. This is what lets a second studio use the
+  same engine.
+- **D-120 · Text, email and call are links, not a form.** `sms:`, `mailto:` and `tel:` with the piece written in;
+  no message goes through the platform in stage 2. The lead card that remembers who asked is stage 3.
+- **D-121 · The first template is "Plaster"**: the current site's palette (paper `#EDEAE3`, ink `#1A1814`, rust),
+  fonts (Bodoni Moda, Newsreader italic, Archivo, IBM Plex Mono, served from the site itself, not Google),
+  numbered index, both themes. Its colours and fonts sit in one file, so stage 7's second template is a copy.
+
+### Platform (Art-Talk-Back, `backend-builder`)
+
+- Migration 0011: `artworks.kind` (`work` default, `site_photo`); Zod, Drizzle mirror, drift test. `artwork.update`
+  can change it.
+- `settings.meta.site` given a schema (`SiteProfile`: name, tagline, phone, email, hours, pages' text, photo
+  places); written through the existing `settings.update`, checked on the way in.
+- Public routes: `GET /v1/public/studios/{slug}` (the site profile only), `GET …/artworks` gains `kind=work` by
+  default, `GET …/site-photos`. Tests: no private setting or other studio leaks; a draft site photo never shows.
+- openapi regenerated (additive).
+
+### Site (IA-ART-SITE-REPO)
+
+- `worker/pages/`: one file per page, a layout, the template's CSS (one file, inlined), the small lightbox and
+  inquiry scripts. `worker/index.ts` routes `/`, `/works`, `/works/:slug`, `/commissions`, `/process`, `/about`,
+  `/sitemap.xml`, `/robots.txt` and the old addresses; `/studio` and `/v1`, `/assistant` as now.
+- Owner side: a **Site** screen in `/studio` (words, contact, a photo per place), and the import page fills the
+  words from the old site once and marks the 25 site photos.
+
+### Gate
+
+1. Lighthouse (mobile) ≥ 95 for performance, accessibility, best practices and SEO on home, works and a piece,
+   on staging.
+2. Every page readable with scripts off (a test loads each with JavaScript disabled and finds the title, the
+   works and the contact links).
+3. Both themes; no sideways scroll at 390 px; AA contrast; the budgets above (script on content pages ≤ 50 KB,
+   largest picture above the fold ≤ 200 KB, largest paint ≤ 2.0 s throttled).
+4. Platform tests: the public profile and site photos never leak another studio's data or a private setting.
+5. Isaac's look on his phone on staging, with a short checklist, then his OK.
+6. Isaac's first deploy of the production `studio-site` Worker; the site then serves his production studio.
+
+### Task cards
+
+| # | Card | Who | Repo |
+|---|---|---|---|
+| A | 0011 `kind`, `SiteProfile`, public profile and site-photo routes, tests, openapi | Lead (Opus 5.5), `backend-builder` | Art-Talk-Back |
+| B | Layout, template CSS and fonts, header/footer, theme switch | Sonnet 5.5 | site |
+| C | Home, Works, a piece (with sizes, srcset, structured data) | Sonnet 5.5 | site |
+| D | Commissions, Process, About; words carried over from the old pages | Sonnet 5.5 (Haiku 5.5 to pull the text) | site |
+| E | Edge cache, sitemap, old-address redirects, scripts-off and Lighthouse checks in CI | Sonnet 5.5 | site |
+| F | "Site" owner screen and the import's words-and-photos step | Sonnet 5.5 | site |
+
+A first (the contract); B–F in parallel against it.
+
+### Needs Isaac, in order
+
+1. OK this plan (or change D-116…D-121).
+2. Before the production import (stage 1's last step): his OK. Then the "Deploy production assistant" run.
+3. At the gate: a look on his phone on staging; then the first deploy of production `studio-site`.
+4. Later, his choice: moving isaacandersonart.com to the new site.
 
 ## Open questions — answered 2026-11-10 (D-102, D-103)
 

@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+### Site 3.0 · stage 2 plan (D-116…D-121)
+- `docs/phase-6-site.md` → Stage 2: the public site's pages, migration 0011 (`artworks.kind`), the public studio profile, the gate and task cards. Waiting for Isaac's OK; no code changed.
+
 ### CI · browser install survives an apt outage
 - The three Playwright jobs install Chromium with `--with-deps`, and if Ubuntu's mirrors can't be reached, the browser alone (the runner image has its libraries).
 

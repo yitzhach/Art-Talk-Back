@@ -1185,6 +1185,92 @@ A first (the contract); C–E against it.
 2. Care notes for collectors (default: a short paragraph Claude drafts from the Process page for him to edit).
 3. Before going live: the list of past buyers to add (he can add them himself in Studio).
 
+## Stage 7 — a second studio (ON HOLD 2026-11-12; partial work on `claude/project-thread-zv48ek`, not merged)
+
+**On hold (Isaac, 2026-11-12): "No need to build that out just yet." He is fully testing what's live first.** Don't
+resume until he says so. What exists: this plan, migration 0016 and the platform code (site_hosts, plans,
+`/v1/platform/studios`, sample works) on the branch, typechecked, untested, no PR. Nothing deployed, no Cloudflare
+change, no address made; the site repo has no stage 7 changes. The address question to Isaac is withdrawn.
+
+Isaac's direction (D-169): a made-up test artist, built and shipped without asking him to test each step; the live
+site is still a testing site until his own domain points at it.
+
+### Where it stands (2026-11-12)
+
+- [ ] Plan (this section), decisions D-170…D-175.
+- [ ] Platform: migration 0016, studios found by address, plans, the platform's studio routes, sample works, tests.
+- [ ] Site: the studio from the address, the Gallery template, template picker and plan line, the Studios screen, tests.
+- [ ] Staging: "Deploy staging" (0016, both Workers), "Add a studio" for the test artist, smoke on its own address.
+- [ ] Live: platform PR, then site PR (the site needs the new routes, as stage 6, D-169), the test artist on live.
+
+### Findings (checked 2026-11-12 on the default branches)
+
+- The site Worker shows one studio, its `STUDIO_SLUG` setting (D-117). Every public route already takes the slug, and
+  the pages hand the slug to their scripts (`data-slug`), so finding the studio by address is one lookup in the Worker.
+- A studio is made only on its owner's first sign-in when the email is in `OWNER_EMAILS` (D-022). Nothing else can
+  make one.
+- Cloudflare: the account's one zone is isaacandersonart.com, which already carries eight Worker addresses
+  (artlab., invoice., digilight., …). A spare one there is free and needs no new Worker.
+- Migrations run to 0015, decisions to D-169: new ones start at **0016** and **D-170**.
+
+### What a new artist gets (the gate's "set up in under an hour, no code change")
+
+1. Isaac (or the "Add a studio" workflow) fills one form: studio name, owner's email, address, template, plan, and
+   whether to start with sample works. That makes the studio, its owner, its address and its site words at once.
+2. The address is attached to `studio-site` in Cloudflare (Workers → `studio-site` → Domains → Add, or the workflow).
+3. The artist opens `https://their-address/studio`, signs in with the emailed code and lands in their own studio: add
+   works from the phone, approve, pick Plaster or Gallery in Site. Their site is live at their address.
+
+### Shape (each becomes a decision)
+
+1. **Studios by address** (D-170): `site_hosts` (hostname → studio). The site Worker looks the request's host up
+   (`GET /v1/public/hosts/{hostname}`, kept at the edge for a minute); the Worker's own workers.dev address and any
+   unknown address keep showing `STUDIO_SLUG`, so Isaac's site and his later domain move need nothing new.
+2. **Platform admins make studios** (D-171): `POST/GET/PATCH /v1/platform/studios`, for a signed-in person whose email is
+   in `PLATFORM_ADMINS` (default `OWNER_EMAILS`), or a request with a one-run key (the "Add a studio" workflow sets a
+   random `PLATFORM_KEY`, uses it, then replaces it with one nobody knows). One batch writes the studio, owner,
+   settings, addresses, plan and activity log. The admin is not made a member of the new studio.
+3. **A second template, Gallery** (D-172): white walls, black type, system fonts (no font downloads); same pages and
+   markup as Plaster. `site.template` in the site profile; Studio → Site has the picker.
+4. **Billing is a record for now** (D-173): each studio has a plan (status `trial`, `active`, `paused`, `test`,
+   `comped`; a monthly price; a trial end). Default for a new artist $29 a month, 30-day trial (D-102: flat monthly
+   fee, no commission). No card is charged until the payments phase (D-162); a `paused` studio's public site and routes
+   answer 404. Isaac's own studio is `comped`. The owner sees their plan in Studio → Site; only a platform admin
+   changes it.
+5. **Sample works** (D-174): "Start with sample works" adds six made-up pieces with generated pictures (bundled in
+   studio-api, 37 KB), public, in a "Samples" collection, so a new site is never empty. The artist deletes them.
+6. **The test artist** (D-175): "Wren Hollow" (made up), owner `wren@example.com` (a domain that never receives mail),
+   plan `test` (hidden from search: `noindex`, robots.txt disallows all), Gallery template, sample works; addresses
+   `wren-test-staging.isaacandersonart.com` (staging) and `wren-test.isaacandersonart.com` (live).
+
+### Data (migration 0016, additive)
+
+- `site_hosts`: id, studio_id, hostname (lowercase, unique among undeleted), standard columns.
+- `studios`: `plan_status` (default `comped`), `plan_price_cents`, `plan_currency` (default USD), `plan_trial_ends_at`.
+
+### Gate
+
+1. The test artist is set up on staging and live through the form/workflow only, timed (under an hour), with no code
+   change; its address shows its own works in Gallery and none of Isaac's; Isaac's site is unchanged.
+2. Isolation tests: an address finds only its studio; another studio's works, pictures, pages, collectors and visitor
+   chat never show through it; a non-admin can't list or make studios; an owner can't change a plan; a paused studio
+   shows nothing; the site's caches and the assistant's studio follow the address.
+3. Smoke on the second address (phone-sized browser, no assistant question, nothing sent).
+
+### Task cards
+
+| # | Card | Repo |
+|---|---|---|
+| A | 0016, host lookup, plans, `/v1/platform/studios`, sample works, `GET /v1/plan`, tests, openapi, "Add a studio" workflow | Art-Talk-Back |
+| B | Studio from the host, robots/noindex, Gallery template, contrast tests | site |
+| C | Studio: template picker, plan line, Studios screen (admins) | site |
+| D | Smoke for a second address | site |
+
+### Needs Isaac
+
+1. OK to use a spare address under isaacandersonart.com for the test artist (asked 2026-11-12; default yes).
+2. The price for other artists (default $29 a month, 30-day trial; he can change it any time).
+
 ## Open questions — answered 2026-11-10 (D-102, D-103)
 
 Isaac: "default on all, except number 10."

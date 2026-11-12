@@ -4,8 +4,8 @@
 // when it is public and not deleted, a picture only when it is ready, unlocked and has that size.
 // Rows are turned into answers field by field, never spread, so a new column can't leak.
 import {
-  ArtworkKind, ArtworkStatus, IMAGE_WIDTHS, PublicArtwork, PublicArtworkDetail, PublicArtworkList, PublicCollections, PublicSitePhotos,
-  PublicStudio, SitePlace, SiteProfile, Slug,
+  ArtworkKind, ArtworkStatus, Hostname, IMAGE_WIDTHS, PublicArtwork, PublicArtworkDetail, PublicArtworkList, PublicCollections, PublicSitePhotos,
+  PublicHost, PublicStudio, SitePlace, SiteProfile, Slug,
 } from "@studio/core";
 import { createRoute } from "@hono/zod-openapi";
 import type { Context } from "hono";
@@ -39,11 +39,14 @@ const reply = (c: Context<AppEnv>, data: unknown, version: number): never =>
     status: 200, headers: { "content-type": "application/json", "cache-control": "public, max-age=60" },
   }) as never;
 
-export async function studioOf(c: Context<AppEnv>, slug: string): Promise<{ id: string; version: number; name: string }> {
+export async function studioOf(c: Context<AppEnv>, slug: string): Promise<{ id: string; version: number; name: string; planStatus: string }> {
   if (!Slug.safeParse(slug).success && !/^[A-Za-z0-9_-]{1,100}$/.test(slug)) throw notFound("Studio");
-  const row = await c.env.DB.prepare("SELECT id, name, catalogue_version FROM studios WHERE slug = ? AND deleted_at IS NULL").bind(slug).first<Row>();
+  // A paused studio's public site answers nothing (D-173).
+  const row = await c.env.DB.prepare(
+    "SELECT id, name, catalogue_version, plan_status FROM studios WHERE slug = ? AND deleted_at IS NULL AND plan_status != 'paused'",
+  ).bind(slug).first<Row>();
   if (!row) throw notFound("Studio");
-  return { id: row.id as string, version: Number(row.catalogue_version ?? 0), name: row.name as string };
+  return { id: row.id as string, version: Number(row.catalogue_version ?? 0), name: row.name as string, planStatus: row.plan_status as string };
 }
 
 // ------------------------------------------------------------------ colour
@@ -319,6 +322,8 @@ publicRoutes.openapi(
       hours: site.hours ? { from: site.hours.from, to: site.hours.to } : null,
       timezone,
       pages: site.pages ?? {},
+      template: site.template ?? "plaster",
+      noindex: studio.planStatus === "test",
     } satisfies Omit<z.infer<typeof PublicStudio>, "catalogueVersion">, studio.version);
   },
 );
@@ -357,5 +362,28 @@ publicRoutes.openapi(
       });
     }
     return reply(c, { places }, studio.version);
+  },
+);
+
+// ------------------------------------------------------------------ addresses (D-170)
+
+publicRoutes.openapi(
+  createRoute({
+    method: "get", path: "/public/hosts/{hostname}", tags: ["public"],
+    summary: "Which studio's site an address shows (the site Worker asks for every address but its own; no sign-in)",
+    security: [], request: { params: z.object({ hostname: z.string().meta({ param: { name: "hostname", in: "path" } }) }) },
+    responses: { 200: json(PublicHost), 404: errors[404] },
+  }),
+  async (c) => {
+    const ok = Hostname.safeParse(c.req.valid("param").hostname);
+    if (!ok.success) throw notFound("Address");
+    const row = await c.env.DB.prepare(
+      `SELECT s.slug AS slug FROM site_hosts h JOIN studios s ON s.id = h.studio_id
+        WHERE h.hostname = ? AND h.deleted_at IS NULL AND s.deleted_at IS NULL AND s.plan_status != 'paused'`,
+    ).bind(ok.data).first<Row>();
+    if (!row) throw notFound("Address");
+    return new Response(JSON.stringify({ hostname: ok.data, slug: row.slug as string }), {
+      status: 200, headers: { "content-type": "application/json", "cache-control": "public, max-age=60" },
+    }) as never;
   },
 );

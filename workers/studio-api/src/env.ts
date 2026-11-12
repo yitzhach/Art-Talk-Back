@@ -11,6 +11,10 @@ export interface Env {
   RESEND_API_KEY?: string;
   ACCESS_TEAM_DOMAIN?: string;
   ACCESS_AUD?: string;
+  /** Who may make studios (D-171), comma-separated emails; default OWNER_EMAILS. */
+  PLATFORM_ADMINS?: string;
+  /** Set for one run by the "Add a studio" workflow, then replaced with one nobody knows (D-171). */
+  PLATFORM_KEY?: string;
   /** Shared with studio-assistant; a request carrying it acts as the assistant (D-046). */
   ASSISTANT_KEY?: string;
   /** Square for card payments (D-144): "sandbox" (default) or "production", and the one studio the account is for. */

@@ -5,6 +5,10 @@ Read this first, then `CLAUDE.md`, then `docs/phase-3.md` (assistant) or `docs/p
 
 ## Where things stand
 
+- **Stage 7 (second studio) is on hold (Isaac, 2026-11-12)** until he finishes fully testing what's live. Plan and
+  partial platform code on branch `claude/project-thread-zv48ek` (not merged, nothing deployed); see
+  `docs/phase-6-site.md` → "Stage 7".
+
 - **What's next (2026-11-12, after D-162).** (1) **Stage 6, Collectors**: approved by Isaac; plan in `docs/phase-6-site.md` →
   "Stage 6 — collectors" (D-163…D-168); built in both repos on branch `claude/project-thread-kn62cz` and on staging (2026-11-12, smoke green);
   waiting on Isaac's look on staging, his care notes (a draft is prefilled in Studio → Collectors), then his yes for

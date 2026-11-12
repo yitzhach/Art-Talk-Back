@@ -3,6 +3,7 @@ import { createRoute } from "@hono/zod-openapi";
 import type { Context } from "hono";
 import { z } from "zod";
 import { sendLoginCode } from "../auth/mail";
+import { isPlatformAdmin } from "./platform";
 import {
   SESSION_COOKIE, SESSION_TTL, createSession, firstStudioId, requireAuth, sessionCookie, upsertUser,
 } from "../auth/session";
@@ -234,5 +235,6 @@ async function meFor(env: Env, userId: string, activeStudioId: string | null): P
     memberships: rows.results.map((r) => ({ studioId: r.studio_id, studioName: r.name, studioSlug: r.slug, role: r.role, clientId: r.client_id })),
     activeStudioId,
     hasPassword: password_hash != null,
+    platformAdmin: isPlatformAdmin(env, user.email),
   };
 }

@@ -213,8 +213,12 @@ const Hhmm = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, "HH:MM, 24-hour");
  * The public face of a studio's site: its words, how to reach it, and which photos go where. Kept in
  * `settings.meta.site`, written through `settings.update` and checked there. Everything here is public.
  */
+/** The look of a studio's public site (D-121 Plaster, D-172 Gallery). */
+export const SiteTemplate = z.enum(["plaster", "gallery"]);
 export const SiteProfile = z.object({
   name: siteText(120).optional(),
+  /** Default `plaster`. */
+  template: SiteTemplate.optional(),
   tagline: z.string().trim().max(300).optional(),
   /** For search engines and link previews. */
   description: z.string().trim().max(300).optional(),
@@ -353,8 +357,15 @@ export const PublicStudio = z.object({
   hours: z.object({ from: z.string(), to: z.string() }).nullable(),
   timezone: z.string(),
   pages: z.partialRecord(SitePageKey, SitePage),
+  /** The site's look (D-172). */
+  template: SiteTemplate,
+  /** A test studio's site is kept out of search engines (D-175). */
+  noindex: z.boolean(),
   catalogueVersion: z.number().int(),
 });
+
+/** Which studio a site address belongs to (D-170). */
+export const PublicHost = z.object({ hostname: z.string(), slug: z.string() });
 
 /** A photo a site page shows: a public site photo or work, in its place's order (D-118). */
 export const PublicSitePhoto = PublicImage.extend({
@@ -668,7 +679,63 @@ export const Me = z.object({
   activeStudioId: z.string().nullable(),
   /** D-080: whether this person has set a password (sign-in by code always works). */
   hasPassword: z.boolean().optional(),
+  /** D-171: this person can make and list studios (`/v1/platform/studios`). */
+  platformAdmin: z.boolean().optional(),
 });
+
+// ------------------------------------------------------------- studios on the platform (Site 3.0 stage 7)
+
+/** A site address: lower-case host name with at least one dot, no port or path (D-170). */
+export const Hostname = z.string().trim().toLowerCase().max(253)
+  .regex(/^(?=.{4,253}$)([a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/, "A host name like art.example.com");
+/** D-173: trial, active, paused (the site shows nothing), test (hidden from search), comped (no fee). */
+export const PlanStatus = z.enum(["trial", "active", "paused", "test", "comped"]);
+export const StudioPlan = z.object({
+  status: PlanStatus,
+  /** The monthly fee; null for none. */
+  priceCents: z.number().int().min(0).max(10_000_000).nullable(),
+  currency: Currency,
+  /** When a trial ends (UTC ISO), or null. */
+  trialEndsAt: z.string().nullable(),
+});
+export const PlanInput = z.object({
+  status: PlanStatus,
+  priceCents: z.number().int().min(0).max(10_000_000).nullable(),
+  currency: Currency,
+  /** Days of free trial from today; sets trialEndsAt. */
+  trialDays: z.number().int().min(0).max(365),
+  trialEndsAt: z.iso.datetime().nullable(),
+}).partial().strict();
+export const PlatformStudioCreate = z.object({
+  name: z.string().trim().min(1).max(120),
+  /** The artist's email: they sign in with it at their address and own the studio. */
+  ownerEmail: z.email().max(200).transform((e) => e.toLowerCase()),
+  hostnames: z.array(Hostname).max(5).default([]),
+  template: SiteTemplate.default("plaster"),
+  plan: PlanInput.default({}),
+  /** Start the site with six sample works (D-174). */
+  samples: z.boolean().default(false),
+}).strict();
+export const PlatformStudioPatch = z.object({
+  name: z.string().trim().min(1).max(120),
+  plan: PlanInput,
+  addHostnames: z.array(Hostname).min(1).max(5),
+  removeHostnames: z.array(Hostname).min(1).max(5),
+}).partial().strict().refine((v) => Object.keys(v).length > 0, "Send at least one field");
+export const PlatformStudio = z.object({
+  id: Id,
+  name: z.string(),
+  slug: z.string(),
+  hostnames: z.array(z.string()),
+  plan: StudioPlan,
+  owners: z.array(z.string()),
+  works: z.number().int(),
+  createdAt: z.string(),
+  version: z.number().int(),
+});
+export const PlatformStudioList = z.object({ items: z.array(PlatformStudio) });
+/** A studio's own view of its plan and site addresses (GET /v1/plan). */
+export const MyPlan = StudioPlan.extend({ hostnames: z.array(z.string()) });
 
 // ------------------------------------------------------------------- shows
 

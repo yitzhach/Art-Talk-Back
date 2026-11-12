@@ -28,6 +28,7 @@ import { syncRoutes } from "./routes/sync";
 import { visitorRoutes } from "./routes/visitors";
 import { orderRoutes } from "./routes/orders";
 import { collectorRoutes } from "./routes/collectors";
+import { platformRoutes } from "./routes/platform";
 import { scheduled } from "./jobs";
 
 const v1 = new OpenAPIHono<AppEnv>();
@@ -59,6 +60,7 @@ v1.route("/", publicRoutes);
 v1.route("/", visitorRoutes);
 v1.route("/", orderRoutes);
 v1.route("/", collectorRoutes);
+v1.route("/", platformRoutes);
 
 const docConfig = {
   openapi: "3.1.0",

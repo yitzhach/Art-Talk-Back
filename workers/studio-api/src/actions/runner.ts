@@ -227,7 +227,7 @@ export async function runAction<R>(def: ActionDef<z.ZodType, R>, rawInput: unkno
 }
 
 /** Inserts an invalid row (and so aborts the batch) unless the previous statement changed exactly one row. */
-function assertOneChanged(db: D1Database): D1PreparedStatement {
+export function assertOneChanged(db: D1Database): D1PreparedStatement {
   return db.prepare(
     `INSERT INTO activity_log (id, studio_id, actor_type, source, action, entity_type, entity_id, created_at)
      SELECT NULL, '', 'system', 'system', 'assert', '', '', '' WHERE changes() <> 1`,

@@ -39,6 +39,11 @@ export const studios = sqliteTable(
     ...recordColumns("system"),
     // Migration 0010 appends this after meta: goes up with every change a public page could show.
     catalogueVersion: integer("catalogue_version").notNull().default(0),
+    // Migration 0016 (D-173): what the studio pays for the platform; a record only until the payments phase.
+    planStatus: text("plan_status", { enum: ["trial", "active", "paused", "test", "comped"] }).notNull().default("comped"),
+    planPriceCents: integer("plan_price_cents"),
+    planCurrency: text("plan_currency").notNull().default("USD"),
+    planTrialEndsAt: text("plan_trial_ends_at"),
   },
   () => [actorCheck("studios_actor"), metaCheck("studios_meta")],
 );
@@ -795,3 +800,19 @@ export type ShareRow = typeof shares.$inferSelect;
 export type LeadRow = typeof leads.$inferSelect;
 export type VisitorRow = typeof visitors.$inferSelect;
 export type OrderRow = typeof orders.$inferSelect;
+
+/** The addresses a studio's public site answers on (migration 0016, D-170); one studio per address. */
+export const siteHosts = sqliteTable(
+  "site_hosts",
+  {
+    id: text("id").primaryKey(),
+    studioId: text("studio_id").notNull().references(() => studios.id),
+    hostname: text("hostname").notNull(),
+    ...recordColumns(),
+  },
+  (t) => [
+    uniqueIndex("site_hosts_hostname").on(t.hostname).where(sql`deleted_at IS NULL`),
+    index("site_hosts_studio").on(t.studioId),
+    actorCheck("site_hosts_actor"), metaCheck("site_hosts_meta"),
+  ],
+);

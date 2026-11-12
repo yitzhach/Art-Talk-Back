@@ -184,9 +184,32 @@ jobs:
         run: |
           npm ci && npm run build && npx wrangler deploy --env staging
           echo "Studio Site staging: https://studio-site-staging.bobdylan2000.workers.dev/studio" | tee -a "$GITHUB_STEP_SUMMARY"
+
+  # A separate job: Playwright's Chromium has no build for ubuntu-latest (26.04) yet, as in the site's own CI.
+  smoke:
+    needs: deploy
+    if: inputs.smoke
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Pick the Studio Site branch
+        id: site
+        env:
+          SITE_REF: ${{ inputs.site_ref }}
+        run: |
+          ref="$SITE_REF"
+          if [ -z "$ref" ]; then
+            if git ls-remote --exit-code --heads https://github.com/yitzhach/IA-ART-SITE-REPO "$GITHUB_REF_NAME" >/dev/null 2>&1; then ref="$GITHUB_REF_NAME"; else ref=main; fi
+          fi
+          echo "ref=$ref" >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@v4
+        with:
+          repository: yitzhach/IA-ART-SITE-REPO
+          ref: ${{ steps.site.outputs.ref }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
       - name: Smoke test studio-site-staging (a real browser, the real assistant)
-        if: env.ANTHROPIC_API_KEY != '' && inputs.smoke
-        working-directory: .studio-site
         run: |
           [ -f tests/staging-smoke.mjs ] || { echo "This site branch has no smoke test"; exit 0; }
           npm install --no-save playwright@1.56.1
@@ -194,8 +217,8 @@ jobs:
           set -o pipefail
           node tests/staging-smoke.mjs https://studio-site-staging.bobdylan2000.workers.dev 2>&1 | tee -a "$GITHUB_STEP_SUMMARY"
       - uses: actions/upload-artifact@v4
-        if: always() && inputs.smoke
+        if: always()
         with:
           name: staging-smoke
-          path: .studio-site/smoke-shots
+          path: smoke-shots
           if-no-files-found: ignore

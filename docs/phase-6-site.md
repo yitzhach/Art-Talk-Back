@@ -645,14 +645,42 @@ Mark paid, the 30-minute and 48-hour holds, one sell path, holds from approved l
 |---|---|---|---|
 | 1 Free | up to 16×16 or 12×24 | free | area up to 300 sq in and longest side up to 24 in |
 | 2 Mid | around 18×20 | $22 flat | area up to 500 sq in and longest side up to 30 in |
-| 3 Large | 20×26 and up | a price Isaac sets per piece (no default) | anything bigger |
-| 4 Quote | crated, freight, unusual | a quote, no Buy | depth over 6 in, or flagged crated or custom quote |
+| 3 Large | 20×26 and up | the ZIP estimate (or a price Isaac pins) | anything bigger |
+| 4 Quote | oversize box, crated, freight | Isaac's estimate, no Buy | the box is oversize for UPS, or flagged crated or custom quote |
 
 - A suggestion is only a suggestion: Isaac taps to accept it, and nothing assigns a tier silently. A piece with no
   dimensions, or within 10% of a boundary, shows **Check size** and stays unassigned (cm sizes are converted first).
 - A tier 3 piece can't be bought until Isaac enters its shipping price; the bulk editor lists it as "needs a
   shipping price".
 - A piece with no tier keeps Hold and Add to inquiry, as today, and never shows Add to cart.
+
+#### The shipping estimator (Isaac, 2026-11-12; proposed shape, not built)
+
+Isaac: buyers type their ZIP and see an estimate, so shipping never surprises them; oversize boxes get his own
+estimate instead of a scary number. He ships from **42503** (Kentucky), mostly UPS through Pirate Ship, usually to
+homes (residential surcharge).
+
+- **The box.** The piece's size plus packing on every side (setting, default 2.5 in a side, so +5 in on each
+  dimension). Billable weight = the larger of the actual weight (the piece's weight plus a packing allowance, default
+  3 lb) and the box's size weight (L × W × H ÷ 139, rounded up). No weight entered → size weight only.
+- **The price.** Zone from the origin ZIP to the buyer's ZIP (UPS's zone chart for 425, stored as data), then a rate
+  grid (zone × billable pound) taken from Pirate Ship's own rate calculator from 42503, plus the residential surcharge
+  (always assumed, so it's never low) and a cushion (setting, default 10%). Pirate Ship has no public rate sheet or
+  API (its help pages point sellers to its calculator), so the grid is ours: seeded once in the build, refreshed by
+  Isaac each January when UPS changes prices. Studio shows the grid's date.
+- **Oversize → Isaac's estimate.** When the box crosses UPS's oversize lines (longest side over 48 in, second side over
+  30 in, or length plus girth over 105 in; large-package lines beyond that), no number shows. The piece says "Isaac
+  will send you a shipping estimate", and it goes the quote way (a lead, his price, a `/pay` link).
+- **Where it's used.** Tier 3 (large) pieces: the estimate for the buyer's ZIP replaces "a price Isaac sets per
+  piece" (he can still pin a fixed price on a piece). Tiers 1 and 2 stay free and $22, so most buyers never need a ZIP.
+  The 20% large-work offer comes off the estimate.
+- **On the site.** A tier 3 piece page shows "Shipping to your ZIP" with a ZIP box (the answer comes from studio-api,
+  uncached, the ZIP kept only in that browser); the cart asks once for the ZIP and uses it for every large piece; the
+  checkout total uses the same calculation with the ZIP, so the number never changes unseen. Square's address must
+  match the ZIP's zone, or the buyer confirms the new total first.
+- **What it means for sizes (2.5 in packing).** A 20×26 becomes a 25×31 box, over UPS's 30 in second side, so it
+  would be oversize; with 2 in packing it's 24×30 and isn't. A 24×36 is oversize either way (length plus girth). So
+  roughly, pieces up to about 24×30 get a ZIP estimate and bigger ones get Isaac's.
 
 #### The calculator (one pure function in `packages/core`, called only by studio-api)
 
@@ -665,7 +693,8 @@ Order of evaluation:
 2. Missing tier, missing tier 3 price, sold or reserved (not by this buyer's own approved hold) → blocked. Never guess.
 3. Local pickup (offered, and every piece allows it) → $0.
 4. Outside the countries shipped to (default US only, D-102) → quote.
-5. Each piece's own shipping: tier 1 $0, tier 2 the flat rate, tier 3 its own price. Each ships as its own box.
+5. Each piece's own shipping: tier 1 $0, tier 2 the flat rate, tier 3 the estimator for the buyer's ZIP (or its
+   pinned price). Each ships as its own box. No ZIP yet → tier 3 shows "enter your ZIP" and checkout asks for it.
 6. The rules below (and the optional cap, off by default).
 
 Returns `customerPaysCents`, `coveredCents` (what Isaac gives away), each piece's line (charged, covered, rule),
@@ -846,6 +875,8 @@ his "ship": platform first, then site.
 4. Does the mid tier's $22 drop when paired (R1)? Default: yes.
 5. Only the US? Default: yes; everywhere else is a quote.
 6. Local pickup from the studio? Default: off.
+7. The estimator: tiers 1 and 2 stay free and $22, and only large pieces use the ZIP estimate? Default: yes.
+8. Packing on each side: 2 or 3 in (default 2.5)? 2 in keeps a 20×26 out of oversize.
 
 
 ### The built plan (cards A–E, one piece per order; the revision above changes it where its table says)

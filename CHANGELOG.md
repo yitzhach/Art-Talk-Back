@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Site 3.0 · stage 6 live (D-169)
+- Art-Talk-Back#55 and IA-ART-SITE-REPO#7 merged, platform first; migration 0015 on production; live smoke 15/15.
+  Isaac's rule: ship without asking until his own domain is attached (D-169).
+
 ### Site 3.0 · stage 6, card A: collectors on the platform (D-163…D-168)
 - Migration 0015: `collector_links`, `followers`, `commissions`, `artworks.public_from` (additive).
 - Owner: `GET /collectors`, `/collectors/{id}`, `POST /collectors/{id}/link|unlink|invite`, `POST /artworks/{id}/owner`,

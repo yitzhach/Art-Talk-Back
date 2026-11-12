@@ -594,3 +594,10 @@ estimate: it's a quote, so nobody is surprised.
 ### D-154 · A quoted piece becomes buyable when Isaac pins its shipping · 2026-11-12 · Claude (spec default)
 For tier 4, a custom quote or a crated piece, the visitor asks; Isaac sets that piece's shipping price (and, if he
 wants, a hold for that lead), and then it checks out like any other. One-off pay links wait.
+
+### D-155 · "Art Wall" for the live camera view is AR-WALLE · 2026-11-12 · Isaac
+Isaac confirmed that AR-WALLE (`yitzhach/AR-WALLE`) is the live-camera wall tool stage 5 builds on.
+
+### D-156 · The photo-based wall tool is dm-t1 · 2026-11-12 · Isaac
+Isaac: "Dm-t1 is another repo. This allows user to place art on their own wall and works on desktop." So the photo mode
+of stage 5 comes from `yitzhach/dm-t1`, not `SEEWALLE` (closes D-103).

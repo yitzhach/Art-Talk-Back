@@ -833,7 +833,7 @@ his "ship": platform first, then site.
 
 1. ~~Does every tier 1 or 2 piece qualify, or only one priced at $500 or more?~~ **Answered 2026-11-12: a $500
    minimum** (Isaac, 👍 on the question).
-2. The most Isaac covers per large piece. Default: $150.
+2. ~~The most Isaac covers per large piece.~~ **Answered 2026-11-12: $150** (Isaac, 👍).
 3. Size lines: up to 300 sq in free, up to 500 sq in $22, above that large. Do an 18×20 ($22) and a 20×26 (large)
    land where he expects?
 4. Does the mid tier's $22 drop when paired (R1)? Default: yes.

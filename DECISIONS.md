@@ -665,3 +665,6 @@ SHIPPING.md exception: the platform merges first (migration 0015, additive; work
 before), then the site. Isaac's look on staging is replaced by the staging smoke: he asked to stop testing each step
 himself ("I need to rely on you to make high level improvements and keep this moving forward"). From here Claude
 checks each stage on staging itself and asks him only for what needs his yes.
+Isaac, same day: "the live site is still only a testing site until I move it over and attach it to my actual URL",
+so until his own domain points at `studio-site`, Claude ships stages live without asking first. Still his: secrets,
+spending money, deleting data or Workers, a new Worker's first deploy, and the domain move itself.

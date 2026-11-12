@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+### Site 3.0 · stage 4 plan (buying)
+- `docs/phase-6-site.md` → "Stage 4 — buying": Stripe Checkout per piece and for commission deposits, the webhook as the only thing that sells, migration 0013 (`orders`, `payment_events`), the gate and what Isaac needs to provide. Plan only; no code or keys.
+
 ### Site 3.0 · stage 3, A: visitors, leads, made pages, usage and the cap (D-134…D-141)
 - Migration 0012: `visitors`, `visitor_messages`, `visitor_pages`, `leads`, `assistant_usage` (additive). Drizzle mirror; drift test.
 - `SiteProfile.assistant` (artist's name, greeting, suggestions, reply time, monthly budget, answers by topic). Public routes under `/v1/public/studios/{slug}`: `assistant`, `digest`, `pages/{token}`, and per visitor (`x-visitor-key`, set only by the site's Worker): `visitor`, `visitor/email-code`, `visitor/email-verify`, `visitor/pages`, `visitor/leads` (JSON or multipart with up to 5 stripped pictures; emails the studio; matches or creates a client). Assistant-only: `visitor/turn-start` (limits, budget, history) and `visitor/turn` (record and cost). Owner: `GET /v1/leads`, `GET /v1/leads/{id}`, `POST /v1/leads/{id}/approve-hold|decline|close`, `GET /v1/site/assistant-usage`.

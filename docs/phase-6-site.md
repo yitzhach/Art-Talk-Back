@@ -676,7 +676,7 @@ payment plans beyond a deposit, prints and editions, other studios' Stripe accou
 2. **Webhook signature checked**: wrong secret, changed body, old timestamp → 400 and nothing written; a replayed
    event → no second sale (tests, plus Stripe's own test events on staging).
 3. **One piece can't sell twice**: two checkouts at once → one 409; a paid event for an expired order on a piece sold
-   meanwhile → refunded automatically? No: flagged to Isaac by email and on Orders (he decides); tests for each.
+   meanwhile → never a second sale: flagged to Isaac by email and on Orders for a refund in Stripe (his call); tests for each.
 4. **Holds**: an approved hold's piece can be bought only from that lead's link; when the hold ends it is for sale.
 5. `/security-review` on both diffs; tenancy sweep covers every new route.
 6. Isaac's look on staging, then live keys and a first real sale he watches (he can buy and refund his own piece).

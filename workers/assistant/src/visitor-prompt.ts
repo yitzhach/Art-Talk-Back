@@ -96,7 +96,8 @@ export function colourName(hex: string): string {
 }
 
 export const sizeLine = (w: Pick<DigestWork, "width" | "height" | "depth" | "sizeUnit">) => {
-  const dims = [w.width, w.height, w.depth].filter((x): x is number => x !== null && x !== undefined);
+  // Height first, as the site and galleries write it: 36 × 24 in is 36 high, 24 wide.
+  const dims = [w.height, w.width, w.depth].filter((x): x is number => x !== null && x !== undefined);
   return dims.length ? `${dims.join(" × ")} ${w.sizeUnit}` : "size not listed";
 };
 
@@ -136,7 +137,7 @@ export function studioBlock(s: StudioWords, works: DigestWork[]): string {
     "</studio>",
     "",
     `<catalogue works="${works.length}">`,
-    "slug | title | medium | year | size | price or status | collection | colours | tags | about",
+    "slug | title | medium | year | size (height × width, then depth) | price or status | collection | colours | tags | about",
     ...works.map(digestLine),
     "</catalogue>",
   ].filter((l) => l !== "").join("\n");

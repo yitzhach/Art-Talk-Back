@@ -55,7 +55,7 @@ describe("a visitor's question", () => {
     expect(system).toContain("Never use the word \"affordable\"");
     expect(system).toContain("The artist is called: Isaac");
     expect(system).toContain("Most commissions run $2,000–$15,000");
-    expect(system).toContain("heron-at-dusk | Heron at Dusk | oil and plaster on panel | 2025 | 24 × 36 in | $2,400");
+    expect(system).toContain("heron-at-dusk | Heron at Dusk | oil and plaster on panel | 2025 | 36 × 24 in | $2,400");
     expect(system).toContain("quiet-harbour | Quiet Harbour");
     expect(system).toMatch(/quiet-harbour[^\n]*sold \(no price/);
     expect(system).not.toContain("$1,200");
@@ -83,7 +83,7 @@ describe("a visitor's question", () => {
       (req) => {
         const results = (req.messages.at(-1)!.content as any[]);
         const got = JSON.parse(results[0].content);
-        expect(got).toMatchObject({ slug: "standing-form-3", size: "14 × 40 × 12 in", price: "$4,500", medium: "cast plaster and steel" });
+        expect(got).toMatchObject({ slug: "standing-form-3", size: "40 × 14 × 12 in", price: "$4,500", medium: "cast plaster and steel" });
         expect(got.description).toContain("for indoors");
         expect(JSON.stringify(got)).not.toMatch(/"id"|inventory|notes/);
         return message([text("It's cast plaster on a steel base, made for indoors.\n[[works: standing-form-3]]")]);
@@ -162,7 +162,7 @@ describe("the digest line", () => {
     expect(colourName("#a7462a")).toBe("rust");
     const line = digestLine({ slug: "x", title: "X", medium: null, year: null, width: 10, height: 12, depth: null, sizeUnit: "in", status: "sold",
       priceCents: 9999, currency: "USD", collection: null, tags: [], palette: [{ hex: "#2f5fb3", share: 5000 }], blurb: null, image: null });
-    expect(line).toContain("10 × 12 in");
+    expect(line).toContain("12 × 10 in");
     expect(line).toContain("blue");
     expect(line).not.toContain("99.99");
   });

@@ -491,6 +491,8 @@ collectorRoutes.openapi(
     const b = c.req.valid("json");
     // The hidden trap (as D-133): a person never fills it.
     if (b.website) return c.body(null, 204) as never;
+    // Only a browser the site knows may ask (as the visitor's own email code, D-131).
+    if (!(await visitorFor(c.env, studio.id, c.req.header("x-visitor-key") ?? "", true))) throw new HttpError("bad_request", "Reload the page and try again.");
     const email = b.email.toLowerCase();
     const key = codeKey(studio.id, email);
     const prev = await c.env.DB.prepare("SELECT sends, created_at FROM login_codes WHERE email = ?").bind(key).first<Row>();

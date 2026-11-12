@@ -1,0 +1,36 @@
+name: Smoke production site
+
+# A phone-sized Chromium checks the live site (studio-site) after a deploy: the same test as "Deploy staging"'s
+# `smoke` (site repo tests/staging-smoke.mjs). It asks the live assistant two questions (a fraction of a cent) and
+# sends no leads, so no email reaches the studio. Changes nothing; deploys nothing.
+on:
+  workflow_dispatch:
+    inputs:
+      site_ref:
+        description: "IA-ART-SITE-REPO ref holding the smoke test"
+        default: main
+
+jobs:
+  smoke:
+    runs-on: ubuntu-24.04  # Playwright 1.56.1 has no Chromium build for 26.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: yitzhach/IA-ART-SITE-REPO
+          ref: ${{ inputs.site_ref }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Smoke test studio-site (a real browser, the live assistant)
+        run: |
+          npm install --no-save playwright@1.56.1
+          npx playwright@1.56.1 install --with-deps chromium || npx playwright@1.56.1 install chromium
+          set -o pipefail
+          node tests/staging-smoke.mjs https://studio-site.bobdylan2000.workers.dev 2>&1 | tee -a "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: production-smoke
+          path: smoke-shots
+          if-no-files-found: ignore

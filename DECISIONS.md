@@ -598,3 +598,7 @@ wants, a hold for that lead), and then it checks out like any other. One-off pay
 ### D-155 · The Art Wall repo is AR-WALLE · 2026-11-12 · Isaac
 Answers D-103: asked "Is that the one?" about `yitzhach/AR-WALLE`, Isaac said "Yea". Stage 5 (On my wall) starts by
 reading that repo.
+
+### D-156 · dm-t1 is the desktop wall preview · 2026-11-12 · Isaac
+Isaac: "Dm-t1 is another repo. This allows user to place art on their own wall and works on desktop." Stage 5 (On my
+wall) reads both `yitzhach/AR-WALLE` and `yitzhach/dm-t1`.

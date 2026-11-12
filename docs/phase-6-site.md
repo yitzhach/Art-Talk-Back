@@ -429,7 +429,7 @@ A first (the contract); B–F in parallel against it.
 - [x] Isaac's OK: build now (D-132). Added at his request: the inquiry list and the contact sheet (D-133, card F).
 - [ ] His own visitor questions (1), the oddest one (3), where his work can be seen (19), the general facts (15) and
   the deposit wording (12): coming "soon enough". They complete the test set; the gate waits for them.
-- [ ] His choice on lead texts (a text-message service); email until then.
+- [x] His choice on lead texts: email only for now (D-142).
 - [x] Card A: migration 0012, the contract below, tenancy tests (2026-11-12, D-134…D-141).
 - [x] Card B: the visitor assistant (`/assistant/visitor`, Haiku 5.5, the check before a reply is shown) (2026-11-12).
 - [x] Card C: the test set (38 coverage cases, 22 slots for Isaac's) and its eval; replays wait for the first live run (2026-11-12).

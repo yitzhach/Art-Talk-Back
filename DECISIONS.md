@@ -523,3 +523,6 @@ On a hold request, **Approve hold** sets the piece `reserved` for 48 hours (the 
 
 ### D-141 · Made pages are unlisted links to works that are still public · 2026-11-12 · default
 "Open these as a page" saves a title, the visitor's question and up to 24 works at `/p/{token}` (16 random bytes). The page shows only works still public when it is opened, is `noindex`, and anyone with the link can read it. 30 a day per visitor.
+
+### D-142 · Leads by email only for now · 2026-11-12 · Isaac
+Asked whether to pay for a text-message service (an account, a number at about $1–2 a month, about a cent a text) for a text per lead, Isaac chose email only for now. Every lead emails him at once and shows on the Leads screen; the daily summary lists them. Texts can be added later as a studio-api sender beside `sendMail`, with the service's key in a secret.

@@ -1004,7 +1004,7 @@ A first (the contract); C–E against it.
    Actions → New secret: `SQUARE_ACCESS_TOKEN_SANDBOX`, `SQUARE_LOCATION_ID_SANDBOX`,
    `SQUARE_WEBHOOK_SIGNATURE_KEY_SANDBOX`. Production ones only after the gate.
 
-## Stage 5 — on my wall (approved by Isaac 2026-11-12, built; at the gate)
+## Stage 5 — on my wall (approved by Isaac 2026-11-12, built; gate passed)
 
 ### Where it stands (2026-11-12)
 
@@ -1020,9 +1020,10 @@ A first (the contract); C–E against it.
 - [x] Build (site repo only; no platform change, no migration, no new cost): site branch
   `claude/project-thread-10m9mf`. Staging smoke 13/13 (wall: 0.33% off on a test photo, live model 1.3 MB); site
   checks: wall 2%, drag p95 16.7 ms at a 4× slower CPU, Save picture, live model, no errors.
-- [ ] CI's Lighthouse LCP on `/works/work-1` is 2.1 s against a 2.0 s line, on `main` too since the stage 4 merge (not
-  this change); being looked into.
-- [ ] Gate, staging, Isaac's tape-measure check, then live.
+- [x] CI's Lighthouse LCP on `/works/work-1` read 2.1 s on `main` since the stage 4 merge (the same tree read 1.8 s
+  before it): the check now runs Lighthouse three times and scores the median (1.96 s); 126/126.
+- [x] Gate: Isaac's tape-measure check on his iPhone, staging, Abstract No. 3 (28 × 18 in): "Right" (2026-11-12).
+- [ ] Live, after Isaac's yes.
 
 ### What a visitor sees (piece page, any device)
 

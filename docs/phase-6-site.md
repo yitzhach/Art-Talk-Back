@@ -1,6 +1,6 @@
 # Phase 6, the site — Site 3.0: a public studio site with a visitor assistant
 
-**Status: stages 1 and 2 shipped (2026-11-12: live at https://studio-site.bobdylan2000.workers.dev/). Stage 3 planned, waiting for Isaac's visitor questions and OK.** Isaac asked on 2026-11-10 for a ground-up rebuild of
+**Status: stages 1 and 2 shipped (2026-11-12: live at https://studio-site.bobdylan2000.workers.dev/). Stage 3 approved (2026-11-12), to build in the next session; Isaac's visitor questions follow.** Isaac asked on 2026-11-10 for a ground-up rebuild of
 isaacandersonart.com that he can later sell to other artists, galleries and art shows (D-096…D-101).
 The drawing he reviewed (eight phone screens, ideas, stages, questions):
 https://claude.ai/artifact/TjfVTjJFCHcaGEc2gjEpTw (private to Isaac).
@@ -102,7 +102,7 @@ One stage per session. A stage ships only when its gate passes.
 | 0 | Brief | This file, decisions, names, the empty app repo | Isaac approves the drawing and the stage 1 plan | Answers (done); Stripe account (by stage 4); repo created |
 | 1 | Catalogue | Add a work from a phone; drafts for approval; current site's images imported as drafts; public read routes | 12 works approved on Isaac's phone and returned by the public list; tenancy tests | Sizes, prices, statuses; first deploy of `studio-site-staging` (D-105) |
 | 2 | The site | Plaster template; home, works, piece, commissions, process, about; inquiry by text, email, call | Lighthouse mobile ≥ 95; pages readable with scripts off; both themes; Isaac's OK on staging | First deploy of the production Worker; later the domain |
-| 3 | Assistant | Asking, cards, saved chats, made pages, the lead card | 30 test questions with no invented work or price; cost per chat measured; the cap holds; security review | 20 real visitor questions; model OK |
+| 3 | Assistant | Asking, cards, saved chats, made pages, the lead card, the inquiry list (D-133) | 30 test questions with no invented work or price; cost per chat measured; the cap holds; security review | 20 real visitor questions; model OK |
 | 4 | Buying | Checkout, holds, commission deposits; sales land in the studio | Test-mode purchase end to end; webhook signature checked; one piece can't sell twice; security review | Stripe keys (secure form); shipping and returns terms |
 | 5 | On my wall | Live iPhone view and photo mode from any piece | Size within 2% on measured test photos; smooth on a phone | Confirm the "Art Wall" repo (D-103) |
 | 6 | Collectors | Follow, first look, collection page, certificate, commission tracker, show QR | A test collector goes invite → first look → purchase | Past buyers to invite |
@@ -421,14 +421,16 @@ A first (the contract); B–F in parallel against it.
 3. At the gate: a look on his phone on staging; then the first deploy of production `studio-site`.
 4. Later, his choice: moving isaacandersonart.com to the new site.
 
-## Stage 3 — the visitor assistant (plan, waiting for Isaac's OK)
+## Stage 3 — the visitor assistant and the inquiry list (approved by Isaac 2026-11-12, to build)
 
-### Where it stands (2026-11-11)
+### Where it stands (2026-11-12)
 
 - [x] Isaac's answers to `docs/phase-6-stage3-questions.md` 2, 4–18, 20–35 (D-125…D-131).
+- [x] Isaac's OK: build now (D-132). Added at his request: the inquiry list and the contact sheet (D-133, card F).
 - [ ] His own visitor questions (1), the oddest one (3), where his work can be seen (19), the general facts (15) and
-  the deposit wording (12): he sends them in a day or so. They become the test set.
-- [ ] Isaac's OK on this plan. Nothing is built before it.
+  the deposit wording (12): coming "soon enough". They complete the test set; the gate waits for them.
+- [ ] His choice on lead texts (a text-message service); email until then.
+- [ ] Build, from card A.
 
 **Goal.** On any page of the site, a visitor taps **Ask**, chats with "Isaac's studio assistant, an AI", and gets short
 answers with real pieces as cards. Everything it says about a work or a price comes from the catalogue; everything
@@ -451,6 +453,14 @@ It can make a page of the pieces it suggested, keep the chat across devices with
    pieces written in, or **Send to Isaac** (name and email or phone, only if the visitor gives them, D-129): a lead.
 5. **Hold request** on an available piece (D-127): "Ask Isaac to hold this for 48 hours" → a lead marked hold.
 6. **Keep this chat**: an email, a six-digit code, then the chat opens on any device with that email.
+6a. **Inquiry list** (`/inquiry`, D-133): every piece the visitor added ("Add to inquiry" on a piece, or from a chat's
+   cards), like a cart: picture, title, size, price or "price on request", remove, a note. From it:
+   - **Email Isaac**: a form (name, email, optional phone, note, up to 5 pictures of their own) that sends him the
+     list as a lead (by email to him, and on his Leads screen).
+   - **Download**: a one-page sheet of the list (PDF, PNG or JPEG) made in the browser, to send to Isaac or a client.
+   - **Text** / **Call**: the number shown on tap (never whole in the page's HTML, against spam bots), then `sms:` /
+     `tel:` with the list written in.
+   The header's and each piece's Text / Email / Call open the same contact sheet instead of leaving the site at once.
 7. At the budget cap, or after 27 messages in a day: the sheet becomes plain search plus Ask Isaac, with one line
    saying why.
 
@@ -501,7 +511,10 @@ It can make a page of the pieces it suggested, keep the chat across devices with
    emails Isaac once).
 3. **Limits**: the 28th message in a day gets search; one visitor can't read another's chat, page or lead; nothing
    from another studio or a private field ever reaches a visitor (tenancy tests).
-4. `/security-review` on both diffs (public chat).
+3a. **Inquiry list** (D-133): two pieces added, a note and a picture sent → one lead on the Leads screen and one email
+   to Isaac with the pieces and the picture (hidden data stripped); the download makes a PDF, PNG and JPEG; the phone
+   number never appears whole in any page's HTML; the form's limits hold.
+4. `/security-review` on both diffs (public chat, public form with uploads).
 5. Isaac's look on his phone on staging, with a short checklist, then his OK.
 
 ### Task cards
@@ -513,13 +526,14 @@ It can make a page of the pieces it suggested, keep the chat across devices with
 | C | Test set and eval harness: Isaac's questions + coverage set, replay in CI | Sonnet 5.5 (Haiku 5.5 to draft variants) | Art-Talk-Back |
 | D | The Ask sheet, cards, `/ask` without scripts, made pages `/p/{id}`, keep-this-chat | Sonnet 5.5 | site |
 | E | Leads screen, Site screen → Assistant, hold approve / decline | Sonnet 5.5 | site |
+| F | Inquiry list `/inquiry`, contact sheet, email form with pictures, download sheet (PDF/PNG/JPEG), protected number, `/contact` without scripts (D-133) | Sonnet 5.5 | site |
 
-A first (the contract); B–E in parallel against it.
+A first (the contract, including `lead.create` with pictures for F); B–F in parallel against it.
 
 ### Needs Isaac, in order
 
 1. His visitor questions, the oddest one, where his work can be seen, the general facts, the deposit wording.
-2. OK this plan.
+2. ~~OK this plan~~ (2026-11-12, D-132).
 3. **Texts for leads** need a text-message service (for example Twilio: an account, a number, about $1–2 a month
    plus about a cent a text). Spending and a secret are his call; until then leads come by email only.
 4. At the gate: a look on his phone on staging.

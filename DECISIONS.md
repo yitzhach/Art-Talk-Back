@@ -658,3 +658,10 @@ first line naming who would get it. On staging the first-look email goes out onc
 finished), status, a note per stage, due date. The collector's page shows the stage and notes, never the price.
 Stage photos, a deposit order and an email on a stage change wait for a later card; none is in the gate.
 
+
+### D-169 · Stage 6 ships platform first, then the site · 2026-11-12 · Isaac ("Yes. Make that live too")
+The site's collector pages and Studio screen need routes the platform doesn't have yet, so this pair takes the
+SHIPPING.md exception: the platform merges first (migration 0015, additive; works without `public_from` behave as
+before), then the site. Isaac's look on staging is replaced by the staging smoke: he asked to stop testing each step
+himself ("I need to rely on you to make high level improvements and keep this moving forward"). From here Claude
+checks each stage on staging itself and asks him only for what needs his yes.

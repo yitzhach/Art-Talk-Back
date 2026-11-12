@@ -1092,7 +1092,9 @@ A first (the contract); C–E against it.
   `claude/project-thread-kn62cz`; site CI 25 green).
 - [x] Staging: "Deploy staging" 39 (migration 0015 on studio-db-staging, both Workers, smoke green), 2026-11-12.
   Security pass by hand: nothing to fix.
-- [ ] The gate on staging (Isaac's look: invite → first look → Venmo order → Mark paid), then his yes for the live site.
+- [x] Gate on staging by the automatic smoke and tests (Isaac asked not to test each step himself, D-169); his yes for
+  the live site: "Yes. Make that live too" (2026-11-12).
+- [ ] Live: Art-Talk-Back PR (platform first, D-169), then IA-ART-SITE-REPO PR and "Deploy production site".
 
 ### Findings (checked 2026-11-12 on the default branches)
 

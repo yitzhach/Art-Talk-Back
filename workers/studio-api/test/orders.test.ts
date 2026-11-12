@@ -57,11 +57,12 @@ const checkout = { enabled: true, venmo: "@Test-Artist", zelle: "pay@artist.test
 async function setup(withCheckout: Record<string, unknown> | null = checkout) {
   const s = await makeStudio("Shop");
   const slug = await studioSlug(s.studioId);
-  if (withCheckout) await patchSite(s, { checkout: withCheckout });
+  // Tier 2 at $40 keeps these orders' sums as they were before shipping tiers (D-146).
+  if (withCheckout) await patchSite(s, { checkout: withCheckout, shipping: { tier2Cents: 4000 } });
   return { s, slug, senv: squareEnv(slug) };
 }
 const work = async (s: Studio, fields: Record<string, unknown> = {}) =>
-  (await makeWork(s, { title: "Heron", priceCents: 50_000, width: 12, height: 16, sizeUnit: "in", ...fields }, { publish: true })).work;
+  (await makeWork(s, { title: "Heron", priceCents: 50_000, width: 12, height: 16, sizeUnit: "in", shipping: { tier: 2 }, ...fields }, { publish: true })).work;
 const art = async (s: Studio, id: string) => (await call(`/v1/artworks/${id}`, { cookie: s.cookie })).data;
 const address = { line1: "1 Main St", city: "Springfield", state: "IL", postalCode: "62701" };
 const buy = (slug: string, who: string, json: Record<string, unknown>, e?: typeof env) =>
@@ -187,13 +188,14 @@ describe("card orders", () => {
     expect(mails.map((m) => m.subject)).toEqual([expect.stringMatching(/^Check order /)]);
   });
 
-  it("large, unsized and unpriced works ship by quote, not checkout", async () => {
+  it("never guesses: no tier, no ZIP for a large piece, an unpriced quote piece, or no price can't check out", async () => {
     const { s, slug, senv } = await setup();
-    const big = await work(s, { width: 40, height: 30 });
-    const cm = await work(s, { width: 100, height: 50, sizeUnit: "cm" });
-    const unsized = await work(s, { width: null, height: null });
+    const big = await work(s, { width: 40, height: 30, shipping: { tier: 3 } });
+    const unset = await work(s, { shipping: null });
+    const quote = await work(s, { shipping: { tier: 4 } });
     const unpriced = await work(s, { priceCents: null });
-    for (const w of [big, cm, unsized, unpriced]) expect((await buy(slug, "c", { work: w.slug, method: "card" }, senv)).status).toBe(400);
+    const cases = [[big, "needsZip"], [unset, null], [quote, null], [unpriced, null]] as const;
+    for (const [w] of cases) expect((await buy(slug, "c", { work: w.slug, method: "card" }, senv)).status).toBe(400);
     expect(links).toHaveLength(0);
   });
 });
@@ -294,5 +296,75 @@ describe("tenancy", () => {
     expect((await call("/v1/orders", { cookie: b.cookie })).data.items).toHaveLength(0);
     expect((await act(b, r.data.id, "mark-paid", 1, {})).status).toBe(404);
     expect((await call("/v1/orders", { cookie: s.cookie })).data.items).toHaveLength(1);
+  });
+});
+
+describe("cart and shipping (D-146…D-154)", () => {
+  const quote = (slug: string, who: string, json: Record<string, unknown>) =>
+    call(`${P(slug)}/shipping/quote`, { method: "POST", headers: vh(who), json });
+
+  it("a $500 piece takes 20% of its price off a large piece's shipping; both sell on one Mark paid", async () => {
+    const { s, slug } = await setup();
+    const large = await work(s, { title: "Marsh", priceCents: 120_000, width: 30, height: 24, shipping: { tier: 3 } });
+    const q = await work(s, { title: "Egret", priceCents: 50_000 });
+    expect((await call(`${P(slug)}/artworks/${large.slug}`)).data.shipping).toEqual({ tier: 3, cents: null, estimate: true, quote: false });
+    expect((await call(`${P(slug)}/shipping`)).data.largeOffer).toEqual({ minCents: 50_000, bps: 2000, capCents: null });
+
+    expect((await quote(slug, "cart", { works: [large.slug] })).data).toMatchObject({ ok: false, needsZip: true });
+    const alone = (await quote(slug, "cart", { works: [large.slug], zip: "62701" })).data;
+    expect(alone).toMatchObject({ ok: true, coveredCents: 0, subtotalCents: 120_000 });
+    expect(alone.shippingCents).toBeGreaterThan(0);
+
+    const both = (await quote(slug, "cart", { works: [large.slug, q.slug], zip: "62701" })).data;
+    // R2 takes up to $100 off the large piece; R1 drops the $40 tier-2 charge when paired.
+    expect(both).toMatchObject({ ok: true, subtotalCents: 170_000, coveredCents: Math.min(10_000, alone.shippingCents) + 4000 });
+    expect(both.shippingCents).toBe(alone.shippingCents + 4000 - both.coveredCents);
+    expect(both.totalCents).toBe(170_000 + both.shippingCents);
+
+    const order = { works: [large.slug, q.slug], method: "venmo", name: "Pat Buyer", email: "pat@buyer.test", address, zip: "62701" };
+    const stale = await buy(slug, "cart", { ...order, shippingCents: both.shippingCents + 100 });
+    expect(stale.status).toBe(409);
+    expect(stale.data.error.details).toMatchObject({ shippingCents: both.shippingCents });
+    expect((await art(s, large.id)).status).toBe("available");
+
+    const r = await buy(slug, "cart", { ...order, shippingCents: both.shippingCents });
+    expect(r.status).toBe(201);
+    expect(r.data).toMatchObject({ amountCents: 170_000, shippingCents: both.shippingCents, coveredCents: both.coveredCents, title: "Marsh and 1 more" });
+    expect(r.data.items.map((i: any) => i.slug)).toEqual([large.slug, q.slug]);
+    for (const w of [large, q]) expect((await art(s, w.id)).status).toBe("reserved");
+
+    const o = await ownerOrder(s, r.data.id);
+    expect((await act(s, r.data.id, "mark-paid", o.version, {})).status).toBe(200);
+    for (const w of [large, q]) expect((await art(s, w.id)).status).toBe("sold");
+    const { results } = await env.DB.prepare("SELECT price_cents FROM sales WHERE studio_id = ? ORDER BY price_cents").bind(s.studioId).all<any>();
+    expect(results.map((x) => x.price_cents)).toEqual([50_000, 120_000]);
+  });
+
+  it("a card cart gets one Square line per piece and the calculator's shipping as a fixed fee", async () => {
+    const { s, slug, senv } = await setup();
+    const a = await work(s, { title: "One", shipping: { tier: 1 } });
+    const b = await work(s, { title: "Two", shipping: { tier: 1 } });
+    const r = await buy(slug, "card", { works: [a.slug, b.slug], method: "card" }, senv);
+    expect(r.status).toBe(201);
+    expect(links[0].quick_pay).toBeUndefined();
+    expect(links[0].order.line_items.map((l: any) => l.name)).toEqual(["One", "Two"]);
+    expect(links[0].checkout_options.shipping_fee).toBeUndefined(); // two small pieces ship free
+  });
+
+  it("two buyers, one piece: the second cart is refused whole and its other piece stays on sale", async () => {
+    const { s, slug } = await setup();
+    const x = await work(s, { title: "Shared" });
+    const y = await work(s, { title: "Other" });
+    expect((await manual(slug, "first", x)).status).toBe(201);
+    const r = await buy(slug, "second", { works: [x.slug, y.slug], method: "venmo", name: "Sam", email: "sam@buyer.test", address });
+    expect(r.status).toBe(409);
+    expect((await art(s, y.id)).status).toBe("available");
+  });
+
+  it("never quotes from what the visitor sends: prices come from the catalogue", async () => {
+    const { s, slug } = await setup();
+    const w = await work(s, { priceCents: 80_000 });
+    const r = await quote(slug, "p", { works: [w.slug] });
+    expect(r.data).toMatchObject({ ok: true, subtotalCents: 80_000, shippingCents: 4000 });
   });
 });

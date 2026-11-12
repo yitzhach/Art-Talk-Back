@@ -2,6 +2,7 @@
 // validation and OpenAPI, and later by the SDK and the assistant's tools.
 import { z } from "zod";
 import { isValid } from "ulidx";
+import { ArtworkShipping, ShipTier, ShippingSettings } from "./shipping";
 
 export const Id = z.string().refine(isValid, "Must be a ULID").meta({ description: "ULID" });
 export const Currency = z.string().regex(/^[A-Z]{3}$/, "3-letter currency code");
@@ -64,6 +65,8 @@ export const ArtworkFields = z.object({
   /** null = an original (D-102 question 8: ready for editions, unused for now). */
   editionSize: z.number().int().min(1).max(100000).nullable(),
   kind: ArtworkKind,
+  /** The work's own shipping (D-146); null until the owner sets it. */
+  shipping: ArtworkShipping.nullable(),
   meta: Meta,
 });
 export const ArtworkPatch = ArtworkFields.partial().strict()
@@ -217,6 +220,8 @@ export const SiteProfile = z.object({
   assistant: SiteAssistant.optional(),
   /** Buying from the site (D-144). */
   checkout: SiteCheckout.optional(),
+  /** Shipping tiers, the large-work offer and the ZIP estimate (D-146…D-153). */
+  shipping: ShippingSettings.optional(),
 }).strict();
 
 // ------------------------------------------------------------------- files
@@ -307,6 +312,11 @@ export const PublicArtwork = z.object({
   currency: Currency.nullable(),
   images: z.array(PublicImage),
   publishedAt: z.string().nullable(),
+  /**
+   * How it ships (D-146): tier, the fixed price where there is one (tier 1 is 0, tier 2 the flat rate, a pinned
+   * price), `estimate` when the price depends on the buyer's ZIP, `quote` when the artist quotes it. Null: not set.
+   */
+  shipping: z.object({ tier: ShipTier, cents: z.number().int().nullable(), estimate: z.boolean(), quote: z.boolean() }).nullable(),
 });
 
 export const PublicArtworkList = z.object({
@@ -483,7 +493,14 @@ export const ShippingAddress = z.object({
  * `website` is the form's hidden trap, as on leads.
  */
 export const OrderInput = z.object({
-  work: Slug,
+  /** One piece (the first cart); `works` takes the cart's pieces. */
+  work: Slug.optional(),
+  /** The cart: up to 10 pieces, one order (stage 4 revision). */
+  works: z.array(Slug).min(1).max(10).optional(),
+  /** The buyer's ZIP, for a large piece's estimate (D-153). */
+  zip: z.string().regex(/^\d{5}$/, "A 5-digit ZIP").optional(),
+  /** The shipping the cart showed, in cents: if it changed, nothing is reserved and the buyer sees the new total (409). */
+  shippingCents: z.number().int().min(0).max(10_000_000).optional(),
   method: OrderMethod,
   name: z.string().trim().min(1).max(120).optional(),
   email: z.email().max(200).optional(),
@@ -491,6 +508,7 @@ export const OrderInput = z.object({
   address: ShippingAddress.optional(),
   website: z.string().max(200).optional(),
 }).strict()
+  .refine((v) => !!v.work !== !!v.works, { message: "One piece or the cart", path: ["works"] })
   .refine((v) => v.method === "card" || (!!v.name && !!v.email && !!v.address), {
     message: "Your name, email and shipping address, so the artist can send it", path: ["email"],
   });
@@ -508,6 +526,12 @@ export const PublicOrder = z.object({
   taxCents: z.number().int(),
   totalCents: z.number().int(),
   currency: Currency,
+  /** Shipping the studio covered (D-148). */
+  coveredCents: z.number().int(),
+  /** Each piece, for a cart order (one line for a one-piece order). */
+  items: z.array(z.object({
+    slug: z.string().nullable(), title: z.string(), priceCents: z.number().int(), shippingCents: z.number().int(), coveredCents: z.number().int(),
+  })),
   /** Card: Square's checkout page, while the order waits. */
   checkoutUrl: z.string().nullable(),
   /** Venmo / Zelle: where to send the money, with the code in the note. */
@@ -516,6 +540,43 @@ export const PublicOrder = z.object({
   paidAt: z.string().nullable(),
   shippedAt: z.string().nullable(),
   returns: z.string().nullable(),
+});
+/** The studio's shipping as the site shows it (D-146…D-153). Amounts in cents; rules only while they run. */
+export const PublicShipping = z.object({
+  tier1: z.object({ maxSqIn: z.number(), maxLongIn: z.number() }),
+  tier2: z.object({ maxSqIn: z.number(), maxLongIn: z.number(), cents: z.number().int() }),
+  /** R1: a tier 2 piece ships free with any other piece. */
+  pairsFree: z.boolean(),
+  /** R2: a qualifying piece takes `bps` of its price off one large piece's shipping. */
+  largeOffer: z.object({ minCents: z.number().int(), bps: z.number().int(), capCents: z.number().int().nullable() }).nullable(),
+  pickup: z.object({ words: z.string().nullable() }).nullable(),
+  /** Only the US ships at checkout; anywhere else is a quote. */
+  countries: z.array(z.string()),
+  words: z.record(z.string(), z.string()),
+});
+export const ShippingQuoteInput = z.object({
+  works: z.array(Slug).min(1).max(10),
+  zip: z.string().regex(/^\d{5}$/, "A 5-digit ZIP").optional(),
+  pickup: z.boolean().optional(),
+}).strict();
+/** The cart's shipping, worked out by studio-api (the site never works it out itself; D-151). */
+export const ShippingQuote = z.object({
+  ok: z.boolean(),
+  needsZip: z.boolean(),
+  quote: z.array(z.string()),
+  blocked: z.array(z.object({ slug: z.string(), why: z.string() })),
+  lines: z.array(z.object({
+    slug: z.string(), tier: ShipTier, baseCents: z.number().int(), chargedCents: z.number().int(), coveredCents: z.number().int(),
+    rule: z.enum(["r1", "r2"]).nullable(), estimate: z.boolean(),
+  })),
+  subtotalCents: z.number().int(),
+  shippingCents: z.number().int(),
+  coveredCents: z.number().int(),
+  totalCents: z.number().int(),
+  reason: z.string(),
+  nudge: z.object({ kind: z.string(), text: z.string(), amountCents: z.number().int() }).nullable(),
+  /** Up to three pieces that would unlock the offer: the artist's pairings first. */
+  suggestions: z.array(z.object({ slug: z.string(), title: z.string(), priceCents: z.number().int(), image: z.string().nullable() })),
 });
 /** What the checkout page needs before an order exists. */
 export const PublicCheckout = z.object({
@@ -526,6 +587,7 @@ export const PublicCheckout = z.object({
   taxBps: z.number().int(),
   returns: z.string().nullable(),
   manualHoldHours: z.number().int(),
+  shipping: PublicShipping,
 });
 /** An order as the owner sees it. */
 export const Order = PublicOrder.omit({ payTo: true, returns: true }).extend({

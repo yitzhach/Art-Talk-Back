@@ -179,6 +179,8 @@ export const artworks = sqliteTable(
     draftedFields: text("drafted_fields", { mode: "json" }).$type<string[]>().notNull().default(sql`'[]'`),
     // Migration 0011 (Site 3.0 stage 2, D-118): a work, or a photo the site's pages use.
     kind: text("kind", { enum: ["work", "site_photo"] }).notNull().default("work"),
+    // Migration 0014 (stage 4 revision, D-146): the work's own shipping (ArtworkShipping), null until set.
+    shipping: text("shipping", { mode: "json" }).$type<Record<string, unknown> | null>(),
   },
   (t) => [
     index("artworks_studio_updated").on(t.studioId, t.updatedAt),
@@ -651,6 +653,9 @@ export const assistantUsage = sqliteTable(
 );
 
 // 0013 — buying from the site (D-144): an order per piece, and each Square webhook event once.
+/** One piece of an order (orders.items). */
+export interface OrderItemRow { artworkId: string; priceCents: number; shippingCents: number; coveredCents: number; rule: string | null }
+
 export const orders = sqliteTable(
   "orders",
   {
@@ -683,6 +688,10 @@ export const orders = sqliteTable(
     carrier: text("carrier"),
     tracking: text("tracking"),
     ...recordColumns(),
+    // Migration 0014 (stage 4 revision): a multi-piece order's pieces, the shipping given away, the ZIP it was for.
+    items: text("items", { mode: "json" }).$type<OrderItemRow[]>().notNull().default(sql`'[]'`),
+    coveredCents: integer("covered_cents").notNull().default(0),
+    shipZip: text("ship_zip"),
   },
   (t) => [
     index("orders_studio_status").on(t.studioId, t.status, t.createdAt),

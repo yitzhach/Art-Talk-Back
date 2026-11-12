@@ -64,7 +64,7 @@ beforeAll(async () => {
     json: { meta: { ...bs.meta, site: { name: "B's site", phone: "5551234567", photos: { "home.hero": [b.banner.work.id, b.public.work.id] },
       checkout: { enabled: true, venmo: "@B-Artist", shippingCents: 1000 } } } } });
   // B's buyable piece (Site 3.0 stage 4).
-  b.forSale = await makeWork(B, { title: "B's small heron", priceCents: 20_000, width: 10, height: 10 }, { publish: true });
+  b.forSale = await makeWork(B, { title: "B's small heron", priceCents: 20_000, width: 10, height: 10, shipping: { tier: 1 } }, { publish: true });
   b.opKey = newId();
   await call("/v1/artworks", { method: "POST", cookie: B.cookie, headers: { "Idempotency-Key": b.opKey }, json: { title: "B keyed" } });
   // B's site visitor (Site 3.0 stage 3): a chat, a made page, a hold request.
@@ -379,6 +379,15 @@ describe("studio A can't reach studio B", () => {
     ["get", "/orders", async () => expect((await call("/v1/orders?status=all", { cookie: A.cookie })).data.items).toEqual([])],
     ["get", "/public/studios/{slug}/checkout", async () => {
       expect((await call(`/v1/public/studios/${await studioSlug(A.studioId)}/checkout`)).data).toMatchObject({ enabled: false, methods: [] });
+    }],
+    ["get", "/public/studios/{slug}/shipping", async () => {
+      expect((await call(`/v1/public/studios/${await studioSlug(A.studioId)}/shipping`)).status).toBe(200);
+    }],
+    ["post", "/public/studios/{slug}/shipping/quote", async () => {
+      // B's piece quoted on A's site: A doesn't have it, so it can't ship.
+      const r = await call(`/v1/public/studios/${await studioSlug(A.studioId)}/shipping/quote`, { method: "POST", headers: { "x-visitor-key": BVISITOR },
+        json: { works: [b.forSale.work.slug] } });
+      expect(r.data).toMatchObject({ ok: false, lines: [], subtotalCents: 0, blocked: [{ slug: b.forSale.work.slug }] });
     }],
     ["post", "/public/studios/{slug}/visitor/orders", async () => {
       // B's piece on A's site: not found, and nothing is set aside in B.

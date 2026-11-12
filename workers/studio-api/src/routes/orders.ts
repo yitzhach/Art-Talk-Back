@@ -3,15 +3,19 @@
 // Public, under /public/studios/{slug}: the checkout's settings; a visitor's own orders (x-visitor-key, as leads).
 // Square: its signed webhook, the only way a card order is paid. No session; the signature is the proof.
 // Owner: the orders, and Mark paid (Venmo, Zelle), Ship, Cancel, More time.
-import { OrderInput, OrderStatus, Order, PublicCheckout, PublicOrder, MarkPaidInput, ShipInput, db as schema } from "@studio/core";
+import {
+  OrderInput, OrderStatus, Order, PublicCheckout, PublicOrder, PublicShipping, MarkPaidInput, ShipInput, ShippingQuote, ShippingQuoteInput,
+  db as schema, shippingFor, wouldUnlock, type ShipWork,
+} from "@studio/core";
 import { createRoute } from "@hono/zod-openapi";
 import type { Context } from "hono";
-import { and, desc, eq, inArray, isNull, lte } from "drizzle-orm";
+import { and, desc, eq, inArray, isNull, lte, or, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { z } from "zod";
 import { artworkEntity, findRecord } from "../actions/records";
 import { getAction, runAction, type Snapshot } from "../actions/runner";
-import { orderEntity, checkoutSettings, methodsOf } from "../actions/orders";
+import { orderEntity, checkoutSettings, itemsOf, methodsOf } from "../actions/orders";
+import { publicShippingOf, shipWorkOf, shippingOf } from "../lib/shipping";
 import { visitorActor, visitorFor } from "../actions/visitors";
 import { requirePermission } from "../auth/permissions";
 import { requireActor } from "../auth/session";
@@ -21,7 +25,7 @@ import { sendOrderMail } from "../lib/order-mail";
 import { siteFor } from "../lib/site-mail";
 import { createPaymentLink, deletePaymentLink, squareReady, squareSignatureOk } from "../lib/square";
 import { nowIso } from "../lib/time";
-import { studioOf } from "./public";
+import { filesOf, publicWork, studioOf } from "./public";
 import { IfMatchHeader, PathId, body, errors, ifMatch, json, newApp, run, send } from "./common";
 
 export const orderRoutes = newApp();
@@ -41,20 +45,29 @@ const asSystem = <R>(env: Env, studioId: string, name: string, input: unknown) =
 
 const totalOf = (o: Row) => Number(o.amountCents) + Number(o.shippingCents ?? 0) + Number(o.taxCents ?? 0);
 
-async function titleOf(env: Env, o: Row): Promise<{ title: string; slug: string | null }> {
-  const w = o.artworkId ? await findRecord(drizzle(env.DB), artworkEntity, o.studioId as string, o.artworkId as string, { withDeleted: true }) : null;
-  return { title: (w?.title as string | undefined) ?? "A piece", slug: (w?.slug as string | null | undefined) ?? null };
+interface ItemOut { slug: string | null; title: string; priceCents: number; shippingCents: number; coveredCents: number }
+
+/** The order's pieces with their titles, and one title for the whole order ("Heron and 2 more"). */
+async function titleOf(env: Env, o: Row): Promise<{ title: string; slug: string | null; items: ItemOut[] }> {
+  const items: ItemOut[] = [];
+  for (const i of itemsOf(o)) {
+    const w = await findRecord(drizzle(env.DB), artworkEntity, o.studioId as string, i.artworkId, { withDeleted: true });
+    items.push({ slug: (w?.slug as string | null | undefined) ?? null, title: (w?.title as string | undefined) ?? "A piece", priceCents: i.priceCents, shippingCents: i.shippingCents, coveredCents: i.coveredCents });
+  }
+  const first = items[0];
+  const title = !first ? "A piece" : items.length === 1 ? first.title : `${first.title} and ${items.length - 1} more`;
+  return { title, slug: first?.slug ?? null, items };
 }
 
 async function publicOrder(env: Env, o: Row): Promise<z.infer<typeof PublicOrder>> {
   const { site } = await siteFor(env, o.studioId as string);
   const c = checkoutSettings(site);
-  const { title, slug } = await titleOf(env, o);
+  const { title, slug, items } = await titleOf(env, o);
   const waiting = o.status === "awaiting_payment";
   return {
     id: o.id as string, code: o.code as string, kind: o.kind as "piece", method: o.method as "card", status: o.status as "paid", title, slug,
     amountCents: o.amountCents as number, shippingCents: o.shippingCents as number, taxCents: o.taxCents as number, totalCents: totalOf(o),
-    currency: o.currency as string, checkoutUrl: o.status === "pending" ? ((o.checkoutUrl as string | null) ?? null) : null,
+    currency: o.currency as string, coveredCents: Number(o.coveredCents ?? 0), items, checkoutUrl: o.status === "pending" ? ((o.checkoutUrl as string | null) ?? null) : null,
     payTo: waiting ? { venmo: o.method === "venmo" ? c.venmo : null, zelle: o.method === "zelle" ? c.zelle : null } : null,
     expiresAt: (o.expiresAt as string | null) ?? null, paidAt: (o.paidAt as string | null) ?? null, shippedAt: (o.shippedAt as string | null) ?? null,
     returns: c.returns,
@@ -88,7 +101,9 @@ export async function expireOrders(env: Env, now = nowIso(), studioId?: string, 
   const o = schema.orders;
   const where = [inArray(o.status, ["pending", "awaiting_payment"]), lte(o.expiresAt, now), isNull(o.deletedAt)];
   if (studioId) where.push(eq(o.studioId, studioId));
-  if (artworkId) where.push(eq(o.artworkId, artworkId));
+  if (artworkId) {
+    where.push(or(eq(o.artworkId, artworkId), sql`EXISTS (SELECT 1 FROM json_each(${o.items}) j WHERE json_extract(j.value, '$.artworkId') = ${artworkId})`)!);
+  }
   const rows = await drizzle(env.DB).select({ id: o.id, studioId: o.studioId, link: o.squareLinkId }).from(o).where(and(...where)).limit(200);
   let n = 0;
   for (const r of rows) {
@@ -120,7 +135,7 @@ orderRoutes.openapi(
     const methods = methodsOf(s, squareReady(c.env, slug));
     return noStore({
       enabled: methods.length > 0, methods, shippingCents: s.shippingCents, smallMaxInches: s.smallMaxInches, taxBps: s.taxBps,
-      returns: s.returns, manualHoldHours: s.manualHoldHours,
+      returns: s.returns, manualHoldHours: s.manualHoldHours, shipping: publicShippingOf(site, nowIso()),
     } satisfies z.infer<typeof PublicCheckout>);
   },
 );
@@ -128,7 +143,7 @@ orderRoutes.openapi(
 orderRoutes.openapi(
   createRoute({
     method: "post", path: `${P}/visitor/orders`, tags: ["orders"], security: [],
-    summary: "Buy one piece: it is set aside while the visitor pays. Card → Square's checkout page; Venmo or Zelle → instructions by email",
+    summary: "Buy one piece or a cart: the pieces are set aside while the visitor pays. Card → Square's checkout page; Venmo or Zelle → instructions by email. 409 when a piece isn't available or the shipping changed (details say which)",
     request: { params: SlugParam, headers: KeyHeader, body: body(OrderInput) },
     responses: { 201: json(PublicOrder), 400: errors[400], 404: errors[404], 409: errors[409], 429: { ...errors[400], description: "Over today's limit" } },
   }),
@@ -143,22 +158,26 @@ orderRoutes.openapi(
     const origin = new URL(c.req.url).origin;
     const cardReady = squareReady(c.env, slug);
 
-    // An order that ran out still holds its piece until the hourly job: end this piece's now.
-    const work = await c.env.DB.prepare("SELECT id FROM artworks WHERE studio_id = ? AND slug = ? AND deleted_at IS NULL").bind(studio.id, input.work).first<{ id: string }>();
-    if (work) await expireOrders(c.env, nowIso(), studio.id, work.id);
+    const works = input.works ?? [input.work!];
+
+    // An order that ran out still holds its pieces until the hourly job: end these pieces' now.
+    for (const w of works) {
+      const work = await c.env.DB.prepare("SELECT id FROM artworks WHERE studio_id = ? AND slug = ? AND deleted_at IS NULL").bind(studio.id, w).first<{ id: string }>();
+      if (work) await expireOrders(c.env, nowIso(), studio.id, work.id);
+    }
 
     const actor = visitorActor(studio.id, v.id);
     const { result } = await runAction<Snapshot>(getAction("order.start") as never, {
-      visitorId: v.id, work: input.work, method: input.method, name: input.name ?? null, email: input.email ?? null,
-      phone: input.phone ?? null, address: input.address ?? null, cardReady, origin,
+      visitorId: v.id, works, method: input.method, name: input.name ?? null, email: input.email ?? null,
+      phone: input.phone ?? null, address: input.address ?? null, zip: input.zip ?? null, shownShippingCents: input.shippingCents ?? null, cardReady, origin,
     }, { env: c.env, actor, origin, source: "app" });
     let order = result;
 
     if (input.method === "card") {
       try {
-        const { title } = await titleOf(c.env, order);
+        const { items } = await titleOf(c.env, order);
         const link = await createPaymentLink(c.env, {
-          orderId: order.id as string, code: order.code as string, title, amountCents: order.amountCents as number,
+          orderId: order.id as string, code: order.code as string, lines: items.map((i) => ({ title: i.title, amountCents: i.priceCents })),
           shippingCents: order.shippingCents as number, taxBps: checkoutSettings((await siteFor(c.env, studio.id)).site).taxBps,
           currency: order.currency as string, redirectUrl: `${origin}/thanks/${order.id}`, email: (order.buyerEmail as string | null) ?? null,
         });
@@ -190,6 +209,86 @@ orderRoutes.openapi(
     const o = v ? await orderById(c.env, studio.id, id) : null;
     if (!o || o.visitorId !== v!.id) throw notFound("Order");
     return noStore(await publicOrder(c.env, o));
+  },
+);
+
+orderRoutes.openapi(
+  createRoute({
+    method: "get", path: `${P}/shipping`, tags: ["orders"], security: [],
+    summary: "The studio's shipping: tiers, rates and the offers running now (D-146…D-153)",
+    request: { params: SlugParam },
+    responses: { 200: json(PublicShipping), 404: errors[404] },
+  }),
+  async (c) => {
+    const { slug } = c.req.valid("param");
+    const studio = await studioOf(c, slug);
+    const { site } = await siteFor(c.env, studio.id);
+    return send(c, publicShippingOf(site, nowIso()));
+  },
+);
+
+orderRoutes.openapi(
+  createRoute({
+    method: "post", path: `${P}/shipping/quote`, tags: ["orders"], security: [],
+    summary: "A cart's shipping, worked out by the one calculator (prices and status from the catalogue, never the request), with up to three suggestions",
+    request: { params: SlugParam, headers: KeyHeader, body: body(ShippingQuoteInput) },
+    responses: { 200: json(ShippingQuote), 400: errors[400], 404: errors[404] },
+  }),
+  async (c) => {
+    const { slug } = c.req.valid("param");
+    const input = c.req.valid("json");
+    const studio = await studioOf(c, slug);
+    const { site } = await siteFor(c.env, studio.id);
+    const settings = shippingOf(site);
+    const v = await visitorFor(c.env, studio.id, c.req.header("x-visitor-key") ?? "", false);
+    const slugs = [...new Set(input.works)];
+    const { results: rows } = await c.env.DB.prepare(
+      `SELECT * FROM artworks WHERE studio_id = ? AND public = 1 AND deleted_at IS NULL AND kind = 'work' AND slug IN (${slugs.map(() => "?").join(",")})`,
+    ).bind(studio.id, ...slugs).all<Row>();
+    const now = nowIso();
+    // A piece on hold for this visitor (their approved hold, D-127) is theirs to buy.
+    const heldForMe = async (r: Row) => {
+      if (!v || r.status !== "reserved") return false;
+      const meta = JSON.parse((r.meta as string) || "{}") as Row;
+      const hold = meta.hold as { leadId?: string; until?: string } | undefined;
+      if (meta.order || !hold?.leadId || (hold.until ?? "") <= now) return false;
+      const lead = await c.env.DB.prepare("SELECT visitor_id FROM leads WHERE id = ? AND studio_id = ?").bind(hold.leadId, studio.id).first<{ visitor_id: string }>();
+      return lead?.visitor_id === v.id;
+    };
+    const works: ShipWork[] = [];
+    for (const r of rows) works.push(shipWorkOf(r, await heldForMe(r)));
+    const r = shippingFor({ works, settings, zip: input.zip ?? null, pickup: input.pickup ?? false, today: now.slice(0, 10) });
+    const slugOf = (id: string) => works.find((w) => w.id === id)?.slug ?? "";
+    const missing = slugs.filter((x) => !rows.some((row) => row.slug === x)).map((x) => ({ slug: x, why: "No longer on the site" }));
+
+    // Suggestions: only when they would unlock the offer; the artist's pairings first, then price nearest the minimum.
+    let suggestions: z.infer<typeof ShippingQuote>["suggestions"] = [];
+    if (r.ok && (r.nudge?.kind === "tier2Alone" || r.nudge?.kind === "largeAlone")) {
+      const pairs = new Set(works.flatMap((w) => w.shipping?.pairsWith ?? []));
+      const { results: cand } = await c.env.DB.prepare(
+        `SELECT * FROM artworks WHERE studio_id = ? AND public = 1 AND deleted_at IS NULL AND kind = 'work' AND status = 'available'
+         AND price_cents > 0 AND shipping IS NOT NULL ORDER BY published_at DESC LIMIT 200`,
+      ).bind(studio.id).all<Row>();
+      const target = settings.r2.minCents;
+      const picks = cand.filter((x) => !slugs.includes(x.slug as string) && wouldUnlock(r, shipWorkOf(x), settings))
+        .sort((a, b) => Number(pairs.has(b.id as string)) - Number(pairs.has(a.id as string))
+          || Math.abs(Number(a.price_cents) - target) - Math.abs(Number(b.price_cents) - target))
+        .slice(0, 3);
+      const files = await filesOf(c, studio.id, picks.map((x) => x.id as string));
+      suggestions = picks.map((x) => {
+        const pub = publicWork(slug, x, files.get(x.id as string) ?? []);
+        const img = pub.images[0]?.sizes.find((z2) => z2.width === 480) ?? pub.images[0]?.sizes[0];
+        return { slug: pub.slug, title: pub.title, priceCents: x.price_cents as number, image: img?.url ?? null };
+      });
+    }
+    const subtotalCents = works.reduce((n, w) => n + (w.priceCents ?? 0), 0);
+    return noStore({
+      ok: r.ok && !missing.length, needsZip: r.needsZip, quote: r.quote.map(slugOf),
+      blocked: [...missing, ...r.blocked.map((b) => ({ slug: slugOf(b.id), why: b.why }))],
+      lines: r.lines.map((l) => ({ slug: l.slug ?? "", tier: l.tier, baseCents: l.baseCents, chargedCents: l.chargedCents, coveredCents: l.coveredCents, rule: l.rule, estimate: l.estimate })),
+      subtotalCents, shippingCents: r.shippingCents, coveredCents: r.coveredCents, totalCents: subtotalCents + r.shippingCents,
+      reason: r.reason, nudge: r.nudge, suggestions,
+    } satisfies z.infer<typeof ShippingQuote>);
   },
 );
 

@@ -41,7 +41,7 @@ export const artworkEntity = define({
     ...recordDefaults, inventoryCode: null, medium: null, year: null, width: null, height: null, depth: null,
     sizeUnit: "in", priceCents: null, currency: "USD", status: "available", description: null, primaryFileId: null,
     public: false, publishedAt: null, slug: null, collection: null, tags: [], palette: [], editionSize: null, draftedFields: [],
-    kind: "work",
+    kind: "work", shipping: null,
   },
 });
 

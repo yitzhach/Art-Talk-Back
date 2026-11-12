@@ -37,8 +37,9 @@ async function square<T>(env: Env, method: string, path: string, body?: unknown)
 export interface LinkInput {
   orderId: string;
   code: string;
-  title: string;
-  amountCents: number;
+  /** Each piece at its catalogue price. */
+  lines: { title: string; amountCents: number }[];
+  /** The calculator's shipping for the whole order: a fixed amount, never worked out by Square (D-151). */
   shippingCents: number;
   taxBps: number;
   currency: string;
@@ -46,7 +47,7 @@ export interface LinkInput {
   email?: string | null;
 }
 
-/** One payment link for one order: the piece at its catalogue price, flat shipping, the studio's fixed tax if any. */
+/** One payment link for one order: each piece at its catalogue price, the order's shipping, the studio's fixed tax if any. */
 export async function createPaymentLink(env: Env, l: LinkInput): Promise<{ linkId: string; url: string; squareOrderId: string }> {
   const money = (amount: number) => ({ amount, currency: l.currency });
   const body = {
@@ -54,10 +55,10 @@ export async function createPaymentLink(env: Env, l: LinkInput): Promise<{ linkI
     order: {
       location_id: env.SQUARE_LOCATION_ID,
       reference_id: l.orderId,
-      line_items: [{
-        name: l.title.slice(0, 500), quantity: "1", base_price_money: money(l.amountCents),
+      line_items: l.lines.map((x) => ({
+        name: x.title.slice(0, 500), quantity: "1", base_price_money: money(x.amountCents),
         ...(l.taxBps ? { applied_taxes: [{ tax_uid: "sales-tax" }] } : {}),
-      }],
+      })),
       ...(l.taxBps ? { taxes: [{ uid: "sales-tax", name: "Sales tax", percentage: (l.taxBps / 100).toFixed(2), scope: "LINE_ITEM" }] } : {}),
       metadata: { orderId: l.orderId, code: l.code },
     },

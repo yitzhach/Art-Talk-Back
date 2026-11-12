@@ -250,6 +250,82 @@
               "site_photo"
             ]
           },
+          "shipping": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "tier": {
+                "anyOf": [
+                  {
+                    "type": "number",
+                    "enum": [
+                      1
+                    ]
+                  },
+                  {
+                    "type": "number",
+                    "enum": [
+                      2
+                    ]
+                  },
+                  {
+                    "type": "number",
+                    "enum": [
+                      3
+                    ]
+                  },
+                  {
+                    "type": "number",
+                    "enum": [
+                      4
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "cents": {
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "minimum": 0,
+                "maximum": 1000000
+              },
+              "weightLb": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "minimum": 0,
+                "maximum": 500
+              },
+              "promo": {
+                "type": "boolean"
+              },
+              "crated": {
+                "type": "boolean"
+              },
+              "customQuote": {
+                "type": "boolean"
+              },
+              "fragile": {
+                "type": "boolean"
+              },
+              "pairsWith": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$"
+                },
+                "maxItems": 3
+              }
+            },
+            "additionalProperties": false
+          },
           "public": {
             "type": "boolean"
           },
@@ -301,6 +377,7 @@
           "palette",
           "editionSize",
           "kind",
+          "shipping",
           "public",
           "publishedAt",
           "draftedFields"
@@ -505,6 +582,82 @@
               "site_photo"
             ]
           },
+          "shipping": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "tier": {
+                "anyOf": [
+                  {
+                    "type": "number",
+                    "enum": [
+                      1
+                    ]
+                  },
+                  {
+                    "type": "number",
+                    "enum": [
+                      2
+                    ]
+                  },
+                  {
+                    "type": "number",
+                    "enum": [
+                      3
+                    ]
+                  },
+                  {
+                    "type": "number",
+                    "enum": [
+                      4
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "cents": {
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "minimum": 0,
+                "maximum": 1000000
+              },
+              "weightLb": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "minimum": 0,
+                "maximum": 500
+              },
+              "promo": {
+                "type": "boolean"
+              },
+              "crated": {
+                "type": "boolean"
+              },
+              "customQuote": {
+                "type": "boolean"
+              },
+              "fragile": {
+                "type": "boolean"
+              },
+              "pairsWith": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$"
+                },
+                "maxItems": 3
+              }
+            },
+            "additionalProperties": false
+          },
           "public": {
             "type": "boolean"
           },
@@ -686,6 +839,7 @@
           "palette",
           "editionSize",
           "kind",
+          "shipping",
           "public",
           "publishedAt",
           "draftedFields",
@@ -3291,6 +3445,82 @@
                       "site_photo"
                     ]
                   },
+                  "shipping": {
+                    "type": [
+                      "object",
+                      "null"
+                    ],
+                    "properties": {
+                      "tier": {
+                        "anyOf": [
+                          {
+                            "type": "number",
+                            "enum": [
+                              1
+                            ]
+                          },
+                          {
+                            "type": "number",
+                            "enum": [
+                              2
+                            ]
+                          },
+                          {
+                            "type": "number",
+                            "enum": [
+                              3
+                            ]
+                          },
+                          {
+                            "type": "number",
+                            "enum": [
+                              4
+                            ]
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "cents": {
+                        "type": [
+                          "integer",
+                          "null"
+                        ],
+                        "minimum": 0,
+                        "maximum": 1000000
+                      },
+                      "weightLb": {
+                        "type": [
+                          "number",
+                          "null"
+                        ],
+                        "minimum": 0,
+                        "maximum": 500
+                      },
+                      "promo": {
+                        "type": "boolean"
+                      },
+                      "crated": {
+                        "type": "boolean"
+                      },
+                      "customQuote": {
+                        "type": "boolean"
+                      },
+                      "fragile": {
+                        "type": "boolean"
+                      },
+                      "pairsWith": {
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$"
+                        },
+                        "maxItems": 3
+                      }
+                    },
+                    "additionalProperties": false
+                  },
                   "meta": {
                     "type": "object",
                     "additionalProperties": {}
@@ -3595,6 +3825,82 @@
                       "work",
                       "site_photo"
                     ]
+                  },
+                  "shipping": {
+                    "type": [
+                      "object",
+                      "null"
+                    ],
+                    "properties": {
+                      "tier": {
+                        "anyOf": [
+                          {
+                            "type": "number",
+                            "enum": [
+                              1
+                            ]
+                          },
+                          {
+                            "type": "number",
+                            "enum": [
+                              2
+                            ]
+                          },
+                          {
+                            "type": "number",
+                            "enum": [
+                              3
+                            ]
+                          },
+                          {
+                            "type": "number",
+                            "enum": [
+                              4
+                            ]
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "cents": {
+                        "type": [
+                          "integer",
+                          "null"
+                        ],
+                        "minimum": 0,
+                        "maximum": 1000000
+                      },
+                      "weightLb": {
+                        "type": [
+                          "number",
+                          "null"
+                        ],
+                        "minimum": 0,
+                        "maximum": 500
+                      },
+                      "promo": {
+                        "type": "boolean"
+                      },
+                      "crated": {
+                        "type": "boolean"
+                      },
+                      "customQuote": {
+                        "type": "boolean"
+                      },
+                      "fragile": {
+                        "type": "boolean"
+                      },
+                      "pairsWith": {
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$"
+                        },
+                        "maxItems": 3
+                      }
+                    },
+                    "additionalProperties": false
                   },
                   "meta": {
                     "type": "object",
@@ -12056,6 +12362,60 @@
                               "string",
                               "null"
                             ]
+                          },
+                          "shipping": {
+                            "type": [
+                              "object",
+                              "null"
+                            ],
+                            "properties": {
+                              "tier": {
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                    "enum": [
+                                      1
+                                    ]
+                                  },
+                                  {
+                                    "type": "number",
+                                    "enum": [
+                                      2
+                                    ]
+                                  },
+                                  {
+                                    "type": "number",
+                                    "enum": [
+                                      3
+                                    ]
+                                  },
+                                  {
+                                    "type": "number",
+                                    "enum": [
+                                      4
+                                    ]
+                                  }
+                                ]
+                              },
+                              "cents": {
+                                "type": [
+                                  "integer",
+                                  "null"
+                                ]
+                              },
+                              "estimate": {
+                                "type": "boolean"
+                              },
+                              "quote": {
+                                "type": "boolean"
+                              }
+                            },
+                            "required": [
+                              "tier",
+                              "cents",
+                              "estimate",
+                              "quote"
+                            ]
                           }
                         },
                         "required": [
@@ -12076,7 +12436,8 @@
                           "priceCents",
                           "currency",
                           "images",
-                          "publishedAt"
+                          "publishedAt",
+                          "shipping"
                         ]
                       }
                     },
@@ -12343,6 +12704,60 @@
                         "null"
                       ]
                     },
+                    "shipping": {
+                      "type": [
+                        "object",
+                        "null"
+                      ],
+                      "properties": {
+                        "tier": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                              "enum": [
+                                1
+                              ]
+                            },
+                            {
+                              "type": "number",
+                              "enum": [
+                                2
+                              ]
+                            },
+                            {
+                              "type": "number",
+                              "enum": [
+                                3
+                              ]
+                            },
+                            {
+                              "type": "number",
+                              "enum": [
+                                4
+                              ]
+                            }
+                          ]
+                        },
+                        "cents": {
+                          "type": [
+                            "integer",
+                            "null"
+                          ]
+                        },
+                        "estimate": {
+                          "type": "boolean"
+                        },
+                        "quote": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "tier",
+                        "cents",
+                        "estimate",
+                        "quote"
+                      ]
+                    },
                     "catalogueVersion": {
                       "type": "integer"
                     }
@@ -12366,6 +12781,7 @@
                     "currency",
                     "images",
                     "publishedAt",
+                    "shipping",
                     "catalogueVersion"
                   ]
                 }
@@ -13521,6 +13937,60 @@
                               "string",
                               "null"
                             ]
+                          },
+                          "shipping": {
+                            "type": [
+                              "object",
+                              "null"
+                            ],
+                            "properties": {
+                              "tier": {
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                    "enum": [
+                                      1
+                                    ]
+                                  },
+                                  {
+                                    "type": "number",
+                                    "enum": [
+                                      2
+                                    ]
+                                  },
+                                  {
+                                    "type": "number",
+                                    "enum": [
+                                      3
+                                    ]
+                                  },
+                                  {
+                                    "type": "number",
+                                    "enum": [
+                                      4
+                                    ]
+                                  }
+                                ]
+                              },
+                              "cents": {
+                                "type": [
+                                  "integer",
+                                  "null"
+                                ]
+                              },
+                              "estimate": {
+                                "type": "boolean"
+                              },
+                              "quote": {
+                                "type": "boolean"
+                              }
+                            },
+                            "required": [
+                              "tier",
+                              "cents",
+                              "estimate",
+                              "quote"
+                            ]
                           }
                         },
                         "required": [
@@ -13541,7 +14011,8 @@
                           "priceCents",
                           "currency",
                           "images",
-                          "publishedAt"
+                          "publishedAt",
+                          "shipping"
                         ]
                       }
                     },
@@ -15817,6 +16288,111 @@
                     },
                     "manualHoldHours": {
                       "type": "integer"
+                    },
+                    "shipping": {
+                      "type": "object",
+                      "properties": {
+                        "tier1": {
+                          "type": "object",
+                          "properties": {
+                            "maxSqIn": {
+                              "type": "number"
+                            },
+                            "maxLongIn": {
+                              "type": "number"
+                            }
+                          },
+                          "required": [
+                            "maxSqIn",
+                            "maxLongIn"
+                          ]
+                        },
+                        "tier2": {
+                          "type": "object",
+                          "properties": {
+                            "maxSqIn": {
+                              "type": "number"
+                            },
+                            "maxLongIn": {
+                              "type": "number"
+                            },
+                            "cents": {
+                              "type": "integer"
+                            }
+                          },
+                          "required": [
+                            "maxSqIn",
+                            "maxLongIn",
+                            "cents"
+                          ]
+                        },
+                        "pairsFree": {
+                          "type": "boolean"
+                        },
+                        "largeOffer": {
+                          "type": [
+                            "object",
+                            "null"
+                          ],
+                          "properties": {
+                            "minCents": {
+                              "type": "integer"
+                            },
+                            "bps": {
+                              "type": "integer"
+                            },
+                            "capCents": {
+                              "type": [
+                                "integer",
+                                "null"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "minCents",
+                            "bps",
+                            "capCents"
+                          ]
+                        },
+                        "pickup": {
+                          "type": [
+                            "object",
+                            "null"
+                          ],
+                          "properties": {
+                            "words": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "words"
+                          ]
+                        },
+                        "countries": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
+                        "words": {
+                          "type": "object",
+                          "additionalProperties": {
+                            "type": "string"
+                          }
+                        }
+                      },
+                      "required": [
+                        "tier1",
+                        "tier2",
+                        "pairsFree",
+                        "largeOffer",
+                        "pickup",
+                        "countries",
+                        "words"
+                      ]
                     }
                   },
                   "required": [
@@ -15826,7 +16402,8 @@
                     "smallMaxInches",
                     "taxBps",
                     "returns",
-                    "manualHoldHours"
+                    "manualHoldHours",
+                    "shipping"
                   ]
                 }
               }
@@ -15851,7 +16428,7 @@
           "orders"
         ],
         "security": [],
-        "summary": "Buy one piece: it is set aside while the visitor pays. Card → Square's checkout page; Venmo or Zelle → instructions by email",
+        "summary": "Buy one piece or a cart: the pieces are set aside while the visitor pays. Card → Square's checkout page; Venmo or Zelle → instructions by email. 409 when a piece isn't available or the shipping changed (details say which)",
         "parameters": [
           {
             "schema": {
@@ -15884,6 +16461,26 @@
                     "minLength": 1,
                     "maxLength": 80,
                     "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+                  },
+                  "works": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 80,
+                      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+                    },
+                    "minItems": 1,
+                    "maxItems": 10
+                  },
+                  "zip": {
+                    "type": "string",
+                    "pattern": "^\\d{5}$"
+                  },
+                  "shippingCents": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 10000000
                   },
                   "method": {
                     "type": "string",
@@ -15955,7 +16552,6 @@
                   }
                 },
                 "required": [
-                  "work",
                   "method"
                 ],
                 "additionalProperties": false
@@ -16029,6 +16625,42 @@
                       "type": "string",
                       "pattern": "^[A-Z]{3}$"
                     },
+                    "coveredCents": {
+                      "type": "integer"
+                    },
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "slug": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "title": {
+                            "type": "string"
+                          },
+                          "priceCents": {
+                            "type": "integer"
+                          },
+                          "shippingCents": {
+                            "type": "integer"
+                          },
+                          "coveredCents": {
+                            "type": "integer"
+                          }
+                        },
+                        "required": [
+                          "slug",
+                          "title",
+                          "priceCents",
+                          "shippingCents",
+                          "coveredCents"
+                        ]
+                      }
+                    },
                     "checkoutUrl": {
                       "type": [
                         "string",
@@ -16097,6 +16729,8 @@
                     "taxCents",
                     "totalCents",
                     "currency",
+                    "coveredCents",
+                    "items",
                     "checkoutUrl",
                     "payTo",
                     "expiresAt",
@@ -16252,6 +16886,42 @@
                       "type": "string",
                       "pattern": "^[A-Z]{3}$"
                     },
+                    "coveredCents": {
+                      "type": "integer"
+                    },
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "slug": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "title": {
+                            "type": "string"
+                          },
+                          "priceCents": {
+                            "type": "integer"
+                          },
+                          "shippingCents": {
+                            "type": "integer"
+                          },
+                          "coveredCents": {
+                            "type": "integer"
+                          }
+                        },
+                        "required": [
+                          "slug",
+                          "title",
+                          "priceCents",
+                          "shippingCents",
+                          "coveredCents"
+                        ]
+                      }
+                    },
                     "checkoutUrl": {
                       "type": [
                         "string",
@@ -16320,6 +16990,8 @@
                     "taxCents",
                     "totalCents",
                     "currency",
+                    "coveredCents",
+                    "items",
                     "checkoutUrl",
                     "payTo",
                     "expiresAt",
@@ -16327,6 +16999,427 @@
                     "shippedAt",
                     "returns"
                   ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (or in another studio)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/public/studios/{slug}/shipping": {
+      "get": {
+        "tags": [
+          "orders"
+        ],
+        "security": [],
+        "summary": "The studio's shipping: tiers, rates and the offers running now (D-146…D-153)",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "slug",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "tier1": {
+                      "type": "object",
+                      "properties": {
+                        "maxSqIn": {
+                          "type": "number"
+                        },
+                        "maxLongIn": {
+                          "type": "number"
+                        }
+                      },
+                      "required": [
+                        "maxSqIn",
+                        "maxLongIn"
+                      ]
+                    },
+                    "tier2": {
+                      "type": "object",
+                      "properties": {
+                        "maxSqIn": {
+                          "type": "number"
+                        },
+                        "maxLongIn": {
+                          "type": "number"
+                        },
+                        "cents": {
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "maxSqIn",
+                        "maxLongIn",
+                        "cents"
+                      ]
+                    },
+                    "pairsFree": {
+                      "type": "boolean"
+                    },
+                    "largeOffer": {
+                      "type": [
+                        "object",
+                        "null"
+                      ],
+                      "properties": {
+                        "minCents": {
+                          "type": "integer"
+                        },
+                        "bps": {
+                          "type": "integer"
+                        },
+                        "capCents": {
+                          "type": [
+                            "integer",
+                            "null"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "minCents",
+                        "bps",
+                        "capCents"
+                      ]
+                    },
+                    "pickup": {
+                      "type": [
+                        "object",
+                        "null"
+                      ],
+                      "properties": {
+                        "words": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "words"
+                      ]
+                    },
+                    "countries": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "words": {
+                      "type": "object",
+                      "additionalProperties": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "required": [
+                    "tier1",
+                    "tier2",
+                    "pairsFree",
+                    "largeOffer",
+                    "pickup",
+                    "countries",
+                    "words"
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (or in another studio)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/public/studios/{slug}/shipping/quote": {
+      "post": {
+        "tags": [
+          "orders"
+        ],
+        "security": [],
+        "summary": "A cart's shipping, worked out by the one calculator (prices and status from the catalogue, never the request), with up to three suggestions",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "slug",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "The site's per-browser key (D-134)"
+            },
+            "required": false,
+            "description": "The site's per-browser key (D-134)",
+            "name": "x-visitor-key",
+            "in": "header"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "works": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 80,
+                      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+                    },
+                    "minItems": 1,
+                    "maxItems": 10
+                  },
+                  "zip": {
+                    "type": "string",
+                    "pattern": "^\\d{5}$"
+                  },
+                  "pickup": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "works"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": {
+                      "type": "boolean"
+                    },
+                    "needsZip": {
+                      "type": "boolean"
+                    },
+                    "quote": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "blocked": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "slug": {
+                            "type": "string"
+                          },
+                          "why": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "slug",
+                          "why"
+                        ]
+                      }
+                    },
+                    "lines": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "slug": {
+                            "type": "string"
+                          },
+                          "tier": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                                "enum": [
+                                  1
+                                ]
+                              },
+                              {
+                                "type": "number",
+                                "enum": [
+                                  2
+                                ]
+                              },
+                              {
+                                "type": "number",
+                                "enum": [
+                                  3
+                                ]
+                              },
+                              {
+                                "type": "number",
+                                "enum": [
+                                  4
+                                ]
+                              }
+                            ]
+                          },
+                          "baseCents": {
+                            "type": "integer"
+                          },
+                          "chargedCents": {
+                            "type": "integer"
+                          },
+                          "coveredCents": {
+                            "type": "integer"
+                          },
+                          "rule": {
+                            "type": [
+                              "string",
+                              "null"
+                            ],
+                            "enum": [
+                              "r1",
+                              "r2",
+                              null
+                            ]
+                          },
+                          "estimate": {
+                            "type": "boolean"
+                          }
+                        },
+                        "required": [
+                          "slug",
+                          "tier",
+                          "baseCents",
+                          "chargedCents",
+                          "coveredCents",
+                          "rule",
+                          "estimate"
+                        ]
+                      }
+                    },
+                    "subtotalCents": {
+                      "type": "integer"
+                    },
+                    "shippingCents": {
+                      "type": "integer"
+                    },
+                    "coveredCents": {
+                      "type": "integer"
+                    },
+                    "totalCents": {
+                      "type": "integer"
+                    },
+                    "reason": {
+                      "type": "string"
+                    },
+                    "nudge": {
+                      "type": [
+                        "object",
+                        "null"
+                      ],
+                      "properties": {
+                        "kind": {
+                          "type": "string"
+                        },
+                        "text": {
+                          "type": "string"
+                        },
+                        "amountCents": {
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "kind",
+                        "text",
+                        "amountCents"
+                      ]
+                    },
+                    "suggestions": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "slug": {
+                            "type": "string"
+                          },
+                          "title": {
+                            "type": "string"
+                          },
+                          "priceCents": {
+                            "type": "integer"
+                          },
+                          "image": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "slug",
+                          "title",
+                          "priceCents",
+                          "image"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "ok",
+                    "needsZip",
+                    "quote",
+                    "blocked",
+                    "lines",
+                    "subtotalCents",
+                    "shippingCents",
+                    "coveredCents",
+                    "totalCents",
+                    "reason",
+                    "nudge",
+                    "suggestions"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
                 }
               }
             }
@@ -16490,6 +17583,42 @@
                             "type": "string",
                             "pattern": "^[A-Z]{3}$"
                           },
+                          "coveredCents": {
+                            "type": "integer"
+                          },
+                          "items": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "slug": {
+                                  "type": [
+                                    "string",
+                                    "null"
+                                  ]
+                                },
+                                "title": {
+                                  "type": "string"
+                                },
+                                "priceCents": {
+                                  "type": "integer"
+                                },
+                                "shippingCents": {
+                                  "type": "integer"
+                                },
+                                "coveredCents": {
+                                  "type": "integer"
+                                }
+                              },
+                              "required": [
+                                "slug",
+                                "title",
+                                "priceCents",
+                                "shippingCents",
+                                "coveredCents"
+                              ]
+                            }
+                          },
                           "checkoutUrl": {
                             "type": [
                               "string",
@@ -16610,6 +17739,8 @@
                           "taxCents",
                           "totalCents",
                           "currency",
+                          "coveredCents",
+                          "items",
                           "checkoutUrl",
                           "expiresAt",
                           "paidAt",
@@ -16745,6 +17876,42 @@
                       "type": "string",
                       "pattern": "^[A-Z]{3}$"
                     },
+                    "coveredCents": {
+                      "type": "integer"
+                    },
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "slug": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "title": {
+                            "type": "string"
+                          },
+                          "priceCents": {
+                            "type": "integer"
+                          },
+                          "shippingCents": {
+                            "type": "integer"
+                          },
+                          "coveredCents": {
+                            "type": "integer"
+                          }
+                        },
+                        "required": [
+                          "slug",
+                          "title",
+                          "priceCents",
+                          "shippingCents",
+                          "coveredCents"
+                        ]
+                      }
+                    },
                     "checkoutUrl": {
                       "type": [
                         "string",
@@ -16865,6 +18032,8 @@
                     "taxCents",
                     "totalCents",
                     "currency",
+                    "coveredCents",
+                    "items",
                     "checkoutUrl",
                     "expiresAt",
                     "paidAt",
@@ -17036,6 +18205,42 @@
                       "type": "string",
                       "pattern": "^[A-Z]{3}$"
                     },
+                    "coveredCents": {
+                      "type": "integer"
+                    },
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "slug": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "title": {
+                            "type": "string"
+                          },
+                          "priceCents": {
+                            "type": "integer"
+                          },
+                          "shippingCents": {
+                            "type": "integer"
+                          },
+                          "coveredCents": {
+                            "type": "integer"
+                          }
+                        },
+                        "required": [
+                          "slug",
+                          "title",
+                          "priceCents",
+                          "shippingCents",
+                          "coveredCents"
+                        ]
+                      }
+                    },
                     "checkoutUrl": {
                       "type": [
                         "string",
@@ -17156,6 +18361,8 @@
                     "taxCents",
                     "totalCents",
                     "currency",
+                    "coveredCents",
+                    "items",
                     "checkoutUrl",
                     "expiresAt",
                     "paidAt",
@@ -17352,6 +18559,42 @@
                       "type": "string",
                       "pattern": "^[A-Z]{3}$"
                     },
+                    "coveredCents": {
+                      "type": "integer"
+                    },
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "slug": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "title": {
+                            "type": "string"
+                          },
+                          "priceCents": {
+                            "type": "integer"
+                          },
+                          "shippingCents": {
+                            "type": "integer"
+                          },
+                          "coveredCents": {
+                            "type": "integer"
+                          }
+                        },
+                        "required": [
+                          "slug",
+                          "title",
+                          "priceCents",
+                          "shippingCents",
+                          "coveredCents"
+                        ]
+                      }
+                    },
                     "checkoutUrl": {
                       "type": [
                         "string",
@@ -17472,6 +18715,8 @@
                     "taxCents",
                     "totalCents",
                     "currency",
+                    "coveredCents",
+                    "items",
                     "checkoutUrl",
                     "expiresAt",
                     "paidAt",
@@ -17641,6 +18886,42 @@
                       "type": "string",
                       "pattern": "^[A-Z]{3}$"
                     },
+                    "coveredCents": {
+                      "type": "integer"
+                    },
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "slug": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "title": {
+                            "type": "string"
+                          },
+                          "priceCents": {
+                            "type": "integer"
+                          },
+                          "shippingCents": {
+                            "type": "integer"
+                          },
+                          "coveredCents": {
+                            "type": "integer"
+                          }
+                        },
+                        "required": [
+                          "slug",
+                          "title",
+                          "priceCents",
+                          "shippingCents",
+                          "coveredCents"
+                        ]
+                      }
+                    },
                     "checkoutUrl": {
                       "type": [
                         "string",
@@ -17761,6 +19042,8 @@
                     "taxCents",
                     "totalCents",
                     "currency",
+                    "coveredCents",
+                    "items",
                     "checkoutUrl",
                     "expiresAt",
                     "paidAt",
@@ -17930,6 +19213,42 @@
                       "type": "string",
                       "pattern": "^[A-Z]{3}$"
                     },
+                    "coveredCents": {
+                      "type": "integer"
+                    },
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "slug": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "title": {
+                            "type": "string"
+                          },
+                          "priceCents": {
+                            "type": "integer"
+                          },
+                          "shippingCents": {
+                            "type": "integer"
+                          },
+                          "coveredCents": {
+                            "type": "integer"
+                          }
+                        },
+                        "required": [
+                          "slug",
+                          "title",
+                          "priceCents",
+                          "shippingCents",
+                          "coveredCents"
+                        ]
+                      }
+                    },
                     "checkoutUrl": {
                       "type": [
                         "string",
@@ -18050,6 +19369,8 @@
                     "taxCents",
                     "totalCents",
                     "currency",
+                    "coveredCents",
+                    "items",
                     "checkoutUrl",
                     "expiresAt",
                     "paidAt",

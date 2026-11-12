@@ -13,6 +13,9 @@ import { z } from "zod";
 import { sizeKey } from "../actions/files";
 import type { AppEnv } from "../env";
 import { notFound } from "../lib/errors";
+import { publicWorkShipping, shippingOf } from "../lib/shipping";
+import { siteFor } from "../lib/site-mail";
+import type { Shipping } from "@studio/core";
 import { errors, json, newApp } from "./common";
 
 export const publicRoutes = newApp();
@@ -104,7 +107,7 @@ function imagesOf(slug: string, files: Row[], cover: string | null): z.infer<typ
     });
 }
 
-export function publicWork(slug: string, a: Row, files: Row[]): z.infer<typeof PublicArtwork> {
+export function publicWork(slug: string, a: Row, files: Row[], ship?: Shipping): z.infer<typeof PublicArtwork> {
   const priced = a.status === "available" && a.price_cents !== null && a.price_cents !== undefined;
   const cover = a.primary_file_id as string | null;
   const images = imagesOf(slug, files, cover);
@@ -127,6 +130,7 @@ export function publicWork(slug: string, a: Row, files: Row[]): z.infer<typeof P
     currency: priced ? (a.currency as "USD") : null,
     images,
     publishedAt: (a.published_at as string | null) ?? null,
+    shipping: a.status === "available" ? publicWorkShipping(a, ship) : null,
   } as z.infer<typeof PublicArtwork>;
 }
 
@@ -153,7 +157,7 @@ const unb64 = <T>(s: string): T | null => {
   try { return JSON.parse(atob(s.replace(/-/g, "+").replace(/_/g, "/"))) as T; } catch { return null; }
 };
 
-export const COLS = "id, title, medium, year, width, height, depth, size_unit, price_cents, currency, status, description, primary_file_id, slug, collection, tags, palette, edition_size, published_at";
+export const COLS = "id, title, medium, year, width, height, depth, size_unit, price_cents, currency, status, description, primary_file_id, slug, collection, tags, palette, edition_size, published_at, shipping";
 
 // ------------------------------------------------------------------ routes
 
@@ -211,7 +215,8 @@ publicRoutes.openapi(
       if (results.length > PAGE && last) next = b64({ p: (last.published_at as string | null) ?? "", i: last.id });
     }
     const files = await filesOf(c, studio.id, works.map((w) => w.id as string));
-    return reply(c, { items: works.map((w) => publicWork(slug, w, files.get(w.id as string) ?? [])), nextCursor: next }, studio.version);
+    const ship = shippingOf((await siteFor(c.env, studio.id)).site);
+    return reply(c, { items: works.map((w) => publicWork(slug, w, files.get(w.id as string) ?? [], ship)), nextCursor: next }, studio.version);
   },
 );
 
@@ -228,7 +233,8 @@ publicRoutes.openapi(
       .bind(studio.id, artworkSlug).first<Row>();
     if (!work) throw notFound("Work");
     const files = await filesOf(c, studio.id, [work.id as string]);
-    return reply(c, publicWork(slug, work, files.get(work.id as string) ?? []), studio.version);
+    const ship = shippingOf((await siteFor(c.env, studio.id)).site);
+    return reply(c, publicWork(slug, work, files.get(work.id as string) ?? [], ship), studio.version);
   },
 );
 

@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+### Site 3.0 · stage 2 in production (2026-11-12)
+- 0011 applied by "Deploy production API"; production `studio-assistant` and `studio-site` deployed; the live site shows studio `isaac-anderson-art-ddm6dy`. Docs only here.
+
 ### Site 3.0 · stage 3 plan (D-125…D-131)
 - Isaac's answers to the stage 3 questions recorded; `docs/phase-6-site.md` → Stage 3: the visitor assistant's screens, shape, migration 0012, the gate and task cards. Waiting for his visitor questions and OK; no code changed.
 

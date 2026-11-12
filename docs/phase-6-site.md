@@ -587,6 +587,124 @@ its HttpOnly cookie `sv` (D-134).
    plus about a cent a text). Spending and a secret are his call; until then leads come by email only.
 4. At the gate: a look on his phone on staging.
 
+## Stage 4 — buying (plan drafted 2026-11-12, waiting for Isaac's OK)
+
+### Where it stands (2026-11-12)
+
+- [ ] Isaac's OK on this plan.
+- [ ] Stripe account and **test-mode** keys, added by Isaac as GitHub secrets (the secure form; never in a chat).
+- [ ] His shipping and returns answers (below, "Needs Isaac").
+- [ ] Cards A–E, then the gate. Nothing in this stage moves real money until the live keys go in, after the gate.
+
+**Goal.** A piece with a listed price that is available gets a **Buy** button. The visitor pays on Stripe's own
+checkout page; the piece is sold everywhere the moment Stripe confirms (site, Studio, the Show Tracker, the assistant),
+and Isaac gets an email with the buyer and the address to ship to. A visitor whose hold Isaac approved (D-127, D-140)
+can buy that piece during the 48 hours; nobody else can. A commission's deposit can be paid online from a link Isaac
+sends. One piece can never sell twice.
+
+**Not in this stage:** refunds from Studio (Isaac refunds in Stripe's dashboard; the webhook marks the sale refunded),
+payment plans beyond a deposit, prints and editions, other studios' Stripe accounts (Connect, stage 7).
+
+### What a visitor sees (phone first)
+
+- Piece page, available with a price: **Buy · $1,600** beside Hold / Add to inquiry. The price line adds "plus shipping
+  and tax at checkout" (or "shipping quoted" for large works, which keep inquiry instead of Buy, D-102).
+- Tap Buy → Stripe Checkout (Stripe's page: card, Apple Pay / Google Pay, shipping address, tax). The piece is set aside
+  for that visitor for 30 minutes while they pay; the page says so.
+- Paid → back on the site at `/thanks/{order}`: the piece, what was paid, "Isaac will email you about delivery", the
+  return terms. Stripe emails its receipt.
+- Abandoned or failed → back on the piece page after the 30 minutes; it is for sale again.
+- Ask: the assistant may say a piece can be bought on its page and link the page; it never starts a checkout or quotes a
+  total (shipping and tax come from checkout).
+- Commission deposit: a link Isaac sends opens `/pay/{token}`: the commission, the agreed amount, the deposit (50% by
+  default, D-126), Pay → Stripe Checkout.
+
+### What Isaac sees
+
+- An email per sale: piece, price, shipping, tax, buyer's name, email, phone, shipping address.
+- Studio → **Orders** (beside Leads): paid, waiting to ship, shipped (he adds a carrier and tracking number; the buyer
+  gets one email), refunded. Each links to the payment in Stripe.
+- A commission's page: **Request deposit** (amount prefilled from his percentage) makes the `/pay` link; he sends it
+  himself (copy link, or an email from Studio after his tap).
+- Site screen → Checkout: on/off, flat shipping rate for small works, the small/large line, return terms, the deposit
+  percentage. Off until the gate passes.
+
+### Shape (proposals; each becomes a decision when built)
+
+1. **Stripe Checkout, hosted, one payment per order.** No card field on the site, no Stripe script on content pages
+   (the budgets of stage 2 hold). Sessions are made by studio-api with `price_data` (the piece's title, picture and
+   price from the catalogue, never from the request), `shipping_address_collection`, a flat shipping rate, an
+   `expires_at` of 30 minutes, and the order id in `metadata` and as the idempotency key.
+2. **Isaac's own Stripe account; keys as secrets.** `STRIPE_SECRET_KEY` (a restricted key: Checkout Sessions write,
+   read on payments) and `STRIPE_WEBHOOK_SECRET` on `studio-api` (staging gets test keys, production live keys, each
+   from a GitHub secret Isaac adds; the deploy workflow sets them like `RESEND_API_KEY`). One studio has checkout for
+   now; per-studio accounts are stage 7 (Connect, no platform share).
+3. **The piece is set aside atomically.** `order.start` (public, visitor) writes the order and moves the artwork
+   `available → reserved` in one batch with the version check, so a second buyer gets 409 "someone is buying this
+   now". A piece on an approved hold is reserved already; only the hold's own lead (a token in its email and its
+   chat) can start its order. `checkout.session.expired` (or 35 minutes with no event, the hourly cron) puts it back.
+4. **The webhook is the only thing that sells.** `POST /v1/stripe/webhook` (no session; the studio is found from the
+   order the event names, never from the body's other fields) checks the `Stripe-Signature` HMAC with Web Crypto and a
+   5-minute tolerance, refuses a bad or old signature with 400, and records each event id once (`payment_events`,
+   unique) so a replay changes nothing. `checkout.session.completed` with `payment_status: paid` → `order.paid`:
+   the order paid, the artwork `sold` (as `artwork.mark_sold`, D-029), a `sales` row (`source: stripe`,
+   `payment_method: online`, `external_id` the payment), the client matched or made (as D-138), the lead (if any)
+   done, emails to Isaac. `charge.refunded` → the order and sale marked refunded; the piece stays sold until Isaac
+   puts it back.
+5. **Money from Stripe, not from us.** The order keeps what Stripe reports (amount, shipping, tax, currency) in cents.
+   Tax: Stripe Tax (`automatic_tax`) as D-102 says, which needs Stripe Tax turned on in his account and has Stripe's
+   own fee per sale; until he turns it on, checkout runs without tax and the plan says so on the Site screen.
+6. **Deposits are orders too.** `kind: deposit`, tied to a client and a commission record (`meta.commission` on the
+   client until a commissions table is needed), amount set by Isaac's tap (`deposit.request`, owner only); paying it
+   writes a `sales` row marked deposit and emails him.
+7. **The assistant never sells.** No checkout tool, no order data in its context. A visitor's order is visible only to
+   the visitor's own browser (`x-visitor-key`) and to the owner.
+
+### Data (migration 0013, additive)
+
+- `orders`: id, studio_id, kind (`piece`, `deposit`), artwork_id, lead_id, client_id, visitor_id, status (`pending`,
+  `paid`, `expired`, `refunded`, `cancelled`), amount_cents, shipping_cents, tax_cents, currency, stripe_session_id
+  (unique), stripe_payment_id, buyer name / email / phone, shipping address (JSON), shipped_at, carrier, tracking,
+  expires_at, pay_token_hash (deposits), plus the standard columns.
+- `payment_events`: stripe event id (unique), studio_id, order_id, type, received_at. Kept 90 days.
+
+### Gate
+
+1. **Test-mode purchase end to end on staging**: Buy → Stripe's test checkout (test card) → webhook → piece sold on
+   the site, in Studio and in the Show Tracker's sales; Isaac's email; `/thanks`; Orders shows it; shipped + tracking
+   email. The same for a deposit link. A phone-sized browser run in "Deploy staging" (`smoke`), Stripe test mode only.
+2. **Webhook signature checked**: wrong secret, changed body, old timestamp → 400 and nothing written; a replayed
+   event → no second sale (tests, plus Stripe's own test events on staging).
+3. **One piece can't sell twice**: two checkouts at once → one 409; a paid event for an expired order on a piece sold
+   meanwhile → refunded automatically? No: flagged to Isaac by email and on Orders (he decides); tests for each.
+4. **Holds**: an approved hold's piece can be bought only from that lead's link; when the hold ends it is for sale.
+5. `/security-review` on both diffs; tenancy sweep covers every new route.
+6. Isaac's look on staging, then live keys and a first real sale he watches (he can buy and refund his own piece).
+
+### Task cards
+
+| # | Card | Who | Repo |
+|---|---|---|---|
+| A | 0013, `order.start` / `order.paid` / `order.expire` / `order.ship` / `deposit.request`, the webhook route and signature check, Stripe client (fetch, no SDK), cron, emails, tests, openapi | Lead (Opus 5.5), `backend-builder` | Art-Talk-Back |
+| B | Deploy workflows: Stripe secrets (test on staging, live on production) and a skip when unset; webhook endpoint notes | Lead | Art-Talk-Back |
+| C | Buy button, `/buy/{slug}` (works without scripts: a form post), `/thanks/{order}`, `/pay/{token}`, price line | Sonnet 5.5 | site |
+| D | Studio → Orders (list, detail, Mark shipped), commission Request deposit, Site → Checkout settings | Sonnet 5.5 | site |
+| E | Smoke test with Stripe test mode; assistant prompt line on buying (no tool) and two eval cases | Sonnet 5.5 | both |
+
+A first (the contract); C–E against it.
+
+### Needs Isaac, in order
+
+1. OK this plan.
+2. A Stripe account (stripe.com, his business details and bank) and its **test** keys added as GitHub secrets: Art-Talk-Back
+   → Settings → Secrets and variables → Actions → New secret, `STRIPE_SECRET_KEY_TEST` and, after the first staging
+   deploy prints the webhook address, `STRIPE_WEBHOOK_SECRET_TEST`. Live keys only after the gate.
+3. Shipping: the flat rate for small works, where "small" ends (default: longest side up to 36 in), and whether he
+   ships outside the US (default: US only).
+4. Returns wording for checkout (default from D-102: seven days on available works, none on commissions).
+5. Stripe Tax on or off (it has Stripe's own fee per sale).
+6. The deposit wording (already asked in stage 3, question 12).
+
 ## Open questions — answered 2026-11-10 (D-102, D-103)
 
 Isaac: "default on all, except number 10."

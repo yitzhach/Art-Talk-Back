@@ -603,6 +603,244 @@ its HttpOnly cookie `sv` (D-134).
 - [x] Cards C–E (2026-11-12): site Buy button, `/buy`, `/thanks`, Orders screen, Checkout settings (site repo); the
   assistant's Buy line.
 - [ ] The gate (sandbox purchase end to end on staging), then production. Nothing moves real money until the production credentials go in, after the gate.
+- [ ] **Revision (proposed 2026-11-12, waiting for Isaac's review): shipping tiers, a cart and the large-work offer.**
+  Isaac's brief "Shipping information" (2026-11-12). Planning only: nothing below is built until he says "build".
+  Payments stay Square for cards and Venmo/Zelle by hand (D-144); the brief's Stripe steps read as Square here.
+
+### Revision: shipping tiers, a cart and the large-work offer (proposed, not built)
+
+**The idea.** Small and medium originals ship free with one clean price. In-between pieces carry a modest flat rate.
+Large works cost real money to ship, so that's where the incentive lives: add a qualifying piece and Isaac covers the
+large work's shipping. The nudges stay quiet: one line in the cart, and the assistant explains the offer only when
+asked.
+
+**Findings (checked 2026-11-12 on both branches).**
+
+- Stage 4 is already built on `claude/project-thread-ionjj5` (cards A–E, D-144, D-145) and deployed to staging (run
+  43253617702, smoke passed), not merged. It sells **one piece per order** with a flat `checkout.shippingCents` and a
+  "small" line (`smallMaxInches`, default 36 in); longer pieces keep inquiry (D-102 item 4).
+- Migration 0013 is taken by `orders` and `payment_events`, so shipping goes in **0014**. Decisions on the default
+  branch run to D-143 and this branch holds D-144 and D-145, so new ones start at **D-146**.
+- Artworks already have width, height, depth, size unit, price and status. No tier, weight or shipping price yet.
+- The commission deposit link (`/pay/{token}`) was planned but not built; quotes and deposits now share it.
+- `docs/SHIPPING.md` is about shipping code (D-057) and stays untouched; parcel shipping is documented in a new
+  `docs/shipping-rates.md`.
+
+**What the revision replaces in the built stage 4.**
+
+| Built now | Becomes |
+|---|---|
+| `order.start` takes one `artworkId` | takes `artworkIds` (1–10); one order, one line per piece (`order_items`) |
+| `checkout.shippingCents` flat rate, `smallMaxInches` decides Buy vs inquiry | the tier calculator; `smallMaxInches` retired (read once to suggest tiers) |
+| Square link: the piece plus one flat shipping line | one line per piece plus one fixed "Shipping" line from the calculator |
+| Buy on the piece page → `/buy/{slug}` | Add to cart → `/cart` → checkout (`/buy/{slug}` stays as a one-piece cart) |
+| Large works: inquiry only (D-102 item 4) | tier 3 is buyable once Isaac sets its shipping price; tier 4 is quote then `/pay/{token}` |
+
+Everything else stays: Square's signed webhook is the only thing that sells a card order, Venmo/Zelle sell only on
+Mark paid, the 30-minute and 48-hour holds, one sell path, holds from approved leads, emails, Orders.
+
+#### The tiers (starting values; Isaac edits all of them in Studio)
+
+| Tier | Roughly | Buyer pays | Suggested when |
+|---|---|---|---|
+| 1 Free | up to 16×16 or 12×24 | free | area up to 300 sq in and longest side up to 24 in |
+| 2 Mid | around 18×20 | $22 flat | area up to 500 sq in and longest side up to 30 in |
+| 3 Large | 20×26 and up | a price Isaac sets per piece (no default) | anything bigger |
+| 4 Quote | crated, freight, unusual | a quote, no Buy | depth over 6 in, or flagged crated or custom quote |
+
+- A suggestion is only a suggestion: Isaac taps to accept it, and nothing assigns a tier silently. A piece with no
+  dimensions, or within 10% of a boundary, shows **Check size** and stays unassigned (cm sizes are converted first).
+- A tier 3 piece can't be bought until Isaac enters its shipping price; the bulk editor lists it as "needs a
+  shipping price".
+- A piece with no tier keeps Hold and Add to inquiry, as today, and never shows Add to cart.
+
+#### The calculator (one pure function in `packages/core`, called only by studio-api)
+
+`shippingFor({ pieces, settings, destination | pickup, now })`, no I/O. The site never works out shipping itself; the
+cart, the quote route and `order.start` all ask studio-api, which calls this one function.
+
+Order of evaluation:
+
+1. Any tier 4 piece, or one flagged custom quote → quote required, checkout blocked.
+2. Missing tier, missing tier 3 price, sold or reserved (not by this buyer's own approved hold) → blocked. Never guess.
+3. Local pickup (offered, and every piece allows it) → $0.
+4. Outside the countries shipped to (default US only, D-102) → quote.
+5. Each piece's own shipping: tier 1 $0, tier 2 the flat rate, tier 3 its own price. Each ships as its own box.
+6. The rules below, then the cap.
+
+Returns `customerPaysCents`, `coveredCents` (what Isaac gives away), each piece's line (charged, covered, rule),
+`ruleIds` with a plain-words reason, `quoteRequired` and `blocked` (which pieces, why), and the next opportunity for
+the nudge.
+
+#### The rules (data, each with on/off and optional start and end dates)
+
+- **R1 "Mid pairs free"**: a tier 2 piece's $22 is waived when the order holds at least one other piece of any tier.
+- **R2 "Large-work offer"**: a tier 3 piece's shipping is covered when the order holds a qualifying piece: a tier 1 or
+  tier 2 piece priced at or above the minimum (default $500). One qualifier covers one large piece. Isaac covers at
+  most the cap per large piece (default $150); the rest is charged and the cart says so ("we cover $150 of $210").
+  Qualifiers are matched to large pieces highest-shipping first, so the buyer always gets the larger saving.
+- **Promotion-eligible** flag on each piece, on by default: off means the piece neither qualifies nor is covered.
+
+Worked examples (a large piece's shipping set at $120):
+
+| Cart | Buyer pays | Why |
+|---|---|---|
+| one 16×16 | free | tier 1 |
+| two tier 1 | free | tier 1 |
+| one 18×20 | $22 | tier 2 |
+| 18×20 + 12×12 | free | R1 |
+| one large | $120 | its own price |
+| large + $600 tier 1 | free | R2 |
+| large + $300 tier 1 | $120 | under the minimum |
+| large + 18×20 ($550) | free | R2 covers the large; R1 waives the $22 |
+| two large + one $600 piece | $120 | one qualifier covers one large |
+| large ($210 shipping) + $600 piece | $60 | the cap covers $150 |
+| anything + tier 4 | quote | step 1 |
+
+**Later (designed for, not built):** reduced add-on rates, international zones, carrier-calculated rates, a seven-day
+"add a piece to your shipment" window.
+
+#### The nudge (quiet by design)
+
+- Only a cart where shipping is charged shows a nudge; one that ships free says "Ships free", once.
+  - Tier 2 alone: "Add any other work and the $22 shipping is on us."
+  - Large alone: "Add a smaller original from $500 and Isaac covers this piece's $120 shipping."
+  - Covered: "Isaac is covering $120 of shipping on this order."
+  - Quote: "This work needs a shipping quote. Isaac usually replies within a day."
+  Isaac edits the wording; the amounts always come from the calculator.
+- Up to three suggestion cards in one row under that line. Each is public, available, priced, not in the cart, not
+  reserved, promotion-eligible and would actually unlock the rule. Ranked by Isaac's "pairs well with" picks first,
+  then unlocks the rule, then price nearest the minimum or the cart's range, then same collection and medium, then
+  newest. Dismissed cards stay hidden for that cart; the same message never shows twice in a row. No pop-ups,
+  timers, countdowns or "only 1 left". Titles, prices and pictures come from the catalogue.
+- The visitor assistant gets the tiers, the offer in plain words and Isaac's pairings from the public shipping
+  settings. When asked about shipping or a large piece it may explain the offer once and link a paired piece. It
+  never raises the offer unprompted, never repeats it, never quotes an order total, never starts a checkout and never
+  offers a discount (D-127). Four eval cases: asked about shipping, asked about a large piece, an unrelated question
+  (no pitch), asked twice (no repeat). Run one at a time within D-143's budget.
+
+#### Cart and checkout on the site
+
+- The cart lives in the browser's storage (wrapped in try/catch), in the existing `buy.js` within the bundle budget.
+  Piece pages stay edge-cached and never vary by cookie or cart; the script fills the cart line.
+- Piece page price line by tier: "$450 · Free shipping"; "$650 · Shipping $22, free with another work"; "$2,400 ·
+  Shipping $120. Add a smaller original from $500 and it's on us."; tier 4 "Shipping quoted" with Hold or inquiry
+  and no Add to cart.
+- `/cart` (uncached, noindex): each piece, its shipping, what Isaac covers, the total, the one nudge line, the
+  suggestions, and **Checkout** with the two ways to pay (card on Square, or Venmo/Zelle by hand).
+- Checkout posts the list to `order.start`. The server recalculates, reserves every piece in one batch (any piece
+  unavailable → 409 naming it, nothing reserved), and gives Square one fixed shipping line. Square never works out
+  shipping. If the total differs from what the cart showed (the cart sends it), nothing is reserved; the buyer sees
+  the new total and confirms again. The site never charges a number the buyer didn't see.
+- Quote pieces: **Request a shipping quote** uses the existing inquiry flow (a lead). Isaac enters the quote on the
+  lead; that makes a quote order and a `/pay/{token}` link he sends himself; the buyer pays the same two ways. No
+  other route to checkout. Commission deposits use the same link.
+- An approved hold's piece can only go in that lead's cart. Hold, Add to inquiry, Ask, Leads and the assistant keep
+  working.
+
+#### Studio (Isaac's controls, site repo)
+
+- New **Shipping** screen beside Site (`/studio/shipping`):
+  - At the top, the one question: did the large-work offer bring in more extra sales than the shipping it gave away?
+  - Settings: tier names, size boundaries, the tier 2 rate, R1 and R2 on/off with dates, the minimum, the cap,
+    countries, local pickup and its wording, the message wording. Checked: amounts ≥ 0, end after start, boundaries
+    in order.
+  - Bulk editor: filter by tier, "missing tier" or "needs a shipping price"; select many; set tier, price,
+    eligibility or flags in one tap; **Accept suggestions** for the selected rows, each row showing what it gets. New
+    pieces land here until set.
+- Work screen (`src/screens/work.ts`): a Shipping section with tier, the suggestion, the per-piece price, weight, the
+  flags (promotion-eligible, ships separately, fragile, crated, local pickup, custom quote) and **Pairs well with**
+  (up to three works).
+- Orders: shows each piece, the shipping charged and covered, and an optional "what shipping actually cost" at Mark
+  shipped.
+
+#### Data (migration 0014, additive)
+
+- `artworks`: `ship_tier` (1–4, null), `ship_cents` (tier 3's price, null), `ship_weight` + `ship_weight_unit`
+  (`lb`/`kg`), `ship_flags` (JSON list), `pairs_with` (JSON list of up to three artwork ids, same studio). Columns,
+  not meta, so the bulk editor can filter on them.
+- Shipping settings in `meta.site.shipping` beside `meta.site.checkout` (the SiteProfile pattern, D-119): tiers,
+  boundaries, rates, rules with dates, minimum, cap, countries, pickup, wording. A change bumps the catalogue version,
+  so the public site shows it within D-124's ~10 s with no deploy.
+- `order_items`: order_id, studio_id, artwork_id, price_cents, ship_cents, covered_cents, rule_id. `orders` keeps
+  `artwork_id` for a one-piece order and gains `covered_cents` and the rule ids (meta). `orders.kind` gains `quote`.
+- `shipping_counters`: studio_id, day, rule_id, what (`shown`, `tapped`, `bought`), n. Anonymous: no visitor id, IP
+  or new cookie.
+
+#### API (additive, `/v1`)
+
+- `GET /v1/public/studios/{slug}/shipping`: tiers, rates, active rules and wording. Cached like the profile.
+- `POST /v1/public/studios/{slug}/shipping/quote`: artwork ids plus destination or pickup → the calculator's answer
+  and up to three suggestions. Prices and status from the catalogue, never the request. Uncached, rate-limited like
+  the other visitor routes.
+- Owner: read and update settings (If-Match), `POST /v1/artworks/shipping` bulk update (one batch, one activity_log
+  entry per work, through one action), suggestions for the bulk editor, a quote on a lead (`order.quote`).
+- `order.start` takes the list and calls the same calculator; the order stores what the buyer pays, what Isaac
+  covers and the rule ids. Counters go through an internal action. `docs/openapi.json` regenerated.
+
+#### Measurement
+
+From orders: orders with a large piece, how many added a qualifier, the extra revenue from those qualifiers, shipping
+Isaac covered, his actual cost where entered, and average order value with and without the offer. Nudge counters per
+rule per day: shown, suggestion tapped, suggested piece bought (a flag the cart sends at checkout). Assistant: how
+often the offer came up when asked, from the existing chat logs. Nothing new is collected about visitors.
+
+#### Proposed decisions (recorded when built)
+
+- **D-146 · Shipping tiers replace D-102 item 4 · Isaac**: four tiers; large works buyable once priced; quotes for
+  tier 4.
+- **D-147 · R1, mid pairs free**: the tier 2 rate is waived with any other piece.
+- **D-148 · R2, the large-work offer**: a qualifier covers a large piece's shipping; minimum $500.
+- **D-149 · One qualifier per large piece, cap $150 per large piece**, matched highest-shipping first.
+- **D-150 · Never guess a tier**: suggestions need Isaac's tap; Check size near a boundary or without dimensions.
+- **D-151 · One calculator in `packages/core`, called only by studio-api**; settings in `meta.site.shipping`, piece
+  fields as artwork columns, multi-piece orders as `order_items`.
+- **D-152 · This project ships platform first, and production needs Isaac's OK · Isaac**: the exception D-057 already
+  lists (the site needs the new contract), and nothing reaches production before his "ship".
+
+#### Tests
+
+- Calculator (pure unit tests): every worked example; each tier alone; tier 3 with no price (blocked); the minimum
+  just under, at and just over; the cap under, at and over; two large pieces with one and two qualifiers; R1 and R2
+  off, before start, on the start and end dates, after end; a promotion-ineligible piece; missing tier; sold or
+  reserved; tier 4 alone and mixed; local pickup (all allow, one doesn't); non-US; empty cart.
+- Suggestions: never in the cart, sold or reserved, never under the minimum; pairs-with ranks first.
+- API: the quote ignores prices sent in the request; tenancy (another studio's id → not found); bulk update is one
+  batch; If-Match; the sweep covers every new route.
+- Checkout: the cart and the Square link use the same calculation; a change in between is shown, not charged; two
+  buyers for one piece → one 409; a two-piece card order sells both pieces from one webhook; a two-piece Venmo order
+  sells both on Mark paid.
+- Assistant evals: the four cases above.
+- Site: no horizontal scroll; Lighthouse mobile ≥ 95; budgets hold; piece pages still cache-hit and don't vary by
+  cart; dismissed suggestions stay dismissed.
+- Everything existing stays green. The staging smoke adds a large piece plus a qualifier, bought in Square's sandbox.
+
+#### Task cards (replace F onward)
+
+| # | Card | Repo |
+|---|---|---|
+| F | Calculator and suggestions in `packages/core`, with the pure tests | Art-Talk-Back |
+| G | 0014; artwork shipping fields; `meta.site.shipping`; settings, bulk and quote routes; `order.start` takes a list (`order_items`), Square lines, `order.quote` and `/pay` tokens; counters; tests; openapi | Art-Talk-Back |
+| H | Cart in `buy.js`, `/cart`, the price line by tier, suggestions, Request a shipping quote, `/pay/{token}` | site |
+| I | Studio → Shipping (settings, bulk editor, the measurement line), Work screen's Shipping section, Orders lines | site |
+| J | The assistant's shipping words and four evals; `docs/shipping-rates.md`; smoke with a large piece plus a qualifier | both |
+
+Sequence: F and G (platform PR, then staging), H and I (site PR, same branch name, then staging), J, end to end on
+staging phone-sized in Square's sandbox, then one staging link and a short checklist for Isaac. Production only after
+his "ship": platform first, then site.
+
+#### Questions for Isaac on the revision (each has a default)
+
+1. Does every tier 1 or 2 piece qualify for the large-work offer, or only one priced at $500 or more? Default: $500.
+2. The most Isaac covers per large piece. Default: $150.
+3. Size lines: up to 300 sq in free, up to 500 sq in $22, above that large. Do an 18×20 ($22) and a 20×26 (large)
+   land where he expects?
+4. Does the mid tier's $22 drop when paired (R1)? Default: yes.
+5. Only the US? Default: yes; everywhere else is a quote.
+6. Local pickup from the studio? Default: off.
+
+
+### The built plan (cards A–E, one piece per order; the revision above changes it where its table says)
 
 **Goal.** A piece with a listed price that is available gets a **Buy** button with two ways to pay: **card** on Square's
 own checkout page (Apple Pay and Google Pay where Square offers them), or **Venmo / Zelle** to Isaac by hand. A card
@@ -712,8 +950,8 @@ A first (the contract); C–E against it.
 
 ### Needs Isaac, one at a time
 
-1. Shipping: the flat rate for small works, where "small" ends (default: longest side up to 36 in), and US only
-   (default).
+1. ~~Shipping: the flat rate for small works and where "small" ends~~ Replaced by the revision's tiers and its
+   six questions.
 2. Returns wording (default from D-102: seven days on available works, none on commissions).
 3. Tax: none at checkout (default), or a fixed rate he gives.
 4. His Venmo name and the Zelle email or phone buyers should send to (shown on the order page).

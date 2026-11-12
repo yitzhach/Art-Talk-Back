@@ -819,7 +819,7 @@ Isaac covered, his actual cost where entered, and average order value with and w
 rule per day: shown, suggestion tapped, suggested piece bought (a flag the cart sends at checkout). Assistant: how
 often the offer came up when asked, from the existing chat logs. Nothing new is collected about visitors.
 
-#### Proposed decisions (recorded when built)
+#### Decisions (D-157…D-161)
 
 - **D-146 · Shipping tiers replace D-102 item 4 · Isaac**: four tiers; large works buyable once priced; quotes for
   tier 4.
@@ -1004,7 +1004,7 @@ A first (the contract); C–E against it.
    Actions → New secret: `SQUARE_ACCESS_TOKEN_SANDBOX`, `SQUARE_LOCATION_ID_SANDBOX`,
    `SQUARE_WEBHOOK_SIGNATURE_KEY_SANDBOX`. Production ones only after the gate.
 
-## Stage 5 — on my wall (planned 2026-11-12; waiting for Isaac's OK on the plan)
+## Stage 5 — on my wall (approved by Isaac 2026-11-12, built; at the gate)
 
 ### Where it stands (2026-11-12)
 
@@ -1016,8 +1016,12 @@ A first (the contract); C–E against it.
   the wall photo, type the real distance: inches per pixel = inches ÷ the points' distance), pieces drag, optional
   per-piece perspective corners, shadows, lighting. Too big to embed under the 50 KB budget, so its calibration and
   placement math is carried over, not its page.
-- [ ] Isaac's OK on this plan.
-- [ ] Build (site repo only; no platform change, no migration, no new cost).
+- [x] Isaac's OK on this plan (2026-11-12: "That sounds good").
+- [x] Build (site repo only; no platform change, no migration, no new cost): site branch
+  `claude/project-thread-10m9mf`. Staging smoke 13/13 (wall: 0.33% off on a test photo, live model 1.3 MB); site
+  checks: wall 2%, drag p95 16.7 ms at a 4× slower CPU, Save picture, live model, no errors.
+- [ ] CI's Lighthouse LCP on `/works/work-1` is 2.1 s against a 2.0 s line, on `main` too since the stage 4 merge (not
+  this change); being looked into.
 - [ ] Gate, staging, Isaac's tape-measure check, then live.
 
 ### What a visitor sees (piece page, any device)
@@ -1035,7 +1039,7 @@ A first (the contract); C–E against it.
      composite. A note says the photo works best taken straight on. dm-t1's calibration math, plain DOM.
 - Elsewhere (Android, desktop) the live way isn't offered; the photo way is.
 
-### Proposed decisions (recorded when built)
+### Decisions (D-157…D-161)
 
 - D-157 · The wall view runs on the visitor's device; nothing is uploaded or stored by the site.
 - D-158 · AR-WALLE's USDZ builder and dm-t1's two-point calibration are copied into the site (no shared package):
@@ -1043,6 +1047,11 @@ A first (the contract); C–E against it.
 - D-159 · Pieces with no depth show 1.5 in deep in AR; pinch stays locked so the size can't drift.
 - D-160 · Perspective corners, lighting, several pieces at once and Android live AR wait: none is needed for "true size
   on my wall", and each would add code a buyer has to download.
+- D-161 · Proposed (Isaac's idea, 2026-11-12): link the full dm-t1 tool from the site, with the studio's works passed
+  to it. dm-t1 already reads a catalogue feed (`catalogUrl`, items `{id, title, src, widthIn, heightIn, price}`) and a
+  config in its address (`#wvcfg=`), and in embed mode posts keep / inquire / export back to the page that opened it.
+  So: a public feed of the studio's works in that shape, an "Open the full wall tool" link, and the tool's picture
+  coming back into the inquiry. Needs: where dm-t1 is hosted, and Isaac's OK. Not part of the stage 5 gate.
 
 ### Gate
 
@@ -1061,8 +1070,9 @@ A first (the contract); C–E against it.
 
 ### Needs Isaac, in order
 
-1. OK on this plan.
+1. OK on this plan (done).
 2. At the gate: the tape-measure check on his iPhone, on staging.
+3. Later (D-161): where dm-t1 lives, and whether to link it.
 
 ## Open questions — answered 2026-11-10 (D-102, D-103)
 

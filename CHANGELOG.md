@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+### Site 3.0 · stage 3, A: visitors, leads, made pages, usage and the cap (D-134…D-141)
+- Migration 0012: `visitors`, `visitor_messages`, `visitor_pages`, `leads`, `assistant_usage` (additive). Drizzle mirror; drift test.
+- `SiteProfile.assistant` (artist's name, greeting, suggestions, reply time, monthly budget, answers by topic). Public routes under `/v1/public/studios/{slug}`: `assistant`, `digest`, `pages/{token}`, and per visitor (`x-visitor-key`, set only by the site's Worker): `visitor`, `visitor/email-code`, `visitor/email-verify`, `visitor/pages`, `visitor/leads` (JSON or multipart with up to 5 stripped pictures; emails the studio; matches or creates a client). Assistant-only: `visitor/turn-start` (limits, budget, history) and `visitor/turn` (record and cost). Owner: `GET /v1/leads`, `GET /v1/leads/{id}`, `POST /v1/leads/{id}/approve-hold|decline|close`, `GET /v1/site/assistant-usage`.
+- Cron triggers on studio-api (`src/jobs.ts`): hourly hold expiry, a daily summary email at 15:23 UTC. Tests: `test/visitors.test.ts` (15), tenancy sweep extended. `docs/openapi.json` regenerated (additive).
+
+### Site 3.0 · stage 3, B: the visitor assistant (D-125, D-126, D-135)
+- `studio-assistant` `POST /assistant/visitor` (`src/visitor.ts`, `src/visitor-prompt.ts`): Haiku 5.5 (`VISITOR_MODEL`) at low effort, the rules + the studio's words + the catalogue digest as a cached prefix, one read tool (`get_work`); the reply is checked before it is shown (prices, cards, quoted titles) and returned whole as JSON. Tests: `test/visitor.test.ts` (12) on a real in-process studio-api.
+- Security: `studio-assistant` has no public workers.dev address any more (reached only through service bindings), so nobody can call the visitor route directly and skip the site's limits.
+
 ### Site 3.0 · stage 3 approved; the inquiry list added (D-132, D-133)
 - Isaac OK'd building the visitor assistant now (his test questions follow) and asked for a cart-like inquiry page and a contact sheet; `docs/phase-6-site.md` → Stage 3 gains card F and a gate step. Handoff and next-session prompt updated. Docs only.
 

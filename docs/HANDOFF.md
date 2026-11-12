@@ -23,6 +23,15 @@ Read this first, then `CLAUDE.md`, then `docs/phase-3.md` (assistant) or `docs/p
     assistant" → "Deploy production site" with `studio_slug` `isaac-anderson-art-ddm6dy`.
   - The eval's recording artifact can't be downloaded from a session sandbox; the workflow also prints it gzipped and
     base64'd between RECORDING-BEGIN/END in the log.
+  - Overnight (2026-11-12, Isaac's $1 test budget, D-143; about 6 cents used): three more eval runs. Run in parallel
+    they hit the provider's rate limit (429) on some cases; every case that got an answer passed. Run evals one at a
+    time. "Deploy staging" has a new input `smoke`: a phone-sized Chromium on GitHub (ubuntu-24.04) asks the real
+    staging assistant two questions and checks cards, made pages, the handoff buttons, the protected number, the
+    inquiry list and its PNG/JPEG downloads, without sending a lead (site `tests/staging-smoke.mjs`). Last run
+    43200355122: 12/12.
+  - Seen on staging, not code: the site photo "Process photo: hero 3" is a `work` there, so the assistant can show it
+    as a card; the app has no switch for `kind`. Production was counted at 40 works + 25 site photos in stage 2.
+    Staging's assistant words are empty until Isaac opens `/studio` there (D-139 fill).
 
 - **Site 3.0 stage 2 (the public site) shipped to production (2026-11-12, D-116…D-124, `docs/phase-6-site.md`).**
   Site repo `yitzhach/IA-ART-SITE-REPO` (Workers `studio-site`, `studio-site-staging`); Art-Talk-Back #48, site #2.

@@ -83,9 +83,10 @@ export interface LeadMailInput {
 
 /** One email per lead, at once (D-129). Reply goes to the visitor. */
 export function leadMail(to: string[], l: LeadMailInput): Mail {
-  const who = l.name || l.email || l.phone || "A visitor";
+  // The visitor's own words: one line, never a header break.
+  const who = (l.name || l.email || l.phone || "A visitor").replace(/[\r\n\t]+/g, " ").slice(0, 120);
   const subject = l.kind === "hold"
-    ? `Hold request: ${String(l.works[0]?.title ?? "a piece")} — ${who}`
+    ? `Hold request: ${String(l.works[0]?.title ?? "a piece").replace(/[\r\n]+/g, " ")} — ${who}`
     : `New inquiry from your site — ${who}${l.works.length ? ` (${l.works.length} piece${l.works.length === 1 ? "" : "s"})` : ""}`;
   const lines = [
     l.kind === "hold"

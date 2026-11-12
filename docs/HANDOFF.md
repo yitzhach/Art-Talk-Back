@@ -5,6 +5,32 @@ Read this first, then `CLAUDE.md`, then `docs/phase-3.md` (assistant) or `docs/p
 
 ## Where things stand
 
+- **What's next (2026-11-12).** In order: (1) **stage 4's gate** (buying is built and merged but switched off:
+  Isaac adds Square **sandbox** keys as GitHub secrets, then a sandbox purchase end to end on staging, then production
+  keys and his "ship"); (2) **stage 6, Collectors** (`docs/phase-6-site.md` → Stages and gates: follow, first look,
+  collection page, certificate, commission tracker, show QR; gate: a test collector goes invite → first look →
+  purchase; needs his list of past buyers to invite), planned and shown to Isaac before any code; (3) **D-161**, the
+  full dm-t1 wall tool linked from the site, once Isaac says where dm-t1 is hosted. Still open from stage 3: his own
+  visitor questions (22 slots).
+
+- **Site 3.0 stage 5 (see it on your wall) live (2026-11-12, D-155…D-160, `docs/phase-6-site.md` → "Stage 5").**
+  Every piece page with a width, height and picture has **See it on your wall**: the live camera view on iPhone/iPad
+  (AR Quick Look, a USDZ built on the device from AR-WALLE's builder, true size, pinch locked) and, on any device, a
+  photo of their wall sized from two taps on something of known length (dm-t1's calibration), draggable, Save picture.
+  Nothing uploaded (D-157). Site only: no platform change, no migration, no new cost. Site PR
+  [IA-ART-SITE-REPO#6](https://github.com/yitzhach/IA-ART-SITE-REPO/pull/6); notes and decisions in Art-Talk-Back
+  (branch `claude/project-thread-10m9mf`, both repos).
+  - Gate: size within 2% (tests 0.3–0.4%, staging smoke 0.33%), drag p95 16.7 ms at a 4× slower CPU, USDZ front
+    within 0.1%; Isaac's tape check on his iPhone (Abstract No. 3, 28 × 18 in): "Right".
+  - Production: site #6 merged; "Deploy production site" 5 (slug `isaac-anderson-art-ddm6dy`, site `main`, Worker version
+    `8ad56c05`); "Smoke production site" 13/13 on the live site (wall: 0.35% off on `/works/abstract`, live model
+    1.3 MB).
+  - Undo: Cloudflare → Workers & Pages → `studio-site` → Deployments → Rollback, then revert #6 on GitHub.
+  - CI: Lighthouse LCP on `/works/work-1` now scores the median of three runs (one run read 2.1 s since the stage 4
+    merge, the same tree 1.8 s before); the fake API answers `/checkout`.
+  - D-161 proposed, waiting on Isaac: link the full dm-t1 tool with a catalogue feed of the studio's works; its
+    picture comes back into the inquiry.
+
 - **Site 3.0 stage 4 (buying) under way (2026-11-12, D-144, `docs/phase-6-site.md` → "Stage 4").** Isaac said start
   now, with cards through his **Square** account (hosted checkout, signed webhook) and **Venmo / Zelle** by hand (held
   48 hours, sold on his Mark paid). Stripe is out. Built in Square's sandbox first; production credentials only after

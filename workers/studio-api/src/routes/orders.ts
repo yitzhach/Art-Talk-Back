@@ -3,6 +3,8 @@
 // Public, under /public/studios/{slug}: the checkout's settings; a visitor's own orders (x-visitor-key, as leads).
 // Square: its signed webhook, the only way a card order is paid. No session; the signature is the proof.
 // Owner: the orders, and Mark paid (Venmo, Zelle), Ship, Cancel, More time.
+import { firstLookAccess } from "../actions/collectors";
+import { live } from "../lib/collectors";
 import {
   OrderInput, OrderStatus, Order, PublicCheckout, PublicOrder, PublicShipping, MarkPaidInput, ShipInput, ShippingQuote, ShippingQuoteInput,
   db as schema, shippingFor, wouldUnlock, type ShipWork,
@@ -242,8 +244,9 @@ orderRoutes.openapi(
     const settings = shippingOf(site);
     const v = await visitorFor(c.env, studio.id, c.req.header("x-visitor-key") ?? "", false);
     const slugs = [...new Set(input.works)];
+    const firstLook = await firstLookAccess(c.env, studio.id, v?.id);
     const { results: rows } = await c.env.DB.prepare(
-      `SELECT * FROM artworks WHERE studio_id = ? AND public = 1 AND deleted_at IS NULL AND kind = 'work' AND slug IN (${slugs.map(() => "?").join(",")})`,
+      `SELECT * FROM artworks WHERE studio_id = ? AND public = 1 AND deleted_at IS NULL AND kind = 'work'${firstLook ? "" : ` AND ${live()}`} AND slug IN (${slugs.map(() => "?").join(",")})`,
     ).bind(studio.id, ...slugs).all<Row>();
     const now = nowIso();
     // A piece on hold for this visitor (their approved hold, D-127) is theirs to buy.
@@ -266,7 +269,7 @@ orderRoutes.openapi(
     if (r.ok && (r.nudge?.kind === "tier2Alone" || r.nudge?.kind === "largeAlone")) {
       const pairs = new Set(works.flatMap((w) => w.shipping?.pairsWith ?? []));
       const { results: cand } = await c.env.DB.prepare(
-        `SELECT * FROM artworks WHERE studio_id = ? AND public = 1 AND deleted_at IS NULL AND kind = 'work' AND status = 'available'
+        `SELECT * FROM artworks WHERE studio_id = ? AND public = 1 AND deleted_at IS NULL AND kind = 'work' AND status = 'available' AND ${live()}
          AND price_cents > 0 AND shipping IS NOT NULL ORDER BY published_at DESC LIMIT 200`,
       ).bind(studio.id).all<Row>();
       const target = settings.r2.minCents;

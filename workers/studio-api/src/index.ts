@@ -12,6 +12,7 @@ import "./actions/shares";
 import "./actions/catalogue";
 import "./actions/visitors";
 import "./actions/orders";
+import "./actions/collectors";
 import { loadAuth } from "./auth/session";
 import type { AppEnv } from "./env";
 import { safeEqual, sha256 } from "./lib/crypto";
@@ -26,6 +27,7 @@ import { shareRoutes } from "./routes/shares";
 import { syncRoutes } from "./routes/sync";
 import { visitorRoutes } from "./routes/visitors";
 import { orderRoutes } from "./routes/orders";
+import { collectorRoutes } from "./routes/collectors";
 import { scheduled } from "./jobs";
 
 const v1 = new OpenAPIHono<AppEnv>();
@@ -56,6 +58,7 @@ v1.route("/", shareRoutes);
 v1.route("/", publicRoutes);
 v1.route("/", visitorRoutes);
 v1.route("/", orderRoutes);
+v1.route("/", collectorRoutes);
 
 const docConfig = {
   openapi: "3.1.0",

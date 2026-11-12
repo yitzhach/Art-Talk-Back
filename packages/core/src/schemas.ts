@@ -78,6 +78,8 @@ export const Artwork = RecordMeta.extend(ArtworkFields.shape).extend({
   public: z.boolean(),
   publishedAt: z.string().nullable(),
   draftedFields: z.array(DraftableField),
+  /** First look (D-165): set by `artwork.first_look`; hidden from the public site until then. */
+  publicFrom: z.string().nullable(),
 });
 
 export const PublishRequest = z.object({ slug: Slug.optional() }).strict();
@@ -198,6 +200,13 @@ export const SiteCheckout = z.object({
   /** How long a Venmo / Zelle order holds the piece. Default 48. */
   manualHoldHours: z.number().int().min(1).max(168).optional(),
 }).strict();
+/** Collectors' pages and first look (stage 6, D-163…D-168). */
+export const SiteCollectors = z.object({
+  /** Care notes every collector's page shows. */
+  care: z.string().trim().max(2000).optional(),
+  /** How many days first look runs before a work reaches the public site. Default 7. */
+  firstLookDays: z.number().int().min(1).max(60).optional(),
+}).strict();
 /** Calls taken between these times, studio time (`settings.timezone`); 24-hour HH:MM. */
 const Hhmm = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, "HH:MM, 24-hour");
 /**
@@ -222,6 +231,8 @@ export const SiteProfile = z.object({
   checkout: SiteCheckout.optional(),
   /** Shipping tiers, the large-work offer and the ZIP estimate (D-146…D-153). */
   shipping: ShippingSettings.optional(),
+  /** Collectors' pages and first look (D-163…D-168). */
+  collectors: SiteCollectors.optional(),
 }).strict();
 
 // ------------------------------------------------------------------- files
@@ -1007,3 +1018,105 @@ export const AppendMessages = z.object({
   app: z.string().max(50).nullable(),
   messages: z.array(z.object({ role: z.enum(["user", "assistant"]), content: z.unknown() })).min(1).max(20),
 }).strict();
+
+// ---------------------------------------------------------------- collectors (Site 3.0 stage 6, D-163…D-168)
+
+export const COMMISSION_STAGE_LIST = ["surface", "layering", "color", "erosion", "finished"] as const;
+export const CommissionStage = z.enum(COMMISSION_STAGE_LIST);
+export const CommissionStatus = z.enum(["open", "done", "cancelled"]);
+const StageNotes = z.partialRecord(CommissionStage, z.string().trim().max(2000));
+export const CommissionFields = z.object({
+  title: z.string().trim().min(1).max(200),
+  size: nullableText(100),
+  priceCents: z.number().int().nonnegative().nullable(),
+  currency: Currency,
+  stage: CommissionStage,
+  status: CommissionStatus,
+  notes: StageNotes,
+  dueOn: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "YYYY-MM-DD").nullable(),
+});
+export const CommissionInput = CommissionFields.partial().required({ title: true }).extend({ clientId: Id }).strict();
+export const CommissionPatch = CommissionFields.partial().strict()
+  .refine((v) => Object.keys(v).length > 0, "Send at least one field");
+export const Commission = CommissionFields.extend({
+  id: Id, version: z.number().int(), clientId: Id, createdAt: z.string(), updatedAt: z.string(),
+});
+
+/** A collector's private link (D-163): the path on the studio's site. */
+export const CollectorLink = z.object({ path: z.string(), invitedAt: z.string().nullable(), createdAt: z.string() });
+
+export const CollectorSummary = z.object({
+  id: Id,
+  version: z.number().int(),
+  name: z.string(),
+  kind: z.string(),
+  email: z.string().nullable(),
+  phone: z.string().nullable(),
+  /** Works this collector owns (D-164). */
+  workCount: z.number().int(),
+  commissionCount: z.number().int(),
+  link: CollectorLink.nullable(),
+  /** Follows the studio with a proven email (D-163). */
+  following: z.boolean(),
+  /** "site", "order", "manual"…: where the record came from, when known. */
+  from: z.string().nullable(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+});
+export const CollectorWork = z.object({
+  id: Id,
+  version: z.number().int(),
+  slug: z.string().nullable(),
+  title: z.string(),
+  year: z.number().int().nullable(),
+  status: ArtworkStatus,
+  soldAt: z.string().nullable(),
+  certificate: z.string(),
+});
+export const CollectorDetail = CollectorSummary.extend({
+  notes: z.string().nullable(),
+  works: z.array(CollectorWork),
+  commissions: z.array(Commission),
+});
+export const SetOwnerInput = z.object({
+  /** null: no owner recorded. */
+  clientId: Id.nullable(),
+  /** Marks an unsold work sold to them at this price (as Mark sold). Only for works not sold yet. */
+  priceCents: z.number().int().nonnegative().optional(),
+}).strict();
+export const FirstLookInput = z.object({
+  /** When the work reaches the public site; null ends first look now. Default: today + the studio's first-look days. */
+  until: z.iso.datetime().nullable().optional(),
+}).strict();
+export const Follower = z.object({
+  id: Id, email: z.string(), clientId: Id.nullable(), showId: Id.nullable(), showName: z.string().nullable(),
+  verifiedAt: z.string().nullable(), unsubscribedAt: z.string().nullable(), createdAt: z.string(),
+});
+
+/** One work a collector owns, as their page shows it: public fields plus the certificate (D-166). */
+export const PublicOwnedWork = PublicArtwork.extend({ certificate: z.string(), soldOn: z.string().nullable() });
+export const PublicCommission = z.object({
+  title: z.string(), size: z.string().nullable(), stage: CommissionStage, status: CommissionStatus, notes: StageNotes,
+  dueOn: z.string().nullable(), updatedAt: z.string(),
+});
+/** A collector's page (D-163): their first name, their works, care, first look and commissions. Unlisted, no sign-in. */
+export const PublicCollectorPage = z.object({
+  firstName: z.string(),
+  studioName: z.string(),
+  works: z.array(PublicOwnedWork),
+  care: z.string().nullable(),
+  firstLook: z.array(PublicArtwork.extend({ publicFrom: z.string() })),
+  commissions: z.array(PublicCommission),
+  catalogueVersion: z.number().int(),
+});
+export const PublicFollowerPage = z.object({
+  email: z.string(),
+  following: z.boolean(),
+  studioName: z.string(),
+  firstLook: z.array(PublicArtwork.extend({ publicFrom: z.string() })),
+});
+export const PublicShow = z.object({
+  id: Id, name: z.string(), venue: z.string().nullable(), city: z.string().nullable(), startsOn: z.string().nullable(), endsOn: z.string().nullable(),
+});
+export const FollowCodeInput = z.object({ email: z.email().max(200), showId: Id.optional(), website: z.string().max(200).optional() }).strict();
+export const FollowVerifyInput = z.object({ email: z.email().max(200), code: z.string().regex(/^\d{6}$/), showId: Id.optional() }).strict();

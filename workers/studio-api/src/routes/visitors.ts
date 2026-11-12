@@ -23,6 +23,7 @@ import { sendLoginCode } from "../auth/mail";
 import { requirePermission } from "../auth/permissions";
 import { requireActor } from "../auth/session";
 import type { AppEnv } from "../env";
+import { live } from "../lib/collectors";
 import { safeEqual, sha256, sixDigitCode } from "../lib/crypto";
 import { HttpError, notFound } from "../lib/errors";
 import { assistantSettings, sendCapMail, sendLeadMail, siteFor } from "../lib/site-mail";
@@ -144,7 +145,7 @@ visitorRoutes.openapi(
     const { slug } = c.req.valid("param");
     const studio = await studioOf(c, slug);
     const { results } = await c.env.DB.prepare(
-      `SELECT ${COLS} FROM artworks WHERE studio_id = ? AND public = 1 AND deleted_at IS NULL AND kind = 'work'
+      `SELECT ${COLS} FROM artworks WHERE studio_id = ? AND public = 1 AND deleted_at IS NULL AND kind = 'work' AND ${live()}
        ORDER BY COALESCE(published_at, '') DESC, id DESC LIMIT ${DIGEST_MAX}`,
     ).bind(studio.id).all<Row>();
     const files = await filesOf(c, studio.id, results.map((r) => r.id as string));
@@ -181,7 +182,7 @@ visitorRoutes.openapi(
     if (!page) throw notFound("Page");
     const ids = parse<string[]>(page.artwork_ids, []).slice(0, 24);
     const { results } = ids.length ? await c.env.DB.prepare(
-      `SELECT ${COLS} FROM artworks WHERE studio_id = ? AND public = 1 AND deleted_at IS NULL AND kind = 'work' AND id IN (${ids.map(() => "?").join(",")})`,
+      `SELECT ${COLS} FROM artworks WHERE studio_id = ? AND public = 1 AND deleted_at IS NULL AND kind = 'work' AND ${live()} AND id IN (${ids.map(() => "?").join(",")})`,
     ).bind(studio.id, ...ids).all<Row>() : { results: [] as Row[] };
     const files = await filesOf(c, studio.id, results.map((r) => r.id as string));
     const byId = new Map(results.map((r) => [r.id as string, r]));

@@ -603,6 +603,8 @@ its HttpOnly cookie `sv` (D-134).
 - [x] Cards C–E (2026-11-12): site Buy button, `/buy`, `/thanks`, Orders screen, Checkout settings (site repo); the
   assistant's Buy line.
 - [ ] The gate (sandbox purchase end to end on staging), then production. Nothing moves real money until the production credentials go in, after the gate.
+- [ ] **Moved to a later phase (Isaac, 2026-11-12, D-162):** the Square sandbox purchase and everything after it.
+  Checkout stays off on the live site until then.
 - [ ] **Revision (2026-11-12, Isaac's questions all answered; build waits for his "build"): shipping tiers, a cart, the
   large-work offer and a ZIP estimator.**
   Isaac's brief "Shipping information" (2026-11-12). Planning only: nothing below is built until he says "build".
@@ -1075,6 +1077,113 @@ A first (the contract); C–E against it.
 1. OK on this plan (done).
 2. At the gate: the tape-measure check on his iPhone, on staging.
 3. Later (D-161): where dm-t1 lives, and whether to link it.
+
+## Stage 6 — collectors (approved 2026-11-12; building on `claude/project-thread-kn62cz`)
+
+### Where it stands (2026-11-12)
+
+- [x] Stage 4's Square sandbox purchase moved to a later phase (Isaac, D-162). Checkout stays off on the live site; no
+  card payment exists anywhere until that phase. So stage 6 records collectors and their works without Square.
+- [x] Isaac's OK on this plan ("Ok", 2026-11-12). Decisions D-163…D-168.
+- [x] Card A, platform: migration 0015, actions, owner and public routes, emails, hourly first-look end, tests
+  (`test/collectors.test.ts`, tenancy sweep), openapi. Differences from the plan: the link token is kept as written
+  (D-163), certificate numbers are worked out, not stored (D-166), commission photos and deposits wait (D-168).
+- [x] Cards B–D, site: `/c/{token}`, certificate page, follow pages, Studio screens, smoke (IA-ART-SITE-REPO branch
+  `claude/project-thread-kn62cz`; site CI 25 green).
+- [x] Staging: "Deploy staging" 39 (migration 0015 on studio-db-staging, both Workers, smoke green), 2026-11-12.
+  Security pass by hand: nothing to fix.
+- [x] Gate on staging by the automatic smoke and tests (Isaac asked not to test each step himself, D-169); his yes for
+  the live site: "Yes. Make that live too" (2026-11-12).
+- [ ] Live: Art-Talk-Back PR (platform first, D-169), then IA-ART-SITE-REPO PR and "Deploy production site".
+
+### Findings (checked 2026-11-12 on the default branches)
+
+- `clients` (0001) already holds name, email, phone, kind `collector`, `notify_email`. Orders (D-145) and leads
+  (D-138) match or make a client by email. Nothing in Studio lists clients yet.
+- Who owns a piece is recorded only as `artworks.meta.sale.clientId` (D-029, `artwork.mark_sold`; `order.paid` does
+  the same). `artwork.mark_sold` refuses a piece already sold, so works sold before the platform have no owner and no
+  way to get one.
+- No follow, first look, certificate, commission record or show page exists. The five process stages (Surface,
+  Layering, Color, Erosion, Finished) are on the site's Process page.
+- Migrations run to 0014, decisions to D-161 (+D-162 here), so new ones start at **0015** and **D-163**.
+
+### What a collector sees (phone first)
+
+- **Their page**, at a private link (`/c/{token}`, unguessable, unlisted, like `/p/{token}`): "Your collection" with
+  each piece they own (picture, title, year, medium, size), its **certificate** (a printable page: title, year, medium,
+  size, certificate number, the studio's name and Isaac's signature line; Print or Save as PDF from the phone's own
+  menu), and the studio's **care** notes.
+- **First look**: new works Isaac marks "first look" appear here (and for followers) before the public site, for a
+  number of days he sets (default 7). Each has Hold, Add to inquiry and, when checkout is on, Buy.
+- **Their commission**, if they have one: the piece's stage on the five-stage line, with the photos and notes Isaac
+  adds at each step.
+- **Follow**: anyone can follow the studio from the site footer or a show's QR code with an email (a code proves it).
+  Followers see first look on a page of their own and can stop following from any email.
+
+### What Isaac sees (Studio)
+
+- **Collectors** screen (beside Leads and Orders): everyone who bought, inquired or followed, newest first. **Add a
+  collector** by hand (name, email). On a collector: their works, **Add a work they own** (any sold piece, or mark one
+  sold to them), **Copy their link**, **Email their invite** (one email he taps to send), notes.
+- On a work: **Sold to** (pick a collector) for pieces sold before the platform; **First look until** (date).
+- **Commissions** on a collector: title, size, price, deposit, the stage, a photo and a note per stage. Moving the
+  stage can email the collector (off unless he ticks it).
+- **Shows**: each show gets a printable **QR code** that opens a follow page for that show; follows from it are tagged
+  with the show.
+- Venmo and Zelle orders (when he turns them on) and future card orders land as collectors on their own.
+
+### Shape (proposals; each becomes a decision when built)
+
+1. **A link, no password** (D-163): a collector's page is reached by its private link; Isaac can make a new one (the
+   old stops working). A collector who also proves their email on the site sees the same page. Same pattern as shares
+   (D-090) and made pages.
+2. **Ownership stays on the artwork** (D-164): `meta.sale.clientId`, set by a new `artwork.set_owner` for pieces
+   already sold, so the Show Tracker's sales and the site agree.
+3. **First look is a date on the work** (D-165): `artworks.public_from`; the public list and piece pages hide a work
+   until then; collector and follower pages show it. A first-look email to followers is a button Isaac presses; nothing
+   sends on its own.
+4. **Certificates are made from the record** (D-166): a number per piece (`IAA-{year}-{nnn}`), kept in
+   `meta.certificate` once issued so it never changes; no PDF stored.
+5. **Staging never emails a real collector** (D-167): on staging every collector and follower email goes to the
+   studio owner's own address, marked TEST.
+6. **Commissions get their own table** (D-168), with the stage and its photos as studio files.
+
+### Data (migration 0015, additive)
+
+- `collector_links`: id, studio_id, client_id, token_hash (unique), revoked_at, plus the standard columns.
+- `followers`: id, studio_id, email, client_id, show_id (where they followed), verified_at, unsubscribed_at, plus the
+  standard columns.
+- `commissions`: id, studio_id, client_id, title, size, price_cents, currency, deposit_order_id, stage (`surface`,
+  `layering`, `color`, `erosion`, `finished`), status (`open`, `done`, `cancelled`), stage notes (JSON), plus the
+  standard columns. Photos are files with entity_type `commission`.
+- `artworks.public_from` (TEXT, null = public now).
+
+### Gate
+
+1. A test collector on staging goes **invite → first look → purchase**: Isaac's Studio adds them and emails the invite
+   (to his own inbox, D-167), their link shows their works and certificates, a first-look piece shows there and not on
+   the public site, and they buy it by **Venmo/Zelle with Mark paid** (card checkout joins this gate when Square's
+   phase runs). The piece then shows in their collection with a certificate. A phone-sized run in "Deploy staging"
+   (`smoke`).
+2. A follow from a show's QR code: code, verified, tagged with the show, sees first look; stop following works.
+3. Tenancy: no link, follower or commission reaches another studio; a revoked link shows nothing; tests.
+4. `/security-review` on both diffs (public links and emails).
+5. Isaac's look on staging, then his yes for the live site.
+
+### Task cards
+
+| # | Card | Repo |
+|---|---|---|
+| A | 0015, actions (`collector_link.create/revoke`, `artwork.set_owner`, `follow.start/verify/stop`, `commission.*`, `first_look.announce`), public routes, emails, tests, openapi | Art-Talk-Back |
+| B | `/c/{token}`, certificate page, follow form and `/follow/{show}`, first look on the follower page; public pages hide works before `public_from` | site |
+| C | Studio: Collectors, collector detail, Sold to and First look on a work, Commissions, show QR | site |
+| D | Smoke steps for the gate | site |
+
+### Needs Isaac, one at a time
+
+1. OK on this plan.
+2. Care notes for collectors (default: a short paragraph Claude drafts from the Process page for him to edit).
+3. Before going live: the list of past buyers to add (he can add them himself in Studio).
 
 ## Open questions — answered 2026-11-10 (D-102, D-103)
 

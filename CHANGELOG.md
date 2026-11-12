@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+### Site 3.0 · stage 6, card A: collectors on the platform (D-163…D-168)
+- Migration 0015: `collector_links`, `followers`, `commissions`, `artworks.public_from` (additive).
+- Owner: `GET /collectors`, `/collectors/{id}`, `POST /collectors/{id}/link|unlink|invite`, `POST /artworks/{id}/owner`,
+  `POST /artworks/{id}/first-look`, `POST /first-look/announce`, `POST|PATCH|DELETE /commissions`, `GET /followers`.
+- Public: a collector's page, its pictures and visit; follow by email code, a follower's page, Stop; a show's name for
+  its QR code. Every public query hides works in first look; only browsers that opened a collector's or follower's page
+  can hold or buy them. Hourly: first look ends → catalogue moves on.
+- Outside production every collector and follower email goes to the studio's inbox, marked TEST (D-167).
+
 ### Site 3.0 · stage 5 live: see it on your wall (D-155…D-161)
 - The site's "See it on your wall" (IA-ART-SITE-REPO#6) shipped: live camera view on iPhone/iPad, true size on a photo
   of your wall on any device. No platform change. Plan, gate and decisions in `docs/phase-6-site.md` → Stage 5 and

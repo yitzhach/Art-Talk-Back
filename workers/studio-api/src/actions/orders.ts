@@ -224,7 +224,8 @@ export const orderStart = defineAction({
     if ((mine?.n ?? 0) >= ORDERS_PER_VISITOR_PER_DAY) throw new HttpError("rate_limited", "That's the limit for today. Please text or call instead.");
 
     const slugs = [...new Set(input.works)];
-    const found = await publicWorksBySlug(ctx.env, ctx.actor.studioId, slugs);
+    const firstLook = await (await import("./collectors")).firstLookAccess(ctx.env, ctx.actor.studioId, input.visitorId);
+    const found = await publicWorksBySlug(ctx.env, ctx.actor.studioId, slugs, { firstLook });
     if (found.length !== slugs.length) {
       const missing = slugs.filter((x) => !found.some((f) => f.slug === x));
       throw new HttpError("not_found", "A piece in your cart is no longer on the site.", { works: missing });

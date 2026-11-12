@@ -346,6 +346,12 @@
                 "altText"
               ]
             }
+          },
+          "publicFrom": {
+            "type": [
+              "string",
+              "null"
+            ]
           }
         },
         "required": [
@@ -380,7 +386,8 @@
           "shipping",
           "public",
           "publishedAt",
-          "draftedFields"
+          "draftedFields",
+          "publicFrom"
         ]
       },
       "ArtworkDetail": {
@@ -679,6 +686,12 @@
               ]
             }
           },
+          "publicFrom": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
           "images": {
             "type": "array",
             "items": {
@@ -843,6 +856,7 @@
           "public",
           "publishedAt",
           "draftedFields",
+          "publicFrom",
           "images"
         ]
       },
@@ -19677,6 +19691,4304 @@
           },
           "409": {
             "description": "The record changed since you loaded it",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/collectors": {
+      "get": {
+        "tags": [
+          "collectors"
+        ],
+        "summary": "Everyone who bought, inquired or followed: newest first, with how many works each owns and whether they have a link",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "maxLength": 100
+            },
+            "required": false,
+            "name": "q",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "description": "ULID"
+                          },
+                          "version": {
+                            "type": "integer"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "kind": {
+                            "type": "string"
+                          },
+                          "email": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "phone": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "workCount": {
+                            "type": "integer"
+                          },
+                          "commissionCount": {
+                            "type": "integer"
+                          },
+                          "link": {
+                            "type": [
+                              "object",
+                              "null"
+                            ],
+                            "properties": {
+                              "path": {
+                                "type": "string"
+                              },
+                              "invitedAt": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "createdAt": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "path",
+                              "invitedAt",
+                              "createdAt"
+                            ]
+                          },
+                          "following": {
+                            "type": "boolean"
+                          },
+                          "from": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "createdAt": {
+                            "type": "string"
+                          },
+                          "updatedAt": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "version",
+                          "name",
+                          "kind",
+                          "email",
+                          "phone",
+                          "workCount",
+                          "commissionCount",
+                          "link",
+                          "following",
+                          "from",
+                          "createdAt",
+                          "updatedAt"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "items"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not allowed for your role",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/collectors/{id}": {
+      "get": {
+        "tags": [
+          "collectors"
+        ],
+        "summary": "One collector: the works they own (with certificate numbers), their link, their commissions",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "description": "ULID"
+                    },
+                    "version": {
+                      "type": "integer"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "kind": {
+                      "type": "string"
+                    },
+                    "email": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "phone": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "workCount": {
+                      "type": "integer"
+                    },
+                    "commissionCount": {
+                      "type": "integer"
+                    },
+                    "link": {
+                      "type": [
+                        "object",
+                        "null"
+                      ],
+                      "properties": {
+                        "path": {
+                          "type": "string"
+                        },
+                        "invitedAt": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "createdAt": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "path",
+                        "invitedAt",
+                        "createdAt"
+                      ]
+                    },
+                    "following": {
+                      "type": "boolean"
+                    },
+                    "from": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "createdAt": {
+                      "type": "string"
+                    },
+                    "updatedAt": {
+                      "type": "string"
+                    },
+                    "notes": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "works": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "description": "ULID"
+                          },
+                          "version": {
+                            "type": "integer"
+                          },
+                          "slug": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "title": {
+                            "type": "string"
+                          },
+                          "year": {
+                            "type": [
+                              "integer",
+                              "null"
+                            ]
+                          },
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "available",
+                              "reserved",
+                              "sold",
+                              "not_for_sale",
+                              "archived"
+                            ]
+                          },
+                          "soldAt": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "certificate": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "version",
+                          "slug",
+                          "title",
+                          "year",
+                          "status",
+                          "soldAt",
+                          "certificate"
+                        ]
+                      }
+                    },
+                    "commissions": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "title": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 200
+                          },
+                          "size": {
+                            "type": [
+                              "string",
+                              "null"
+                            ],
+                            "maxLength": 100
+                          },
+                          "priceCents": {
+                            "type": [
+                              "integer",
+                              "null"
+                            ],
+                            "minimum": 0
+                          },
+                          "currency": {
+                            "type": "string",
+                            "pattern": "^[A-Z]{3}$"
+                          },
+                          "stage": {
+                            "type": "string",
+                            "enum": [
+                              "surface",
+                              "layering",
+                              "color",
+                              "erosion",
+                              "finished"
+                            ]
+                          },
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "open",
+                              "done",
+                              "cancelled"
+                            ]
+                          },
+                          "notes": {
+                            "type": "object",
+                            "properties": {
+                              "surface": {
+                                "type": "string",
+                                "maxLength": 2000
+                              },
+                              "layering": {
+                                "type": "string",
+                                "maxLength": 2000
+                              },
+                              "color": {
+                                "type": "string",
+                                "maxLength": 2000
+                              },
+                              "erosion": {
+                                "type": "string",
+                                "maxLength": 2000
+                              },
+                              "finished": {
+                                "type": "string",
+                                "maxLength": 2000
+                              }
+                            }
+                          },
+                          "dueOn": {
+                            "type": [
+                              "string",
+                              "null"
+                            ],
+                            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                          },
+                          "id": {
+                            "type": "string",
+                            "description": "ULID"
+                          },
+                          "version": {
+                            "type": "integer"
+                          },
+                          "clientId": {
+                            "type": "string",
+                            "description": "ULID"
+                          },
+                          "createdAt": {
+                            "type": "string"
+                          },
+                          "updatedAt": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "title",
+                          "size",
+                          "priceCents",
+                          "currency",
+                          "stage",
+                          "status",
+                          "notes",
+                          "dueOn",
+                          "id",
+                          "version",
+                          "clientId",
+                          "createdAt",
+                          "updatedAt"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "version",
+                    "name",
+                    "kind",
+                    "email",
+                    "phone",
+                    "workCount",
+                    "commissionCount",
+                    "link",
+                    "following",
+                    "from",
+                    "createdAt",
+                    "updatedAt",
+                    "notes",
+                    "works",
+                    "commissions"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not allowed for your role",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (or in another studio)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/collectors/{id}/link": {
+      "post": {
+        "tags": [
+          "collectors"
+        ],
+        "summary": "Make their private page link (any old one stops working)",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "description": "ULID"
+                    },
+                    "version": {
+                      "type": "integer"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "kind": {
+                      "type": "string"
+                    },
+                    "email": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "phone": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "workCount": {
+                      "type": "integer"
+                    },
+                    "commissionCount": {
+                      "type": "integer"
+                    },
+                    "link": {
+                      "type": [
+                        "object",
+                        "null"
+                      ],
+                      "properties": {
+                        "path": {
+                          "type": "string"
+                        },
+                        "invitedAt": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "createdAt": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "path",
+                        "invitedAt",
+                        "createdAt"
+                      ]
+                    },
+                    "following": {
+                      "type": "boolean"
+                    },
+                    "from": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "createdAt": {
+                      "type": "string"
+                    },
+                    "updatedAt": {
+                      "type": "string"
+                    },
+                    "notes": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "works": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "description": "ULID"
+                          },
+                          "version": {
+                            "type": "integer"
+                          },
+                          "slug": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "title": {
+                            "type": "string"
+                          },
+                          "year": {
+                            "type": [
+                              "integer",
+                              "null"
+                            ]
+                          },
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "available",
+                              "reserved",
+                              "sold",
+                              "not_for_sale",
+                              "archived"
+                            ]
+                          },
+                          "soldAt": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "certificate": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "version",
+                          "slug",
+                          "title",
+                          "year",
+                          "status",
+                          "soldAt",
+                          "certificate"
+                        ]
+                      }
+                    },
+                    "commissions": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "title": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 200
+                          },
+                          "size": {
+                            "type": [
+                              "string",
+                              "null"
+                            ],
+                            "maxLength": 100
+                          },
+                          "priceCents": {
+                            "type": [
+                              "integer",
+                              "null"
+                            ],
+                            "minimum": 0
+                          },
+                          "currency": {
+                            "type": "string",
+                            "pattern": "^[A-Z]{3}$"
+                          },
+                          "stage": {
+                            "type": "string",
+                            "enum": [
+                              "surface",
+                              "layering",
+                              "color",
+                              "erosion",
+                              "finished"
+                            ]
+                          },
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "open",
+                              "done",
+                              "cancelled"
+                            ]
+                          },
+                          "notes": {
+                            "type": "object",
+                            "properties": {
+                              "surface": {
+                                "type": "string",
+                                "maxLength": 2000
+                              },
+                              "layering": {
+                                "type": "string",
+                                "maxLength": 2000
+                              },
+                              "color": {
+                                "type": "string",
+                                "maxLength": 2000
+                              },
+                              "erosion": {
+                                "type": "string",
+                                "maxLength": 2000
+                              },
+                              "finished": {
+                                "type": "string",
+                                "maxLength": 2000
+                              }
+                            }
+                          },
+                          "dueOn": {
+                            "type": [
+                              "string",
+                              "null"
+                            ],
+                            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                          },
+                          "id": {
+                            "type": "string",
+                            "description": "ULID"
+                          },
+                          "version": {
+                            "type": "integer"
+                          },
+                          "clientId": {
+                            "type": "string",
+                            "description": "ULID"
+                          },
+                          "createdAt": {
+                            "type": "string"
+                          },
+                          "updatedAt": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "title",
+                          "size",
+                          "priceCents",
+                          "currency",
+                          "stage",
+                          "status",
+                          "notes",
+                          "dueOn",
+                          "id",
+                          "version",
+                          "clientId",
+                          "createdAt",
+                          "updatedAt"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "version",
+                    "name",
+                    "kind",
+                    "email",
+                    "phone",
+                    "workCount",
+                    "commissionCount",
+                    "link",
+                    "following",
+                    "from",
+                    "createdAt",
+                    "updatedAt",
+                    "notes",
+                    "works",
+                    "commissions"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not allowed for your role",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (or in another studio)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/collectors/{id}/unlink": {
+      "post": {
+        "tags": [
+          "collectors"
+        ],
+        "summary": "Stop their page link working",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "description": "ULID"
+                    },
+                    "version": {
+                      "type": "integer"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "kind": {
+                      "type": "string"
+                    },
+                    "email": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "phone": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "workCount": {
+                      "type": "integer"
+                    },
+                    "commissionCount": {
+                      "type": "integer"
+                    },
+                    "link": {
+                      "type": [
+                        "object",
+                        "null"
+                      ],
+                      "properties": {
+                        "path": {
+                          "type": "string"
+                        },
+                        "invitedAt": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "createdAt": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "path",
+                        "invitedAt",
+                        "createdAt"
+                      ]
+                    },
+                    "following": {
+                      "type": "boolean"
+                    },
+                    "from": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "createdAt": {
+                      "type": "string"
+                    },
+                    "updatedAt": {
+                      "type": "string"
+                    },
+                    "notes": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "works": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "description": "ULID"
+                          },
+                          "version": {
+                            "type": "integer"
+                          },
+                          "slug": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "title": {
+                            "type": "string"
+                          },
+                          "year": {
+                            "type": [
+                              "integer",
+                              "null"
+                            ]
+                          },
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "available",
+                              "reserved",
+                              "sold",
+                              "not_for_sale",
+                              "archived"
+                            ]
+                          },
+                          "soldAt": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "certificate": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "version",
+                          "slug",
+                          "title",
+                          "year",
+                          "status",
+                          "soldAt",
+                          "certificate"
+                        ]
+                      }
+                    },
+                    "commissions": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "title": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 200
+                          },
+                          "size": {
+                            "type": [
+                              "string",
+                              "null"
+                            ],
+                            "maxLength": 100
+                          },
+                          "priceCents": {
+                            "type": [
+                              "integer",
+                              "null"
+                            ],
+                            "minimum": 0
+                          },
+                          "currency": {
+                            "type": "string",
+                            "pattern": "^[A-Z]{3}$"
+                          },
+                          "stage": {
+                            "type": "string",
+                            "enum": [
+                              "surface",
+                              "layering",
+                              "color",
+                              "erosion",
+                              "finished"
+                            ]
+                          },
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "open",
+                              "done",
+                              "cancelled"
+                            ]
+                          },
+                          "notes": {
+                            "type": "object",
+                            "properties": {
+                              "surface": {
+                                "type": "string",
+                                "maxLength": 2000
+                              },
+                              "layering": {
+                                "type": "string",
+                                "maxLength": 2000
+                              },
+                              "color": {
+                                "type": "string",
+                                "maxLength": 2000
+                              },
+                              "erosion": {
+                                "type": "string",
+                                "maxLength": 2000
+                              },
+                              "finished": {
+                                "type": "string",
+                                "maxLength": 2000
+                              }
+                            }
+                          },
+                          "dueOn": {
+                            "type": [
+                              "string",
+                              "null"
+                            ],
+                            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                          },
+                          "id": {
+                            "type": "string",
+                            "description": "ULID"
+                          },
+                          "version": {
+                            "type": "integer"
+                          },
+                          "clientId": {
+                            "type": "string",
+                            "description": "ULID"
+                          },
+                          "createdAt": {
+                            "type": "string"
+                          },
+                          "updatedAt": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "title",
+                          "size",
+                          "priceCents",
+                          "currency",
+                          "stage",
+                          "status",
+                          "notes",
+                          "dueOn",
+                          "id",
+                          "version",
+                          "clientId",
+                          "createdAt",
+                          "updatedAt"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "version",
+                    "name",
+                    "kind",
+                    "email",
+                    "phone",
+                    "workCount",
+                    "commissionCount",
+                    "link",
+                    "following",
+                    "from",
+                    "createdAt",
+                    "updatedAt",
+                    "notes",
+                    "works",
+                    "commissions"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not allowed for your role",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (or in another studio)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/collectors/{id}/invite": {
+      "post": {
+        "tags": [
+          "collectors"
+        ],
+        "summary": "Email them the link to their page (on staging the email goes to the studio's own inbox, D-167)",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "origin": {
+                    "type": "string",
+                    "maxLength": 200
+                  },
+                  "note": {
+                    "type": "string",
+                    "maxLength": 1000
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "description": "ULID"
+                    },
+                    "version": {
+                      "type": "integer"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "kind": {
+                      "type": "string"
+                    },
+                    "email": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "phone": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "workCount": {
+                      "type": "integer"
+                    },
+                    "commissionCount": {
+                      "type": "integer"
+                    },
+                    "link": {
+                      "type": [
+                        "object",
+                        "null"
+                      ],
+                      "properties": {
+                        "path": {
+                          "type": "string"
+                        },
+                        "invitedAt": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "createdAt": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "path",
+                        "invitedAt",
+                        "createdAt"
+                      ]
+                    },
+                    "following": {
+                      "type": "boolean"
+                    },
+                    "from": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "createdAt": {
+                      "type": "string"
+                    },
+                    "updatedAt": {
+                      "type": "string"
+                    },
+                    "notes": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "works": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "description": "ULID"
+                          },
+                          "version": {
+                            "type": "integer"
+                          },
+                          "slug": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "title": {
+                            "type": "string"
+                          },
+                          "year": {
+                            "type": [
+                              "integer",
+                              "null"
+                            ]
+                          },
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "available",
+                              "reserved",
+                              "sold",
+                              "not_for_sale",
+                              "archived"
+                            ]
+                          },
+                          "soldAt": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "certificate": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "version",
+                          "slug",
+                          "title",
+                          "year",
+                          "status",
+                          "soldAt",
+                          "certificate"
+                        ]
+                      }
+                    },
+                    "commissions": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "title": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 200
+                          },
+                          "size": {
+                            "type": [
+                              "string",
+                              "null"
+                            ],
+                            "maxLength": 100
+                          },
+                          "priceCents": {
+                            "type": [
+                              "integer",
+                              "null"
+                            ],
+                            "minimum": 0
+                          },
+                          "currency": {
+                            "type": "string",
+                            "pattern": "^[A-Z]{3}$"
+                          },
+                          "stage": {
+                            "type": "string",
+                            "enum": [
+                              "surface",
+                              "layering",
+                              "color",
+                              "erosion",
+                              "finished"
+                            ]
+                          },
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "open",
+                              "done",
+                              "cancelled"
+                            ]
+                          },
+                          "notes": {
+                            "type": "object",
+                            "properties": {
+                              "surface": {
+                                "type": "string",
+                                "maxLength": 2000
+                              },
+                              "layering": {
+                                "type": "string",
+                                "maxLength": 2000
+                              },
+                              "color": {
+                                "type": "string",
+                                "maxLength": 2000
+                              },
+                              "erosion": {
+                                "type": "string",
+                                "maxLength": 2000
+                              },
+                              "finished": {
+                                "type": "string",
+                                "maxLength": 2000
+                              }
+                            }
+                          },
+                          "dueOn": {
+                            "type": [
+                              "string",
+                              "null"
+                            ],
+                            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                          },
+                          "id": {
+                            "type": "string",
+                            "description": "ULID"
+                          },
+                          "version": {
+                            "type": "integer"
+                          },
+                          "clientId": {
+                            "type": "string",
+                            "description": "ULID"
+                          },
+                          "createdAt": {
+                            "type": "string"
+                          },
+                          "updatedAt": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "title",
+                          "size",
+                          "priceCents",
+                          "currency",
+                          "stage",
+                          "status",
+                          "notes",
+                          "dueOn",
+                          "id",
+                          "version",
+                          "clientId",
+                          "createdAt",
+                          "updatedAt"
+                        ]
+                      }
+                    },
+                    "sent": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "version",
+                    "name",
+                    "kind",
+                    "email",
+                    "phone",
+                    "workCount",
+                    "commissionCount",
+                    "link",
+                    "following",
+                    "from",
+                    "createdAt",
+                    "updatedAt",
+                    "notes",
+                    "works",
+                    "commissions",
+                    "sent"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not allowed for your role",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (or in another studio)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/artworks/{id}/owner": {
+      "post": {
+        "tags": [
+          "collectors"
+        ],
+        "summary": "Who owns this work: a sold one gets its buyer; an unsold one is marked sold to them (D-164)",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Record version the change was based on"
+            },
+            "required": false,
+            "description": "Record version the change was based on",
+            "name": "if-match",
+            "in": "header"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "clientId": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "description": "ULID"
+                  },
+                  "priceCents": {
+                    "type": "integer",
+                    "minimum": 0
+                  }
+                },
+                "required": [
+                  "clientId"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "description": "ULID"
+                    },
+                    "version": {
+                      "type": "integer"
+                    },
+                    "status": {
+                      "type": "string"
+                    },
+                    "publicFrom": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "ownerId": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "description": "ULID"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "version",
+                    "status",
+                    "publicFrom",
+                    "ownerId"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not allowed for your role",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (or in another studio)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The record changed since you loaded it",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/artworks/{id}/first-look": {
+      "post": {
+        "tags": [
+          "collectors"
+        ],
+        "summary": "First look: collectors and followers see this work before the public site does; `until` null ends it (D-165)",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Record version the change was based on"
+            },
+            "required": false,
+            "description": "Record version the change was based on",
+            "name": "if-match",
+            "in": "header"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "until": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "date-time"
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "description": "ULID"
+                    },
+                    "version": {
+                      "type": "integer"
+                    },
+                    "status": {
+                      "type": "string"
+                    },
+                    "publicFrom": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "ownerId": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "description": "ULID"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "version",
+                    "status",
+                    "publicFrom",
+                    "ownerId"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not allowed for your role",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (or in another studio)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The record changed since you loaded it",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/first-look/announce": {
+      "post": {
+        "tags": [
+          "collectors"
+        ],
+        "summary": "Email followers and collectors about the works in first look not announced yet (the artist's tap; staging: his inbox only)",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "origin": {
+                    "type": "string",
+                    "maxLength": 200
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "works": {
+                      "type": "integer"
+                    },
+                    "emailed": {
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "works",
+                    "emailed"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not allowed for your role",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/commissions": {
+      "post": {
+        "tags": [
+          "collectors"
+        ],
+        "summary": "Start a commission for a collector (D-168)",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "title": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200
+                  },
+                  "size": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "maxLength": 100
+                  },
+                  "priceCents": {
+                    "type": [
+                      "integer",
+                      "null"
+                    ],
+                    "minimum": 0
+                  },
+                  "currency": {
+                    "type": "string",
+                    "pattern": "^[A-Z]{3}$"
+                  },
+                  "stage": {
+                    "type": "string",
+                    "enum": [
+                      "surface",
+                      "layering",
+                      "color",
+                      "erosion",
+                      "finished"
+                    ]
+                  },
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "open",
+                      "done",
+                      "cancelled"
+                    ]
+                  },
+                  "notes": {
+                    "type": "object",
+                    "properties": {
+                      "surface": {
+                        "type": "string",
+                        "maxLength": 2000
+                      },
+                      "layering": {
+                        "type": "string",
+                        "maxLength": 2000
+                      },
+                      "color": {
+                        "type": "string",
+                        "maxLength": 2000
+                      },
+                      "erosion": {
+                        "type": "string",
+                        "maxLength": 2000
+                      },
+                      "finished": {
+                        "type": "string",
+                        "maxLength": 2000
+                      }
+                    }
+                  },
+                  "dueOn": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                  },
+                  "clientId": {
+                    "type": "string",
+                    "description": "ULID"
+                  }
+                },
+                "required": [
+                  "title",
+                  "clientId"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "title": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 200
+                    },
+                    "size": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "maxLength": 100
+                    },
+                    "priceCents": {
+                      "type": [
+                        "integer",
+                        "null"
+                      ],
+                      "minimum": 0
+                    },
+                    "currency": {
+                      "type": "string",
+                      "pattern": "^[A-Z]{3}$"
+                    },
+                    "stage": {
+                      "type": "string",
+                      "enum": [
+                        "surface",
+                        "layering",
+                        "color",
+                        "erosion",
+                        "finished"
+                      ]
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "open",
+                        "done",
+                        "cancelled"
+                      ]
+                    },
+                    "notes": {
+                      "type": "object",
+                      "properties": {
+                        "surface": {
+                          "type": "string",
+                          "maxLength": 2000
+                        },
+                        "layering": {
+                          "type": "string",
+                          "maxLength": 2000
+                        },
+                        "color": {
+                          "type": "string",
+                          "maxLength": 2000
+                        },
+                        "erosion": {
+                          "type": "string",
+                          "maxLength": 2000
+                        },
+                        "finished": {
+                          "type": "string",
+                          "maxLength": 2000
+                        }
+                      }
+                    },
+                    "dueOn": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                    },
+                    "id": {
+                      "type": "string",
+                      "description": "ULID"
+                    },
+                    "version": {
+                      "type": "integer"
+                    },
+                    "clientId": {
+                      "type": "string",
+                      "description": "ULID"
+                    },
+                    "createdAt": {
+                      "type": "string"
+                    },
+                    "updatedAt": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "title",
+                    "size",
+                    "priceCents",
+                    "currency",
+                    "stage",
+                    "status",
+                    "notes",
+                    "dueOn",
+                    "id",
+                    "version",
+                    "clientId",
+                    "createdAt",
+                    "updatedAt"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not allowed for your role",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (or in another studio)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/commissions/{id}": {
+      "patch": {
+        "tags": [
+          "collectors"
+        ],
+        "summary": "Change a commission: its stage, a stage's note, its status",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Record version the change was based on"
+            },
+            "required": false,
+            "description": "Record version the change was based on",
+            "name": "if-match",
+            "in": "header"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "title": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200
+                  },
+                  "size": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "maxLength": 100
+                  },
+                  "priceCents": {
+                    "type": [
+                      "integer",
+                      "null"
+                    ],
+                    "minimum": 0
+                  },
+                  "currency": {
+                    "type": "string",
+                    "pattern": "^[A-Z]{3}$"
+                  },
+                  "stage": {
+                    "type": "string",
+                    "enum": [
+                      "surface",
+                      "layering",
+                      "color",
+                      "erosion",
+                      "finished"
+                    ]
+                  },
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "open",
+                      "done",
+                      "cancelled"
+                    ]
+                  },
+                  "notes": {
+                    "type": "object",
+                    "properties": {
+                      "surface": {
+                        "type": "string",
+                        "maxLength": 2000
+                      },
+                      "layering": {
+                        "type": "string",
+                        "maxLength": 2000
+                      },
+                      "color": {
+                        "type": "string",
+                        "maxLength": 2000
+                      },
+                      "erosion": {
+                        "type": "string",
+                        "maxLength": 2000
+                      },
+                      "finished": {
+                        "type": "string",
+                        "maxLength": 2000
+                      }
+                    }
+                  },
+                  "dueOn": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "title": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 200
+                    },
+                    "size": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "maxLength": 100
+                    },
+                    "priceCents": {
+                      "type": [
+                        "integer",
+                        "null"
+                      ],
+                      "minimum": 0
+                    },
+                    "currency": {
+                      "type": "string",
+                      "pattern": "^[A-Z]{3}$"
+                    },
+                    "stage": {
+                      "type": "string",
+                      "enum": [
+                        "surface",
+                        "layering",
+                        "color",
+                        "erosion",
+                        "finished"
+                      ]
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "open",
+                        "done",
+                        "cancelled"
+                      ]
+                    },
+                    "notes": {
+                      "type": "object",
+                      "properties": {
+                        "surface": {
+                          "type": "string",
+                          "maxLength": 2000
+                        },
+                        "layering": {
+                          "type": "string",
+                          "maxLength": 2000
+                        },
+                        "color": {
+                          "type": "string",
+                          "maxLength": 2000
+                        },
+                        "erosion": {
+                          "type": "string",
+                          "maxLength": 2000
+                        },
+                        "finished": {
+                          "type": "string",
+                          "maxLength": 2000
+                        }
+                      }
+                    },
+                    "dueOn": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                    },
+                    "id": {
+                      "type": "string",
+                      "description": "ULID"
+                    },
+                    "version": {
+                      "type": "integer"
+                    },
+                    "clientId": {
+                      "type": "string",
+                      "description": "ULID"
+                    },
+                    "createdAt": {
+                      "type": "string"
+                    },
+                    "updatedAt": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "title",
+                    "size",
+                    "priceCents",
+                    "currency",
+                    "stage",
+                    "status",
+                    "notes",
+                    "dueOn",
+                    "id",
+                    "version",
+                    "clientId",
+                    "createdAt",
+                    "updatedAt"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not allowed for your role",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (or in another studio)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The record changed since you loaded it",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "collectors"
+        ],
+        "summary": "Delete a commission (soft; can be undone)",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Record version the change was based on"
+            },
+            "required": false,
+            "description": "Record version the change was based on",
+            "name": "if-match",
+            "in": "header"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "title": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 200
+                    },
+                    "size": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "maxLength": 100
+                    },
+                    "priceCents": {
+                      "type": [
+                        "integer",
+                        "null"
+                      ],
+                      "minimum": 0
+                    },
+                    "currency": {
+                      "type": "string",
+                      "pattern": "^[A-Z]{3}$"
+                    },
+                    "stage": {
+                      "type": "string",
+                      "enum": [
+                        "surface",
+                        "layering",
+                        "color",
+                        "erosion",
+                        "finished"
+                      ]
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "open",
+                        "done",
+                        "cancelled"
+                      ]
+                    },
+                    "notes": {
+                      "type": "object",
+                      "properties": {
+                        "surface": {
+                          "type": "string",
+                          "maxLength": 2000
+                        },
+                        "layering": {
+                          "type": "string",
+                          "maxLength": 2000
+                        },
+                        "color": {
+                          "type": "string",
+                          "maxLength": 2000
+                        },
+                        "erosion": {
+                          "type": "string",
+                          "maxLength": 2000
+                        },
+                        "finished": {
+                          "type": "string",
+                          "maxLength": 2000
+                        }
+                      }
+                    },
+                    "dueOn": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                    },
+                    "id": {
+                      "type": "string",
+                      "description": "ULID"
+                    },
+                    "version": {
+                      "type": "integer"
+                    },
+                    "clientId": {
+                      "type": "string",
+                      "description": "ULID"
+                    },
+                    "createdAt": {
+                      "type": "string"
+                    },
+                    "updatedAt": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "title",
+                    "size",
+                    "priceCents",
+                    "currency",
+                    "stage",
+                    "status",
+                    "notes",
+                    "dueOn",
+                    "id",
+                    "version",
+                    "clientId",
+                    "createdAt",
+                    "updatedAt"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not allowed for your role",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (or in another studio)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The record changed since you loaded it",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/followers": {
+      "get": {
+        "tags": [
+          "collectors"
+        ],
+        "summary": "Who follows the studio, newest first, and where they followed from",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "description": "ULID"
+                          },
+                          "email": {
+                            "type": "string"
+                          },
+                          "clientId": {
+                            "type": [
+                              "string",
+                              "null"
+                            ],
+                            "description": "ULID"
+                          },
+                          "showId": {
+                            "type": [
+                              "string",
+                              "null"
+                            ],
+                            "description": "ULID"
+                          },
+                          "showName": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "verifiedAt": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "unsubscribedAt": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "createdAt": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "email",
+                          "clientId",
+                          "showId",
+                          "showName",
+                          "verifiedAt",
+                          "unsubscribedAt",
+                          "createdAt"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "items"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not allowed for your role",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/public/studios/{slug}/collectors/{token}": {
+      "get": {
+        "tags": [
+          "collectors-public"
+        ],
+        "security": [],
+        "summary": "A collector's page: their first name, the works they own with certificates, care notes, first look and their commissions (unlisted)",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "slug",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "token",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "firstName": {
+                      "type": "string"
+                    },
+                    "studioName": {
+                      "type": "string"
+                    },
+                    "works": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "slug": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 80,
+                            "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+                          },
+                          "title": {
+                            "type": "string"
+                          },
+                          "medium": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "year": {
+                            "type": [
+                              "integer",
+                              "null"
+                            ]
+                          },
+                          "width": {
+                            "type": [
+                              "number",
+                              "null"
+                            ]
+                          },
+                          "height": {
+                            "type": [
+                              "number",
+                              "null"
+                            ]
+                          },
+                          "depth": {
+                            "type": [
+                              "number",
+                              "null"
+                            ]
+                          },
+                          "sizeUnit": {
+                            "type": "string",
+                            "enum": [
+                              "in",
+                              "cm"
+                            ]
+                          },
+                          "editionSize": {
+                            "type": [
+                              "integer",
+                              "null"
+                            ]
+                          },
+                          "collection": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "tags": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          },
+                          "palette": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "hex": {
+                                  "type": "string",
+                                  "pattern": "^#[0-9a-fA-F]{6}$"
+                                },
+                                "share": {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 10000
+                                }
+                              },
+                              "required": [
+                                "hex",
+                                "share"
+                              ]
+                            }
+                          },
+                          "description": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "available",
+                              "reserved",
+                              "sold",
+                              "not_for_sale",
+                              "archived"
+                            ]
+                          },
+                          "priceCents": {
+                            "type": [
+                              "integer",
+                              "null"
+                            ]
+                          },
+                          "currency": {
+                            "type": [
+                              "string",
+                              "null"
+                            ],
+                            "pattern": "^[A-Z]{3}$"
+                          },
+                          "images": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "fileId": {
+                                  "type": "string",
+                                  "description": "ULID"
+                                },
+                                "altText": {
+                                  "type": [
+                                    "string",
+                                    "null"
+                                  ]
+                                },
+                                "aspectRatio": {
+                                  "type": [
+                                    "number",
+                                    "null"
+                                  ],
+                                  "exclusiveMinimum": 0
+                                },
+                                "sizes": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object",
+                                    "properties": {
+                                      "width": {
+                                        "anyOf": [
+                                          {
+                                            "type": "number",
+                                            "enum": [
+                                              480
+                                            ]
+                                          },
+                                          {
+                                            "type": "number",
+                                            "enum": [
+                                              960
+                                            ]
+                                          },
+                                          {
+                                            "type": "number",
+                                            "enum": [
+                                              1600
+                                            ]
+                                          }
+                                        ]
+                                      },
+                                      "url": {
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": [
+                                      "width",
+                                      "url"
+                                    ]
+                                  }
+                                }
+                              },
+                              "required": [
+                                "fileId",
+                                "altText",
+                                "aspectRatio",
+                                "sizes"
+                              ]
+                            }
+                          },
+                          "publishedAt": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "shipping": {
+                            "type": [
+                              "object",
+                              "null"
+                            ],
+                            "properties": {
+                              "tier": {
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                    "enum": [
+                                      1
+                                    ]
+                                  },
+                                  {
+                                    "type": "number",
+                                    "enum": [
+                                      2
+                                    ]
+                                  },
+                                  {
+                                    "type": "number",
+                                    "enum": [
+                                      3
+                                    ]
+                                  },
+                                  {
+                                    "type": "number",
+                                    "enum": [
+                                      4
+                                    ]
+                                  }
+                                ]
+                              },
+                              "cents": {
+                                "type": [
+                                  "integer",
+                                  "null"
+                                ]
+                              },
+                              "estimate": {
+                                "type": "boolean"
+                              },
+                              "quote": {
+                                "type": "boolean"
+                              }
+                            },
+                            "required": [
+                              "tier",
+                              "cents",
+                              "estimate",
+                              "quote"
+                            ]
+                          },
+                          "certificate": {
+                            "type": "string"
+                          },
+                          "soldOn": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "slug",
+                          "title",
+                          "medium",
+                          "year",
+                          "width",
+                          "height",
+                          "depth",
+                          "sizeUnit",
+                          "editionSize",
+                          "collection",
+                          "tags",
+                          "palette",
+                          "description",
+                          "status",
+                          "priceCents",
+                          "currency",
+                          "images",
+                          "publishedAt",
+                          "shipping",
+                          "certificate",
+                          "soldOn"
+                        ]
+                      }
+                    },
+                    "care": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "firstLook": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "slug": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 80,
+                            "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+                          },
+                          "title": {
+                            "type": "string"
+                          },
+                          "medium": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "year": {
+                            "type": [
+                              "integer",
+                              "null"
+                            ]
+                          },
+                          "width": {
+                            "type": [
+                              "number",
+                              "null"
+                            ]
+                          },
+                          "height": {
+                            "type": [
+                              "number",
+                              "null"
+                            ]
+                          },
+                          "depth": {
+                            "type": [
+                              "number",
+                              "null"
+                            ]
+                          },
+                          "sizeUnit": {
+                            "type": "string",
+                            "enum": [
+                              "in",
+                              "cm"
+                            ]
+                          },
+                          "editionSize": {
+                            "type": [
+                              "integer",
+                              "null"
+                            ]
+                          },
+                          "collection": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "tags": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          },
+                          "palette": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "hex": {
+                                  "type": "string",
+                                  "pattern": "^#[0-9a-fA-F]{6}$"
+                                },
+                                "share": {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 10000
+                                }
+                              },
+                              "required": [
+                                "hex",
+                                "share"
+                              ]
+                            }
+                          },
+                          "description": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "available",
+                              "reserved",
+                              "sold",
+                              "not_for_sale",
+                              "archived"
+                            ]
+                          },
+                          "priceCents": {
+                            "type": [
+                              "integer",
+                              "null"
+                            ]
+                          },
+                          "currency": {
+                            "type": [
+                              "string",
+                              "null"
+                            ],
+                            "pattern": "^[A-Z]{3}$"
+                          },
+                          "images": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "fileId": {
+                                  "type": "string",
+                                  "description": "ULID"
+                                },
+                                "altText": {
+                                  "type": [
+                                    "string",
+                                    "null"
+                                  ]
+                                },
+                                "aspectRatio": {
+                                  "type": [
+                                    "number",
+                                    "null"
+                                  ],
+                                  "exclusiveMinimum": 0
+                                },
+                                "sizes": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object",
+                                    "properties": {
+                                      "width": {
+                                        "anyOf": [
+                                          {
+                                            "type": "number",
+                                            "enum": [
+                                              480
+                                            ]
+                                          },
+                                          {
+                                            "type": "number",
+                                            "enum": [
+                                              960
+                                            ]
+                                          },
+                                          {
+                                            "type": "number",
+                                            "enum": [
+                                              1600
+                                            ]
+                                          }
+                                        ]
+                                      },
+                                      "url": {
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": [
+                                      "width",
+                                      "url"
+                                    ]
+                                  }
+                                }
+                              },
+                              "required": [
+                                "fileId",
+                                "altText",
+                                "aspectRatio",
+                                "sizes"
+                              ]
+                            }
+                          },
+                          "publishedAt": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "shipping": {
+                            "type": [
+                              "object",
+                              "null"
+                            ],
+                            "properties": {
+                              "tier": {
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                    "enum": [
+                                      1
+                                    ]
+                                  },
+                                  {
+                                    "type": "number",
+                                    "enum": [
+                                      2
+                                    ]
+                                  },
+                                  {
+                                    "type": "number",
+                                    "enum": [
+                                      3
+                                    ]
+                                  },
+                                  {
+                                    "type": "number",
+                                    "enum": [
+                                      4
+                                    ]
+                                  }
+                                ]
+                              },
+                              "cents": {
+                                "type": [
+                                  "integer",
+                                  "null"
+                                ]
+                              },
+                              "estimate": {
+                                "type": "boolean"
+                              },
+                              "quote": {
+                                "type": "boolean"
+                              }
+                            },
+                            "required": [
+                              "tier",
+                              "cents",
+                              "estimate",
+                              "quote"
+                            ]
+                          },
+                          "publicFrom": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "slug",
+                          "title",
+                          "medium",
+                          "year",
+                          "width",
+                          "height",
+                          "depth",
+                          "sizeUnit",
+                          "editionSize",
+                          "collection",
+                          "tags",
+                          "palette",
+                          "description",
+                          "status",
+                          "priceCents",
+                          "currency",
+                          "images",
+                          "publishedAt",
+                          "shipping",
+                          "publicFrom"
+                        ]
+                      }
+                    },
+                    "commissions": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "title": {
+                            "type": "string"
+                          },
+                          "size": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "stage": {
+                            "type": "string",
+                            "enum": [
+                              "surface",
+                              "layering",
+                              "color",
+                              "erosion",
+                              "finished"
+                            ]
+                          },
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "open",
+                              "done",
+                              "cancelled"
+                            ]
+                          },
+                          "notes": {
+                            "type": "object",
+                            "properties": {
+                              "surface": {
+                                "type": "string",
+                                "maxLength": 2000
+                              },
+                              "layering": {
+                                "type": "string",
+                                "maxLength": 2000
+                              },
+                              "color": {
+                                "type": "string",
+                                "maxLength": 2000
+                              },
+                              "erosion": {
+                                "type": "string",
+                                "maxLength": 2000
+                              },
+                              "finished": {
+                                "type": "string",
+                                "maxLength": 2000
+                              }
+                            }
+                          },
+                          "dueOn": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "updatedAt": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "title",
+                          "size",
+                          "stage",
+                          "status",
+                          "notes",
+                          "dueOn",
+                          "updatedAt"
+                        ]
+                      }
+                    },
+                    "catalogueVersion": {
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "firstName",
+                    "studioName",
+                    "works",
+                    "care",
+                    "firstLook",
+                    "commissions",
+                    "catalogueVersion"
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (or in another studio)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/public/studios/{slug}/collectors/{token}/visit": {
+      "post": {
+        "tags": [
+          "collectors-public"
+        ],
+        "security": [],
+        "summary": "The collector's page was opened in this browser: it sees first look while the link is live (D-165)",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "slug",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "token",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "The site's per-browser key (D-134)"
+            },
+            "required": false,
+            "description": "The site's per-browser key (D-134)",
+            "name": "x-visitor-key",
+            "in": "header"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Done"
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (or in another studio)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/public/studios/{slug}/collectors/{token}/images/{fileId}/{file}": {
+      "get": {
+        "tags": [
+          "collectors-public"
+        ],
+        "security": [],
+        "summary": "A picture of a work on this collector's page (their own works, first look)",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "slug",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "token",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "fileId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "`480.webp`, `960.webp` or `1600.webp`"
+            },
+            "required": true,
+            "description": "`480.webp`, `960.webp` or `1600.webp`",
+            "name": "file",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The picture",
+            "content": {
+              "image/webp": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (or in another studio)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/public/studios/{slug}/follow/email-code": {
+      "post": {
+        "tags": [
+          "collectors-public"
+        ],
+        "security": [],
+        "summary": "Follow the studio: email a six-digit code to prove the address (204 for any address)",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "slug",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "The site's per-browser key (D-134)"
+            },
+            "required": false,
+            "description": "The site's per-browser key (D-134)",
+            "name": "x-visitor-key",
+            "in": "header"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "maxLength": 200,
+                    "format": "email"
+                  },
+                  "showId": {
+                    "type": "string",
+                    "description": "ULID"
+                  },
+                  "website": {
+                    "type": "string",
+                    "maxLength": 200
+                  }
+                },
+                "required": [
+                  "email"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Sent"
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (or in another studio)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many codes",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/public/studios/{slug}/follow/verify": {
+      "post": {
+        "tags": [
+          "collectors-public"
+        ],
+        "security": [],
+        "summary": "Follow the studio: the code proves the email; this browser sees first look. Answers the follower's own page",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "slug",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "The site's per-browser key (D-134)"
+            },
+            "required": false,
+            "description": "The site's per-browser key (D-134)",
+            "name": "x-visitor-key",
+            "in": "header"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "maxLength": 200,
+                    "format": "email"
+                  },
+                  "code": {
+                    "type": "string",
+                    "pattern": "^\\d{6}$"
+                  },
+                  "showId": {
+                    "type": "string",
+                    "description": "ULID"
+                  }
+                },
+                "required": [
+                  "email",
+                  "code"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "path": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "path"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (or in another studio)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many tries",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/public/studios/{slug}/followers/{token}": {
+      "get": {
+        "tags": [
+          "collectors-public"
+        ],
+        "security": [],
+        "summary": "A follower's page: first look while they follow (unlisted)",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "slug",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "token",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "email": {
+                      "type": "string"
+                    },
+                    "following": {
+                      "type": "boolean"
+                    },
+                    "studioName": {
+                      "type": "string"
+                    },
+                    "firstLook": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "slug": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 80,
+                            "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+                          },
+                          "title": {
+                            "type": "string"
+                          },
+                          "medium": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "year": {
+                            "type": [
+                              "integer",
+                              "null"
+                            ]
+                          },
+                          "width": {
+                            "type": [
+                              "number",
+                              "null"
+                            ]
+                          },
+                          "height": {
+                            "type": [
+                              "number",
+                              "null"
+                            ]
+                          },
+                          "depth": {
+                            "type": [
+                              "number",
+                              "null"
+                            ]
+                          },
+                          "sizeUnit": {
+                            "type": "string",
+                            "enum": [
+                              "in",
+                              "cm"
+                            ]
+                          },
+                          "editionSize": {
+                            "type": [
+                              "integer",
+                              "null"
+                            ]
+                          },
+                          "collection": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "tags": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          },
+                          "palette": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "hex": {
+                                  "type": "string",
+                                  "pattern": "^#[0-9a-fA-F]{6}$"
+                                },
+                                "share": {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 10000
+                                }
+                              },
+                              "required": [
+                                "hex",
+                                "share"
+                              ]
+                            }
+                          },
+                          "description": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "available",
+                              "reserved",
+                              "sold",
+                              "not_for_sale",
+                              "archived"
+                            ]
+                          },
+                          "priceCents": {
+                            "type": [
+                              "integer",
+                              "null"
+                            ]
+                          },
+                          "currency": {
+                            "type": [
+                              "string",
+                              "null"
+                            ],
+                            "pattern": "^[A-Z]{3}$"
+                          },
+                          "images": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "fileId": {
+                                  "type": "string",
+                                  "description": "ULID"
+                                },
+                                "altText": {
+                                  "type": [
+                                    "string",
+                                    "null"
+                                  ]
+                                },
+                                "aspectRatio": {
+                                  "type": [
+                                    "number",
+                                    "null"
+                                  ],
+                                  "exclusiveMinimum": 0
+                                },
+                                "sizes": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object",
+                                    "properties": {
+                                      "width": {
+                                        "anyOf": [
+                                          {
+                                            "type": "number",
+                                            "enum": [
+                                              480
+                                            ]
+                                          },
+                                          {
+                                            "type": "number",
+                                            "enum": [
+                                              960
+                                            ]
+                                          },
+                                          {
+                                            "type": "number",
+                                            "enum": [
+                                              1600
+                                            ]
+                                          }
+                                        ]
+                                      },
+                                      "url": {
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": [
+                                      "width",
+                                      "url"
+                                    ]
+                                  }
+                                }
+                              },
+                              "required": [
+                                "fileId",
+                                "altText",
+                                "aspectRatio",
+                                "sizes"
+                              ]
+                            }
+                          },
+                          "publishedAt": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "shipping": {
+                            "type": [
+                              "object",
+                              "null"
+                            ],
+                            "properties": {
+                              "tier": {
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                    "enum": [
+                                      1
+                                    ]
+                                  },
+                                  {
+                                    "type": "number",
+                                    "enum": [
+                                      2
+                                    ]
+                                  },
+                                  {
+                                    "type": "number",
+                                    "enum": [
+                                      3
+                                    ]
+                                  },
+                                  {
+                                    "type": "number",
+                                    "enum": [
+                                      4
+                                    ]
+                                  }
+                                ]
+                              },
+                              "cents": {
+                                "type": [
+                                  "integer",
+                                  "null"
+                                ]
+                              },
+                              "estimate": {
+                                "type": "boolean"
+                              },
+                              "quote": {
+                                "type": "boolean"
+                              }
+                            },
+                            "required": [
+                              "tier",
+                              "cents",
+                              "estimate",
+                              "quote"
+                            ]
+                          },
+                          "publicFrom": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "slug",
+                          "title",
+                          "medium",
+                          "year",
+                          "width",
+                          "height",
+                          "depth",
+                          "sizeUnit",
+                          "editionSize",
+                          "collection",
+                          "tags",
+                          "palette",
+                          "description",
+                          "status",
+                          "priceCents",
+                          "currency",
+                          "images",
+                          "publishedAt",
+                          "shipping",
+                          "publicFrom"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "email",
+                    "following",
+                    "studioName",
+                    "firstLook"
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (or in another studio)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/public/studios/{slug}/followers/{token}/stop": {
+      "post": {
+        "tags": [
+          "collectors-public"
+        ],
+        "security": [],
+        "summary": "Stop following: no more emails, and first look ends",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "slug",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "token",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Stopped"
+          },
+          "404": {
+            "description": "Not found (or in another studio)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/public/studios/{slug}/followers/{token}/images/{fileId}/{file}": {
+      "get": {
+        "tags": [
+          "collectors-public"
+        ],
+        "security": [],
+        "summary": "A picture of a work in first look, for a follower",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "slug",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "token",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "fileId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "`480.webp`, `960.webp` or `1600.webp`"
+            },
+            "required": true,
+            "description": "`480.webp`, `960.webp` or `1600.webp`",
+            "name": "file",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The picture",
+            "content": {
+              "image/webp": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (or in another studio)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/public/studios/{slug}/shows/{id}": {
+      "get": {
+        "tags": [
+          "collectors-public"
+        ],
+        "security": [],
+        "summary": "A show's name and dates, for the follow page its QR code opens",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "slug",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "description": "ULID"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "venue": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "city": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "startsOn": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "endsOn": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "name",
+                    "venue",
+                    "city",
+                    "startsOn",
+                    "endsOn"
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (or in another studio)",
             "content": {
               "application/json": {
                 "schema": {

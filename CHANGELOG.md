@@ -2,10 +2,26 @@
 
 ## Unreleased
 
+### Site 3.0 · stage 4, shipping tiers, cart and the large-work offer (D-146…D-154)
+- Migration 0014: `artworks.shipping`, `orders.items`, `orders.covered_cents`, `orders.ship_zip` (additive).
+- `@studio/core` `shippingFor`: tiers, R1, R2 (20% of a $500+ piece, no cap), the ZIP estimate (UPS Ground from 42503,
+  2 in packing, residential, +10%), oversize → quote. ZIP prefix centroids from the `zipcodes` package (BSD).
+- Public: `GET …/shipping`, `POST …/shipping/quote` (catalogue prices only, up to three suggestions); pieces show
+  their shipping; orders take `works[]`, `zip` and the shown `shippingCents` (409 when it changed). Square gets one
+  line per piece. Mark paid and the webhook sell every piece of a cart.
+
 ### Site 3.0 · stage 3 shipped
 - Production: migration 0012 applied, `studio-api`, `studio-assistant` and `studio-site` deployed (site #3 and #4). New workflow "Smoke production site": the site's phone-sized smoke test against the live site (two assistant questions, no leads). Handoff and next-session prompt updated.
 
+### Site 3.0 · stage 4, A and B: orders, Square and Venmo/Zelle (D-144, D-145)
+- Migration 0013 (`orders`, `payment_events`). `SiteProfile.checkout` (off by default).
+- Public: `GET …/checkout`, `POST …/visitor/orders`, `GET …/visitor/orders/{id}`. Square: `POST /v1/square/webhook`
+  (signature checked). Owner: `GET /v1/orders`, `/orders/{id}`, and `mark-paid`, `ship`, `cancel`, `extend`.
+- Order emails to the buyer and the studio; unpaid orders end hourly. Staging deploy sets the Square sandbox secrets.
+- The site's assistant knows the Buy button (points to it; never takes payment or places an order).
+
 ### Site 3.0 · stage 4 plan (buying)
+- Reworked for Square (cards, hosted checkout, signed webhook) with Venmo and Zelle by hand (D-144); Stripe dropped.
 - `docs/phase-6-site.md` → "Stage 4 — buying": Stripe Checkout per piece and for commission deposits, the webhook as the only thing that sells, migration 0013 (`orders`, `payment_events`), the gate and what Isaac needs to provide. Plan only; no code or keys.
 
 ### Site 3.0 · stage 3, A: visitors, leads, made pages, usage and the cap (D-134…D-141)

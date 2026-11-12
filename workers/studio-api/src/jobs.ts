@@ -1,11 +1,13 @@
 // studio-api's scheduled work (Site 3.0 stage 3, D-137): it has the database and the mail key, and none of this needs
-// a model. Hourly: holds whose 48 hours ended go back on sale. Once a day: each studio whose site had chats or leads
+// a model. Hourly: holds whose 48 hours ended, and unpaid orders
+// whose time ended (D-144), go back on sale. Once a day: each studio whose site had chats or leads
 // gets one summary email.
 import { getAction, runAction } from "./actions/runner";
 import type { Actor, Env } from "./env";
 import { sendMail } from "./auth/mail";
 import { assistantSettings, money, siteFor, studioInbox } from "./lib/site-mail";
 import { nowIso } from "./lib/time";
+import { expireOrders } from "./routes/orders";
 
 /** wrangler.jsonc → triggers.crons. */
 export const HOURLY = "7 * * * *";
@@ -83,5 +85,6 @@ export async function dailySummaries(env: Env, now = nowIso()): Promise<number> 
 
 export async function scheduled(event: { cron: string; scheduledTime?: number }, env: Env): Promise<void> {
   await expireHolds(env);
+  await expireOrders(env);
   if (event.cron === DAILY) await dailySummaries(env);
 }

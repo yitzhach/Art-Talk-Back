@@ -57,6 +57,10 @@ jobs:
       MAIL_FROM: ${{ vars.MAIL_FROM }}
       ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
       AI_GATEWAY_TOKEN: ${{ secrets.AI_GATEWAY_TOKEN }}
+      # Square sandbox (Site 3.0 stage 4, D-144): card checkout on staging only once all three are set.
+      SQUARE_ACCESS_TOKEN: ${{ secrets.SQUARE_ACCESS_TOKEN_SANDBOX }}
+      SQUARE_LOCATION_ID: ${{ secrets.SQUARE_LOCATION_ID_SANDBOX }}
+      SQUARE_WEBHOOK_SIGNATURE_KEY: ${{ secrets.SQUARE_WEBHOOK_SIGNATURE_KEY_SANDBOX }}
       AI_GATEWAY_URL: ${{ vars.AI_GATEWAY_URL }}
       ASSISTANT_MODEL: ${{ inputs.assistant_model || 'claude-sonnet-5-5' }}
     steps:
@@ -99,6 +103,12 @@ jobs:
           fi
       - name: Set RESEND_API_KEY
         run: printf '%s' "$RESEND_API_KEY" | pnpm exec wrangler secret put RESEND_API_KEY --env staging
+      - name: Set Square sandbox secrets
+        if: env.SQUARE_ACCESS_TOKEN != '' && env.SQUARE_LOCATION_ID != '' && env.SQUARE_WEBHOOK_SIGNATURE_KEY != ''
+        run: |
+          for v in SQUARE_ACCESS_TOKEN SQUARE_LOCATION_ID SQUARE_WEBHOOK_SIGNATURE_KEY; do
+            printf '%s' "${!v}" | pnpm exec wrangler secret put "$v" --env staging
+          done
       # studio-assistant-staging (Phase 3), once there is a model key. Both Workers get
       # the same ASSISTANT_KEY, made here once and never shown (D-046).
       - name: Deploy studio-assistant-staging

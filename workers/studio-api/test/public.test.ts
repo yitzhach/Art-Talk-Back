@@ -11,7 +11,7 @@ const patch = (s: Studio, w: any, json: unknown) =>
 const unpublish = (s: Studio, w: any) => call(`/v1/artworks/${w.id}/unpublish`, { method: "POST", cookie: s.cookie, headers: { "If-Match": String(w.version) } });
 
 const KEYS = ["collection", "currency", "depth", "description", "editionSize", "height", "images", "medium", "palette", "priceCents",
-  "publishedAt", "sizeUnit", "slug", "status", "tags", "title", "width", "year"];
+  "publishedAt", "shipping", "sizeUnit", "slug", "status", "tags", "title", "width", "year"];
 
 const w: Record<string, any> = {};
 

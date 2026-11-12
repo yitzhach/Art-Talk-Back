@@ -587,123 +587,422 @@ its HttpOnly cookie `sv` (D-134).
    plus about a cent a text). Spending and a secret are his call; until then leads come by email only.
 4. At the gate: a look on his phone on staging.
 
-## Stage 4 — buying (plan drafted 2026-11-12, waiting for Isaac's OK)
+## Stage 4 — buying (approved 2026-11-12, D-144: Square for cards, Venmo and Zelle by hand)
 
 ### Where it stands (2026-11-12)
 
-- [ ] Isaac's OK on this plan.
-- [ ] Stripe account and **test-mode** keys, added by Isaac as GitHub secrets (the secure form; never in a chat).
-- [ ] His shipping and returns answers (below, "Needs Isaac").
-- [ ] Cards A–E, then the gate. Nothing in this stage moves real money until the live keys go in, after the gate.
+- [x] Isaac's OK: "Yes, start building it and right now." Cards through his Square account; Venmo and Zelle as manual
+  options (D-144). Stripe is out.
+- [ ] His answers below ("Needs Isaac"), one at a time.
+- [ ] Square **sandbox** credentials added by Isaac as GitHub secrets (never in a chat).
+- [x] Card A (2026-11-12): migration 0013, the order actions (`order.start`, `.mark_paid`, `.paid`, `.cancel`,
+  `.extend`, `.ship`, `.expire`, `.refunded`), public checkout and order routes, Square's signed webhook, the owner's
+  Orders routes, order emails, hourly expiry, 9 order tests and the tenancy sweep (D-145).
+- [x] Card B (2026-11-12): staging deploy sets the Square sandbox secrets once all three exist; `SQUARE_ENV` and
+  `SQUARE_STUDIO_SLUG` vars per environment. Production Square secrets come only after the gate.
+- [x] Cards C–E (2026-11-12): site Buy button, `/buy`, `/thanks`, Orders screen, Checkout settings (site repo); the
+  assistant's Buy line.
+- [ ] The gate (sandbox purchase end to end on staging), then production. Nothing moves real money until the production credentials go in, after the gate.
+- [ ] **Revision (2026-11-12, Isaac's questions all answered; build waits for his "build"): shipping tiers, a cart, the
+  large-work offer and a ZIP estimator.**
+  Isaac's brief "Shipping information" (2026-11-12). Planning only: nothing below is built until he says "build".
+  Payments stay Square for cards and Venmo/Zelle by hand (D-144); the brief's Stripe steps read as Square here.
 
-**Goal.** A piece with a listed price that is available gets a **Buy** button. The visitor pays on Stripe's own
-checkout page; the piece is sold everywhere the moment Stripe confirms (site, Studio, the Show Tracker, the assistant),
-and Isaac gets an email with the buyer and the address to ship to. A visitor whose hold Isaac approved (D-127, D-140)
-can buy that piece during the 48 hours; nobody else can. A commission's deposit can be paid online from a link Isaac
-sends. One piece can never sell twice.
+### Revision: shipping tiers, a cart and the large-work offer (proposed, not built)
 
-**Not in this stage:** refunds from Studio (Isaac refunds in Stripe's dashboard; the webhook marks the sale refunded),
-payment plans beyond a deposit, prints and editions, other studios' Stripe accounts (Connect, stage 7).
+**The idea.** Small and medium originals ship free with one clean price. In-between pieces carry a modest flat rate.
+Large works cost real money to ship, so that's where the incentive lives: add a qualifying piece and Isaac covers the
+large work's shipping. The nudges stay quiet: one line in the cart, and the assistant explains the offer only when
+asked.
+
+**Findings (checked 2026-11-12 on both branches).**
+
+- Stage 4 is already built on `claude/project-thread-ionjj5` (cards A–E, D-144, D-145) and deployed to staging (run
+  43253617702, smoke passed), not merged. It sells **one piece per order** with a flat `checkout.shippingCents` and a
+  "small" line (`smallMaxInches`, default 36 in); longer pieces keep inquiry (D-102 item 4).
+- Migration 0013 is taken by `orders` and `payment_events`, so shipping goes in **0014**. Decisions on the default
+  branch run to D-143 and this branch holds D-144 and D-145, so new ones start at **D-146**.
+- Artworks already have width, height, depth, size unit, price and status. No tier, weight or shipping price yet.
+- The commission deposit link (`/pay/{token}`) was planned but not built; quotes and deposits now share it.
+- `docs/SHIPPING.md` is about shipping code (D-057) and stays untouched; parcel shipping is documented in a new
+  `docs/shipping-rates.md`.
+
+**What the revision replaces in the built stage 4.**
+
+| Built now | Becomes |
+|---|---|
+| `order.start` takes one `artworkId` | takes `artworkIds` (1–10); one order, one line per piece (`order_items`) |
+| `checkout.shippingCents` flat rate, `smallMaxInches` decides Buy vs inquiry | the tier calculator; `smallMaxInches` retired (read once to suggest tiers) |
+| Square link: the piece plus one flat shipping line | one line per piece plus one fixed "Shipping" line from the calculator |
+| Buy on the piece page → `/buy/{slug}` | Add to cart → `/cart` → checkout (`/buy/{slug}` stays as a one-piece cart) |
+| Large works: inquiry only (D-102 item 4) | tier 3 is buyable once Isaac sets its shipping price; tier 4 is quote then `/pay/{token}` |
+
+Everything else stays: Square's signed webhook is the only thing that sells a card order, Venmo/Zelle sell only on
+Mark paid, the 30-minute and 48-hour holds, one sell path, holds from approved leads, emails, Orders.
+
+#### The tiers (starting values; Isaac edits all of them in Studio)
+
+| Tier | Roughly | Buyer pays | Suggested when |
+|---|---|---|---|
+| 1 Free | up to 16×16 or 12×24 | free | area up to 300 sq in and longest side up to 24 in |
+| 2 Mid | 18×20 to 20×26 | $22 flat | area under 576 sq in and longest side up to 30 in |
+| 3 Large | 24×24 and up | the ZIP estimate (or a price Isaac pins) | area 576 sq in (24×24) or more, or longest side over 30 in (Isaac, 2026-11-12) |
+| 4 Quote | oversize box, crated, freight | Isaac's estimate, no Buy | the box is oversize for UPS, or flagged crated or custom quote |
+
+- A suggestion is only a suggestion: Isaac taps to accept it, and nothing assigns a tier silently. A piece with no
+  dimensions, or within 10% of a boundary, shows **Check size** and stays unassigned (cm sizes are converted first).
+- A tier 3 piece can't be bought until Isaac enters its shipping price; the bulk editor lists it as "needs a
+  shipping price".
+- A piece with no tier keeps Hold and Add to inquiry, as today, and never shows Add to cart.
+
+#### The shipping estimator (Isaac, 2026-11-12; proposed shape, not built)
+
+Isaac: buyers type their ZIP and see an estimate, so shipping never surprises them; oversize boxes get his own
+estimate instead of a scary number. He ships from **42503** (Kentucky), mostly UPS through Pirate Ship, usually to
+homes (residential surcharge).
+
+- **The box.** The piece's size plus packing on every side (setting, **2 in a side**, Isaac 2026-11-12, so +4 in on
+  each dimension). Billable weight = the larger of the actual weight (the piece's weight plus a packing allowance, default
+  3 lb) and the box's size weight (L × W × H ÷ 139, rounded up). No weight entered → size weight only.
+- **The price.** Zone from the origin ZIP to the buyer's ZIP (UPS's zone chart for 425, stored as data), then a rate
+  grid (zone × billable pound) taken from Pirate Ship's own rate calculator from 42503, plus the residential surcharge
+  (always assumed, so it's never low) and a cushion (setting, default 10%). Pirate Ship has no public rate sheet or
+  API (its help pages point sellers to its calculator), so the grid is ours: seeded once in the build, refreshed by
+  Isaac each January when UPS changes prices. Studio shows the grid's date.
+- **Oversize → Isaac's estimate.** When the box crosses UPS's oversize lines (longest side over 48 in, second side over
+  30 in, or length plus girth over 105 in; large-package lines beyond that), no number shows. The piece says "Isaac
+  will send you a shipping estimate", and it goes the quote way (a lead, his price, a `/pay` link).
+- **Where it's used.** Tier 3 (large) pieces: the estimate for the buyer's ZIP replaces "a price Isaac sets per
+  piece" (he can still pin a fixed price on a piece). Tiers 1 and 2 stay free and $22, so most buyers never need a ZIP.
+  The 20% large-work offer comes off the estimate.
+- **On the site.** A tier 3 piece page shows "Shipping to your ZIP" with a ZIP box (the answer comes from studio-api,
+  uncached, the ZIP kept only in that browser); the cart asks once for the ZIP and uses it for every large piece; the
+  checkout total uses the same calculation with the ZIP, so the number never changes unseen. Square's address must
+  match the ZIP's zone, or the buyer confirms the new total first.
+- **What it means for sizes (2 in packing, 1.5 in deep).** A 20×26 is a 24×30 box and a 24×30 a 28×34 box, both
+  under UPS's lines; a 24×36 (length plus girth 107 in) is oversize. So roughly, pieces up to about 24×30 get a ZIP
+  estimate and bigger ones get Isaac's.
+
+#### The calculator (one pure function in `packages/core`, called only by studio-api)
+
+`shippingFor({ pieces, settings, destination | pickup, now })`, no I/O. The site never works out shipping itself; the
+cart, the quote route and `order.start` all ask studio-api, which calls this one function.
+
+Order of evaluation:
+
+1. Any tier 4 piece, or one flagged custom quote → quote required, checkout blocked.
+2. Missing tier, missing tier 3 price, sold or reserved (not by this buyer's own approved hold) → blocked. Never guess.
+3. Local pickup (offered, and every piece allows it) → $0.
+4. Outside the countries shipped to (default US only, D-102) → quote.
+5. Each piece's own shipping: tier 1 $0, tier 2 the flat rate, tier 3 the estimator for the buyer's ZIP (or its
+   pinned price). Each ships as its own box. No ZIP yet → tier 3 shows "enter your ZIP" and checkout asks for it.
+6. The rules below (and the optional cap, off by default).
+
+Returns `customerPaysCents`, `coveredCents` (what Isaac gives away), each piece's line (charged, covered, rule),
+`ruleIds` with a plain-words reason, `quoteRequired` and `blocked` (which pieces, why), and the next opportunity for
+the nudge.
+
+#### The rules (data, each with on/off and optional start and end dates)
+
+- **R1 "Mid pairs free"**: a tier 2 piece's $22 is waived when the order holds at least one other piece of any tier.
+- **R2 "Large-work offer"** (Isaac, 2026-11-12): a qualifying piece takes **20% of its own price** off one large
+  piece's shipping. A qualifier is a tier 1 or tier 2 piece priced at or above the minimum ($500, so the smallest
+  saving is $100). One qualifier helps one large piece. The saving is never more than that piece's shipping; there is
+  no other cap (Isaac, 2026-11-12). The rest is charged and the cart says so ("we cover $100 of $120"). The 20% is a
+  setting, and an optional cap stays in settings, off.
+  Qualifiers are matched to large pieces largest-saving first, so the buyer always gets the most off.
+- **Promotion-eligible** flag on each piece, on by default: off means the piece neither qualifies nor is covered.
+
+Worked examples (a large piece's shipping set at $120):
+
+| Cart | Buyer pays | Why |
+|---|---|---|
+| one 16×16 | free | tier 1 |
+| two tier 1 | free | tier 1 |
+| one 18×20 | $22 | tier 2 |
+| 18×20 + 12×12 | free | R1 |
+| one large | $120 | its own price |
+| large + $500 tier 1 | $20 | R2: 20% of $500 is $100 |
+| large + $600 tier 1 | free | R2: 20% of $600 is $120 |
+| large + $300 tier 1 | $120 | under the minimum |
+| large + 18×20 ($550) | $10 | R2 takes $110 off the large; R1 waives the $22 |
+| two large + one $600 piece | $120 | one qualifier covers one large |
+| large ($210 shipping) + $600 piece | $90 | R2 takes $120 off |
+| large ($210 shipping) + $1,000 piece | $10 | 20% of $1,000 is $200, no cap |
+| anything + tier 4 | quote | step 1 |
+
+**Later (designed for, not built):** reduced add-on rates, international zones, carrier-calculated rates, a seven-day
+"add a piece to your shipment" window.
+
+#### The nudge (quiet by design)
+
+- Only a cart where shipping is charged shows a nudge; one that ships free says "Ships free", once.
+  - Tier 2 alone: "Add any other work and the $22 shipping is on us."
+  - Large alone: "Add a smaller original from $500 and Isaac covers this piece's $120 shipping."
+  - Covered: "Isaac is covering $120 of shipping on this order."
+  - Quote: "This work needs a shipping quote. Isaac usually replies within a day."
+  Isaac edits the wording; the amounts always come from the calculator.
+- Up to three suggestion cards in one row under that line. Each is public, available, priced, not in the cart, not
+  reserved, promotion-eligible and would actually unlock the rule. Ranked by Isaac's "pairs well with" picks first,
+  then unlocks the rule, then price nearest the minimum or the cart's range, then same collection and medium, then
+  newest. Dismissed cards stay hidden for that cart; the same message never shows twice in a row. No pop-ups,
+  timers, countdowns or "only 1 left". Titles, prices and pictures come from the catalogue.
+- The visitor assistant gets the tiers, the offer in plain words and Isaac's pairings from the public shipping
+  settings. When asked about shipping or a large piece it may explain the offer once and link a paired piece. It
+  never raises the offer unprompted, never repeats it, never quotes an order total, never starts a checkout and never
+  offers a discount (D-127). Four eval cases: asked about shipping, asked about a large piece, an unrelated question
+  (no pitch), asked twice (no repeat). Run one at a time within D-143's budget.
+
+#### Cart and checkout on the site
+
+- The cart lives in the browser's storage (wrapped in try/catch), in the existing `buy.js` within the bundle budget.
+  Piece pages stay edge-cached and never vary by cookie or cart; the script fills the cart line.
+- Piece page price line by tier: "$450 · Free shipping"; "$650 · Shipping $22, free with another work"; "$2,400 ·
+  Shipping $120. Add a smaller original from $500 and it's on us."; tier 4 "Shipping quoted" with Hold or inquiry
+  and no Add to cart.
+- `/cart` (uncached, noindex): each piece, its shipping, what Isaac covers, the total, the one nudge line, the
+  suggestions, and **Checkout** with the two ways to pay (card on Square, or Venmo/Zelle by hand).
+- Checkout posts the list to `order.start`. The server recalculates, reserves every piece in one batch (any piece
+  unavailable → 409 naming it, nothing reserved), and gives Square one fixed shipping line. Square never works out
+  shipping. If the total differs from what the cart showed (the cart sends it), nothing is reserved; the buyer sees
+  the new total and confirms again. The site never charges a number the buyer didn't see.
+- Quote pieces: **Request a shipping quote** uses the existing inquiry flow (a lead). Isaac enters the quote on the
+  lead; that makes a quote order and a `/pay/{token}` link he sends himself; the buyer pays the same two ways. No
+  other route to checkout. Commission deposits use the same link.
+- An approved hold's piece can only go in that lead's cart. Hold, Add to inquiry, Ask, Leads and the assistant keep
+  working.
+
+#### Studio (Isaac's controls, site repo)
+
+- New **Shipping** screen beside Site (`/studio/shipping`):
+  - At the top, the one question: did the large-work offer bring in more extra sales than the shipping it gave away?
+  - Settings: tier names, size boundaries, the tier 2 rate, R1 and R2 on/off with dates, the minimum, the 20%, the optional cap,
+    countries, local pickup and its wording, the message wording. Checked: amounts ≥ 0, end after start, boundaries
+    in order.
+  - Bulk editor: filter by tier, "missing tier" or "needs a shipping price"; select many; set tier, price,
+    eligibility or flags in one tap; **Accept suggestions** for the selected rows, each row showing what it gets. New
+    pieces land here until set.
+- Work screen (`src/screens/work.ts`): a Shipping section with tier, the suggestion, the per-piece price, weight, the
+  flags (promotion-eligible, ships separately, fragile, crated, local pickup, custom quote) and **Pairs well with**
+  (up to three works).
+- Orders: shows each piece, the shipping charged and covered, and an optional "what shipping actually cost" at Mark
+  shipped.
+
+#### Data (migration 0014, additive)
+
+- `artworks`: `ship_tier` (1–4, null), `ship_cents` (tier 3's price, null), `ship_weight` + `ship_weight_unit`
+  (`lb`/`kg`), `ship_flags` (JSON list), `pairs_with` (JSON list of up to three artwork ids, same studio). Columns,
+  not meta, so the bulk editor can filter on them.
+- Shipping settings in `meta.site.shipping` beside `meta.site.checkout` (the SiteProfile pattern, D-119): tiers,
+  boundaries, rates, rules with dates, minimum, cap, countries, pickup, wording. A change bumps the catalogue version,
+  so the public site shows it within D-124's ~10 s with no deploy.
+- `order_items`: order_id, studio_id, artwork_id, price_cents, ship_cents, covered_cents, rule_id. `orders` keeps
+  `artwork_id` for a one-piece order and gains `covered_cents` and the rule ids (meta). `orders.kind` gains `quote`.
+- `shipping_counters`: studio_id, day, rule_id, what (`shown`, `tapped`, `bought`), n. Anonymous: no visitor id, IP
+  or new cookie.
+
+#### API (additive, `/v1`)
+
+- `GET /v1/public/studios/{slug}/shipping`: tiers, rates, active rules and wording. Cached like the profile.
+- `POST /v1/public/studios/{slug}/shipping/quote`: artwork ids plus destination or pickup → the calculator's answer
+  and up to three suggestions. Prices and status from the catalogue, never the request. Uncached, rate-limited like
+  the other visitor routes.
+- Owner: read and update settings (If-Match), `POST /v1/artworks/shipping` bulk update (one batch, one activity_log
+  entry per work, through one action), suggestions for the bulk editor, a quote on a lead (`order.quote`).
+- `order.start` takes the list and calls the same calculator; the order stores what the buyer pays, what Isaac
+  covers and the rule ids. Counters go through an internal action. `docs/openapi.json` regenerated.
+
+#### Measurement
+
+From orders: orders with a large piece, how many added a qualifier, the extra revenue from those qualifiers, shipping
+Isaac covered, his actual cost where entered, and average order value with and without the offer. Nudge counters per
+rule per day: shown, suggestion tapped, suggested piece bought (a flag the cart sends at checkout). Assistant: how
+often the offer came up when asked, from the existing chat logs. Nothing new is collected about visitors.
+
+#### Proposed decisions (recorded when built)
+
+- **D-146 · Shipping tiers replace D-102 item 4 · Isaac**: four tiers; large works buyable once priced; quotes for
+  tier 4.
+- **D-147 · R1, mid pairs free**: the tier 2 rate is waived with any other piece.
+- **D-148 · R2, the large-work offer · Isaac**: a qualifier takes 20% of its price off a large piece's shipping;
+  minimum $500.
+- **D-149 · One qualifier per large piece, no cap · Isaac**: the saving stops at the large piece's own shipping;
+  matched largest-saving first.
+- **D-150 · Never guess a tier**: suggestions need Isaac's tap; Check size near a boundary or without dimensions.
+- **D-151 · One calculator in `packages/core`, called only by studio-api**; settings in `meta.site.shipping`, piece
+  fields as artwork columns, multi-piece orders as `order_items`.
+- **D-153 · A ZIP estimate for large pieces · Isaac**: UPS via Pirate Ship from 42503, 2 in packing a side, residential
+  assumed, a 10% cushion, our own rate grid; oversize boxes get Isaac's estimate.
+- **D-152 · This project ships platform first, and production needs Isaac's OK · Isaac**: the exception D-057 already
+  lists (the site needs the new contract), and nothing reaches production before his "ship".
+
+#### Tests
+
+- Calculator (pure unit tests): every worked example; each tier alone; tier 3 with no price (blocked); the minimum
+  just under, at and just over; the 20% saving under, at and over the large piece's shipping, and the optional cap on and off; two large pieces with one and two qualifiers; R1 and R2
+  off, before start, on the start and end dates, after end; a promotion-ineligible piece; missing tier; sold or
+  reserved; tier 4 alone and mixed; local pickup (all allow, one doesn't); non-US; empty cart.
+- Suggestions: never in the cart, sold or reserved, never under the minimum; pairs-with ranks first.
+- API: the quote ignores prices sent in the request; tenancy (another studio's id → not found); bulk update is one
+  batch; If-Match; the sweep covers every new route.
+- Checkout: the cart and the Square link use the same calculation; a change in between is shown, not charged; two
+  buyers for one piece → one 409; a two-piece card order sells both pieces from one webhook; a two-piece Venmo order
+  sells both on Mark paid.
+- Assistant evals: the four cases above.
+- Site: no horizontal scroll; Lighthouse mobile ≥ 95; budgets hold; piece pages still cache-hit and don't vary by
+  cart; dismissed suggestions stay dismissed.
+- Everything existing stays green. The staging smoke adds a large piece plus a qualifier, bought in Square's sandbox.
+
+#### Task cards (replace F onward)
+
+| # | Card | Repo |
+|---|---|---|
+| F | Calculator and suggestions in `packages/core`, with the pure tests | Art-Talk-Back |
+| G | 0014; artwork shipping fields; `meta.site.shipping`; settings, bulk and quote routes; `order.start` takes a list (`order_items`), Square lines, `order.quote` and `/pay` tokens; counters; tests; openapi | Art-Talk-Back |
+| H | Cart in `buy.js`, `/cart`, the price line by tier, suggestions, Request a shipping quote, `/pay/{token}` | site |
+| I | Studio → Shipping (settings, bulk editor, the measurement line), Work screen's Shipping section, Orders lines | site |
+| J | The assistant's shipping words and four evals; `docs/shipping-rates.md`; smoke with a large piece plus a qualifier | both |
+
+Sequence: F and G (platform PR, then staging), H and I (site PR, same branch name, then staging), J, end to end on
+staging phone-sized in Square's sandbox, then one staging link and a short checklist for Isaac. Production only after
+his "ship": platform first, then site.
+
+#### Questions for Isaac on the revision (all answered 2026-11-12)
+
+1. ~~Does every tier 1 or 2 piece qualify, or only one priced at $500 or more?~~ **Answered 2026-11-12: a $500
+   minimum** (Isaac, 👍 on the question).
+2. ~~The most Isaac covers per large piece.~~ **Answered 2026-11-12: $150** (Isaac, 👍). Then Isaac changed R2 to
+   20% of the add-on's price, and then said **no cap**.
+3. ~~Size lines?~~ **Answered 2026-11-12: 24×24 and up are large and get the ZIP estimate** (Isaac). Free stays
+   up to 300 sq in and 24 in long; $22 covers the rest below 576 sq in, so an 18×20 and a 20×26 are $22.
+4. ~~Does the mid tier's $22 drop when paired (R1)?~~ **Answered 2026-11-12: yes** (Isaac).
+5. ~~Only the US?~~ **Answered 2026-11-12: US only; everywhere else is a quote** (Isaac).
+6. ~~Local pickup from the studio?~~ **Answered 2026-11-12: off for now** (Isaac).
+7. ~~The estimator: only large pieces use the ZIP estimate?~~ **Answered 2026-11-12: yes** (Isaac); tiers 1 and 2
+   stay free and $22.
+8. ~~Packing on each side?~~ **Answered 2026-11-12: 2 in** (Isaac).
+
+
+### The built plan (cards A–E, one piece per order; the revision above changes it where its table says)
+
+**Goal.** A piece with a listed price that is available gets a **Buy** button with two ways to pay: **card** on Square's
+own checkout page (Apple Pay and Google Pay where Square offers them), or **Venmo / Zelle** to Isaac by hand. A card
+payment sells the piece the moment Square confirms it; a Venmo or Zelle order holds the piece until Isaac taps
+**Mark paid** in Studio. A visitor whose hold Isaac approved (D-127, D-140) can buy that piece during the 48 hours;
+nobody else can. A commission's deposit uses the same two ways from a link Isaac sends. One piece can never sell twice.
+
+**Not in this stage:** refunds from Studio (Isaac refunds in Square's dashboard or by hand; card refunds reach us from
+Square and mark the sale refunded), payment plans beyond a deposit, prints and editions, other studios' accounts
+(stage 7).
 
 ### What a visitor sees (phone first)
 
-- Piece page, available with a price: **Buy · $1,600** beside Hold / Add to inquiry. The price line adds "plus shipping
-  and tax at checkout" (or "shipping quoted" for large works, which keep inquiry instead of Buy, D-102).
-- Tap Buy → Stripe Checkout (Stripe's page: card, Apple Pay / Google Pay, shipping address, tax). The piece is set aside
-  for that visitor for 30 minutes while they pay; the page says so.
-- Paid → back on the site at `/thanks/{order}`: the piece, what was paid, "Isaac will email you about delivery", the
-  return terms. Stripe emails its receipt.
-- Abandoned or failed → back on the piece page after the 30 minutes; it is for sale again.
-- Ask: the assistant may say a piece can be bought on its page and link the page; it never starts a checkout or quotes a
-  total (shipping and tax come from checkout).
-- Commission deposit: a link Isaac sends opens `/pay/{token}`: the commission, the agreed amount, the deposit (50% by
-  default, D-126), Pay → Stripe Checkout.
+- Piece page, available with a price: **Buy · $1,600** beside Hold / Add to inquiry; "plus shipping" under it (large
+  works keep inquiry instead of Buy, D-102).
+- Tap Buy → `/buy/{slug}`: the piece, shipping, the total, the return terms, and two buttons:
+  - **Pay by card** → Square's checkout page (address, card). The piece is set aside for 30 minutes while they pay.
+    Paid → `/thanks/{order}`: what was paid, "Isaac will email you about delivery". Square emails its receipt.
+  - **Pay by Venmo or Zelle** → name, email, phone, shipping address → `/thanks/{order}` shows the amount, Isaac's
+    Venmo name and Zelle address, and the order code to put in the payment note. The piece is set aside for 48 hours;
+    the visitor gets the same in an email. Isaac confirms by hand; the visitor gets an email when he does.
+- Abandoned card checkout → for sale again after 30 minutes. An unpaid Venmo/Zelle order → for sale again after 48 hours
+  (Isaac can extend or cancel it in Orders).
+- Ask: the assistant may say a piece can be bought on its page and link the page; it never starts an order or quotes a
+  total.
+- Commission deposit: a link Isaac sends opens `/pay/{token}`: the commission, the deposit (50% by default, D-126),
+  and the same two ways to pay.
 
 ### What Isaac sees
 
-- An email per sale: piece, price, shipping, tax, buyer's name, email, phone, shipping address.
-- Studio → **Orders** (beside Leads): paid, waiting to ship, shipped (he adds a carrier and tracking number; the buyer
-  gets one email), refunded. Each links to the payment in Stripe.
-- A commission's page: **Request deposit** (amount prefilled from his percentage) makes the `/pay` link; he sends it
-  himself (copy link, or an email from Studio after his tap).
-- Site screen → Checkout: on/off, flat shipping rate for small works, the small/large line, return terms, the deposit
-  percentage. Off until the gate passes.
+- An email per order: piece, total, how they're paying, buyer, shipping address. Venmo/Zelle orders say "not paid yet:
+  tap Mark paid when the money arrives".
+- Studio → **Orders** (beside Leads): waiting for payment (Venmo/Zelle, with Mark paid, Extend, Cancel), paid, shipped
+  (he adds a carrier and tracking; the buyer gets one email), refunded.
+- A commission's page: **Request deposit** makes the `/pay` link; he sends it himself.
+- Site screen → Checkout: on/off, the flat shipping rate and the small/large line, return terms, the deposit
+  percentage, his Venmo name and Zelle address, whether each way to pay is on. Off until the gate passes.
 
 ### Shape (proposals; each becomes a decision when built)
 
-1. **Stripe Checkout, hosted, one payment per order.** No card field on the site, no Stripe script on content pages
-   (the budgets of stage 2 hold). Sessions are made by studio-api with `price_data` (the piece's title, picture and
-   price from the catalogue, never from the request), `shipping_address_collection`, a flat shipping rate, an
-   `expires_at` of 30 minutes, and the order id in `metadata` and as the idempotency key.
-2. **Isaac's own Stripe account; keys as secrets.** `STRIPE_SECRET_KEY` (a restricted key: Checkout Sessions write,
-   read on payments) and `STRIPE_WEBHOOK_SECRET` on `studio-api` (staging gets test keys, production live keys, each
-   from a GitHub secret Isaac adds; the deploy workflow sets them like `RESEND_API_KEY`). One studio has checkout for
-   now; per-studio accounts are stage 7 (Connect, no platform share).
+1. **Square's hosted checkout, one link per order.** studio-api calls Square's `POST /v2/online-checkout/payment-links`
+   (fetch, no SDK) with an `order` built from the catalogue (title, price, the flat shipping as a second line, the
+   order id as `reference_id`), never from the request; `ask_for_shipping_address`, a `redirect_url` to `/thanks`,
+   and an idempotency key from the order id. No card field and no Square script on the site.
+2. **Isaac's own Square account; credentials as secrets.** `SQUARE_ACCESS_TOKEN`, `SQUARE_LOCATION_ID` and
+   `SQUARE_WEBHOOK_SIGNATURE_KEY` on `studio-api`: sandbox values on staging (`connect.squareupsandbox.com`),
+   production values on production, each from a GitHub secret the deploy workflow sets like `RESEND_API_KEY`, and
+   skipped when unset (checkout stays off).
 3. **The piece is set aside atomically.** `order.start` (public, visitor) writes the order and moves the artwork
    `available → reserved` in one batch with the version check, so a second buyer gets 409 "someone is buying this
-   now". A piece on an approved hold is reserved already; only the hold's own lead (a token in its email and its
-   chat) can start its order. `checkout.session.expired` (or 35 minutes with no event, the hourly cron) puts it back.
-4. **The webhook is the only thing that sells.** `POST /v1/stripe/webhook` (no session; the studio is found from the
-   order the event names, never from the body's other fields) checks the `Stripe-Signature` HMAC with Web Crypto and a
-   5-minute tolerance, refuses a bad or old signature with 400, and records each event id once (`payment_events`,
-   unique) so a replay changes nothing. `checkout.session.completed` with `payment_status: paid` → `order.paid`:
-   the order paid, the artwork `sold` (as `artwork.mark_sold`, D-029), a `sales` row (`source: stripe`,
-   `payment_method: online`, `external_id` the payment), the client matched or made (as D-138), the lead (if any)
-   done, emails to Isaac. `charge.refunded` → the order and sale marked refunded; the piece stays sold until Isaac
-   puts it back.
-5. **Money from Stripe, not from us.** The order keeps what Stripe reports (amount, shipping, tax, currency) in cents.
-   Tax: Stripe Tax (`automatic_tax`) as D-102 says, which needs Stripe Tax turned on in his account and has Stripe's
-   own fee per sale; until he turns it on, checkout runs without tax and the plan says so on the Site screen.
-6. **Deposits are orders too.** `kind: deposit`, tied to a client and a commission record (`meta.commission` on the
-   client until a commissions table is needed), amount set by Isaac's tap (`deposit.request`, owner only); paying it
-   writes a `sales` row marked deposit and emails him.
-7. **The assistant never sells.** No checkout tool, no order data in its context. A visitor's order is visible only to
+   now". Only an approved hold's own lead can start its order. The hourly cron puts expired orders' pieces back and
+   deletes their unused payment links at Square.
+4. **For a card, Square's webhook is the only thing that sells.** `POST /v1/square/webhook` (no session; the studio is
+   found from the order the payment names) checks `x-square-hmacsha256-signature` (HMAC-SHA256 of the webhook's own
+   address plus the raw body, Web Crypto, constant-time compare), refuses a bad one with 401, and records each event id
+   once (`payment_events`, unique). `payment.updated` with status `COMPLETED` → `order.paid`: the order paid, the
+   artwork `sold` (as `artwork.mark_sold`, D-029), a `sales` row (`source: square`, `payment_method: card`,
+   `external_id` the payment), the client matched or made (as D-138), the lead (if any) done, emails. `refund.updated`
+   completed → the sale marked refunded; the piece stays sold until Isaac puts it back.
+5. **Venmo and Zelle are confirmed by Isaac, never by us.** `order.start` with `method: venmo|zelle` reserves the piece
+   for 48 hours and emails both sides; only the owner's **Mark paid** (`order.mark_paid`, with the amount received
+   and an optional note) sells it, through the same path as a card. No Venmo or Zelle account is connected; we only
+   show his public handles.
+6. **Money from the source.** A card order keeps what Square reports (amount, shipping, tax, currency) in cents; a
+   manual order keeps the total shown and what Isaac enters. Tax: none at checkout unless Isaac sets a rate (Square
+   applies a fixed rate he configures; it does not work out tax by address).
+7. **Deposits are orders too.** `kind: deposit`, tied to a client and a commission (`meta.commission` on the client for
+   now), amount from Isaac's tap (`deposit.request`, owner only).
+8. **The assistant never sells.** No order tool, no order data in its context. A visitor's order is visible only to
    the visitor's own browser (`x-visitor-key`) and to the owner.
 
 ### Data (migration 0013, additive)
 
-- `orders`: id, studio_id, kind (`piece`, `deposit`), artwork_id, lead_id, client_id, visitor_id, status (`pending`,
-  `paid`, `expired`, `refunded`, `cancelled`), amount_cents, shipping_cents, tax_cents, currency, stripe_session_id
-  (unique), stripe_payment_id, buyer name / email / phone, shipping address (JSON), shipped_at, carrier, tracking,
-  expires_at, pay_token_hash (deposits), plus the standard columns.
-- `payment_events`: stripe event id (unique), studio_id, order_id, type, received_at. Kept 90 days.
+- `orders`: id, studio_id, kind (`piece`, `deposit`), method (`card`, `venmo`, `zelle`), artwork_id, lead_id,
+  client_id, visitor_id, status (`pending`, `awaiting_payment`, `paid`, `expired`, `cancelled`, `refunded`), code
+  (short, for the Venmo/Zelle note), amount_cents, shipping_cents, tax_cents, currency, square_link_id,
+  square_order_id (unique), square_payment_id, buyer name / email / phone, shipping address (JSON), paid_at, shipped_at,
+  carrier, tracking, expires_at, pay_token_hash (deposits), plus the standard columns.
+- `payment_events`: Square event id (unique), studio_id, order_id, type, received_at. Kept 90 days.
 
 ### Gate
 
-1. **Test-mode purchase end to end on staging**: Buy → Stripe's test checkout (test card) → webhook → piece sold on
-   the site, in Studio and in the Show Tracker's sales; Isaac's email; `/thanks`; Orders shows it; shipped + tracking
-   email. The same for a deposit link. A phone-sized browser run in "Deploy staging" (`smoke`), Stripe test mode only.
-2. **Webhook signature checked**: wrong secret, changed body, old timestamp → 400 and nothing written; a replayed
-   event → no second sale (tests, plus Stripe's own test events on staging).
-3. **One piece can't sell twice**: two checkouts at once → one 409; a paid event for an expired order on a piece sold
-   meanwhile → never a second sale: flagged to Isaac by email and on Orders for a refund in Stripe (his call); tests for each.
-4. **Holds**: an approved hold's piece can be bought only from that lead's link; when the hold ends it is for sale.
-5. `/security-review` on both diffs; tenancy sweep covers every new route.
-6. Isaac's look on staging, then live keys and a first real sale he watches (he can buy and refund his own piece).
+1. **Sandbox card purchase end to end on staging**: Buy → Square's sandbox checkout (test card) → webhook → piece sold
+   on the site, in Studio and in the Show Tracker's sales; emails; `/thanks`; Orders; shipped + tracking email. The same
+   for a deposit link. A phone-sized browser run in "Deploy staging" (`smoke`), sandbox only.
+2. **Venmo/Zelle order on staging**: piece reserved, both emails, Mark paid → sold; an unpaid one expires and the piece
+   is for sale again.
+3. **Webhook signature checked**: wrong key, changed body, wrong address → 401 and nothing written; a replayed event →
+   no second sale (tests, plus Square's own test event on staging).
+4. **One piece can't sell twice**: two orders at once → one 409; a card payment for an order that expired while the
+   piece sold another way → never a second sale: flagged to Isaac on Orders and by email for a refund (his call).
+5. **Holds**: an approved hold's piece can be bought only from that lead's link; when the hold ends it is for sale.
+6. `/security-review` on both diffs; tenancy sweep covers every new route.
+7. Isaac's look on staging, then production credentials and a first real sale he watches.
 
 ### Task cards
 
 | # | Card | Who | Repo |
 |---|---|---|---|
-| A | 0013, `order.start` / `order.paid` / `order.expire` / `order.ship` / `deposit.request`, the webhook route and signature check, Stripe client (fetch, no SDK), cron, emails, tests, openapi | Lead (Opus 5.5), `backend-builder` | Art-Talk-Back |
-| B | Deploy workflows: Stripe secrets (test on staging, live on production) and a skip when unset; webhook endpoint notes | Lead | Art-Talk-Back |
-| C | Buy button, `/buy/{slug}` (works without scripts: a form post), `/thanks/{order}`, `/pay/{token}`, price line | Sonnet 5.5 | site |
-| D | Studio → Orders (list, detail, Mark shipped), commission Request deposit, Site → Checkout settings | Sonnet 5.5 | site |
-| E | Smoke test with Stripe test mode; assistant prompt line on buying (no tool) and two eval cases | Sonnet 5.5 | both |
+| A | 0013, `order.start` / `order.paid` / `order.mark_paid` / `order.expire` / `order.ship` / `deposit.request`, the webhook route and signature check, Square client (fetch), cron, emails, tests, openapi | Lead | Art-Talk-Back |
+| B | Deploy workflows: Square secrets (sandbox on staging, production on production), skipped when unset | Lead | Art-Talk-Back |
+| C | Buy button, `/buy/{slug}` (works without scripts), `/thanks/{order}`, `/pay/{token}`, price line | Lead | site |
+| D | Studio → Orders (list, detail, Mark paid, Mark shipped), Request deposit, Site → Checkout settings | Lead | site |
+| E | Smoke test with Square's sandbox; assistant prompt line on buying (no tool) and two eval cases | Lead | both |
 
 A first (the contract); C–E against it.
 
-### Needs Isaac, in order
+### Needs Isaac, one at a time
 
-1. OK this plan.
-2. A Stripe account (stripe.com, his business details and bank) and its **test** keys added as GitHub secrets: Art-Talk-Back
-   → Settings → Secrets and variables → Actions → New secret, `STRIPE_SECRET_KEY_TEST` and, after the first staging
-   deploy prints the webhook address, `STRIPE_WEBHOOK_SECRET_TEST`. Live keys only after the gate.
-3. Shipping: the flat rate for small works, where "small" ends (default: longest side up to 36 in), and whether he
-   ships outside the US (default: US only).
-4. Returns wording for checkout (default from D-102: seven days on available works, none on commissions).
-5. Stripe Tax on or off (it has Stripe's own fee per sale).
-6. The deposit wording (already asked in stage 3, question 12).
+1. ~~Shipping: the flat rate for small works and where "small" ends~~ Replaced by the revision's tiers and its
+   six questions.
+2. Returns wording (default from D-102: seven days on available works, none on commissions).
+3. Tax: none at checkout (default), or a fixed rate he gives.
+4. His Venmo name and the Zelle email or phone buyers should send to (shown on the order page).
+5. Deposit wording (stage 3, question 12).
+6. Square **sandbox** credentials as GitHub secrets: Square Developer → his app → Sandbox → access token and location id,
+   then Webhooks → the address staging prints → its signature key. Art-Talk-Back → Settings → Secrets and variables →
+   Actions → New secret: `SQUARE_ACCESS_TOKEN_SANDBOX`, `SQUARE_LOCATION_ID_SANDBOX`,
+   `SQUARE_WEBHOOK_SIGNATURE_KEY_SANDBOX`. Production ones only after the gate.
 
 ## Open questions — answered 2026-11-10 (D-102, D-103)
 

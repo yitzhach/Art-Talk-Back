@@ -8,11 +8,11 @@ Paste this into Claude Code (or a new chat) with the repos Art-Talk-Back and IA-
 > migration 0012). I'm not technical: clicks and links, not commands. Work lean: tests and GitHub runs before any
 > browser, short replies. Up to $1 on assistant tests without asking (D-143), one eval run at a time.
 >
-> 1. Stage 4 (buying): show me the plan in a few lines and ask me its open questions one at a time (my OK, shipping
->    rate and the small/large line, return wording, Stripe Tax on or off, deposit wording). Record each answer in
->    DECISIONS.md. Once I OK it, tell me exactly where to add Stripe **test** keys as GitHub secrets
->    (`STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`; never paste them in a chat), then build cards A–E on a branch,
->    deploy to staging and run the gate in Stripe test mode. Nothing with live keys or real money without my yes.
+> 1. Stage 4 (buying, approved, D-144: Square for cards, Venmo and Zelle by hand): carry on from the stage 4 section's
+>    checklist, asking me its open questions one at a time and recording each answer in DECISIONS.md. Tell me exactly
+>    where to add Square **sandbox** credentials as GitHub secrets (never paste them in a chat). Build cards A–E on a
+>    branch, deploy to staging and run the gate in Square's sandbox. Nothing with production credentials or real money
+>    without my yes.
 > 2. If I've sent my own visitor questions: record them (DECISIONS.md), put the facts in the assistant's words
 >    (Site → Assistant, through the app or the settings route, never the database), fill the 22 slots in
 >    `workers/assistant/evals/visitor-cases.json`, run "Assistant eval (live)" suite visitor with record, and commit the

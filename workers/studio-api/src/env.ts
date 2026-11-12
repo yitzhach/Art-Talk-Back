@@ -13,6 +13,14 @@ export interface Env {
   ACCESS_AUD?: string;
   /** Shared with studio-assistant; a request carrying it acts as the assistant (D-046). */
   ASSISTANT_KEY?: string;
+  /** Square for card payments (D-144): "sandbox" (default) or "production", and the one studio the account is for. */
+  SQUARE_ENV?: string;
+  SQUARE_STUDIO_SLUG?: string;
+  SQUARE_ACCESS_TOKEN?: string;
+  SQUARE_LOCATION_ID?: string;
+  SQUARE_WEBHOOK_SIGNATURE_KEY?: string;
+  /** The webhook address registered in Square, which its signature covers; default: the request's own URL. */
+  SQUARE_WEBHOOK_URL?: string;
 }
 
 /** "guest": a client acting through a Studio Wall link (D-092); never a membership, only an Actor. */

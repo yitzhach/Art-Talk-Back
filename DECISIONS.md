@@ -529,3 +529,68 @@ Asked whether to pay for a text-message service (an account, a number at about $
 
 ### D-143 · Up to $1 on the visitor assistant's tests without asking · 2026-11-12 · Isaac
 "You can feel free to spend up to $1 on these tests without asking me again… just keep this moving forward." Live eval runs and staging checks that call the model may spend up to $1 in all (two runs so far: about 2 cents). Shipping to production still waits for his look on staging (the gate).
+
+### D-144 · Stage 4 starts now: Square for cards, Venmo and Zelle by hand · 2026-11-12 · Isaac
+"Yes, start building it and right now. I have a Square account and so I would probably allow manual payments to
+connect to my Square account and then other payment options would include Venmo Zelle and that's probably it for
+now." Card payments go through his own Square account (Square's hosted checkout page; a signed webhook sells the
+piece), replacing the Stripe plan. Venmo and Zelle are shown as manual options: the piece is held 48 hours and sells
+only when Isaac taps Mark paid, since neither can be confirmed automatically. Built and tested in Square's sandbox
+first; production credentials only after the gate (`docs/phase-6-site.md` → Stage 4).
+
+### D-145 · How an order sells · 2026-11-12 · Claude (spec default)
+- One order is one piece. It sets the piece aside (`reserved`, `meta.order`): 30 minutes for a card (Square's page),
+  48 hours by default for Venmo or Zelle. An order that ran out ends hourly, or at once when someone else tries that piece.
+- Only two things sell: Square's signed webhook (a completed payment for the order's Square order) and the owner's
+  Mark paid on a Venmo or Zelle order (`always_confirm`, never the assistant). Both take one path: the order paid, the
+  piece sold with `meta.sale.orderId`, a sales row (card → source `square`, method `card`; by hand → source `manual`,
+  method `other` with "Website order CODE (Venmo)"), the client matched by email or made, a held piece's lead closed.
+- Nothing sells twice. A payment for a piece that sold another way (or is held for someone else) marks the order paid
+  with a conflict, emails the studio to refund, and changes nothing else. A late payment for an expired order still
+  sells if the piece is free.
+- A visitor whose hold was approved can buy their own held piece; cancelling that order keeps the hold.
+- Card checkout runs only for the studio named in `SQUARE_STUDIO_SLUG`, with all three Square secrets set; other
+  studios see Venmo and Zelle only. A Square refund marks the order refunded; the piece stays sold for the owner.
+- Online checkout is for priced pieces up to the small size (36 in longest side by default); larger or unsized pieces
+  keep the inquiry and a shipping quote.
+
+### D-146 · Shipping tiers replace D-102 item 4 · 2026-11-12 · Isaac
+Four tiers on each piece (`artworks.shipping`): 1 small (≤300 sq in and ≤24 in long) ships free; 2 medium (under 576
+sq in, ≤30 in long) is a flat $22; 3 large ("24×24 and up get calculated") gets a ZIP estimate; 4 is a quote
+(oversize box, crated or freight). Large works are buyable online once priced. US only; elsewhere is a quote. Local
+pickup stays off. Supersedes D-145's "small size only" rule.
+
+### D-147 · R1, a medium piece ships free with another · 2026-11-12 · Isaac
+The tier 2 charge is waived when the cart holds any other piece.
+
+### D-148 · R2, the large-work offer · 2026-11-12 · Isaac
+"I'll discount a large pieces shipping by 20% of the price of the add on piece. So a 500 piece reduces shipping by
+100." A qualifying piece costs at least $500 and takes 20% of its own price off one large piece's shipping.
+
+### D-149 · One qualifier per large piece, no cap · 2026-11-12 · Isaac
+"No cap." The saving stops at the large piece's own shipping. Qualifiers and large pieces pair largest first. An
+optional cap setting exists and is off.
+
+### D-150 · Never guess a tier · 2026-11-12 · Claude (spec default)
+A piece with no tier can't check out. Studio suggests tiers from the size and flags those near a line or without
+dimensions; a suggestion counts only once Isaac accepts it.
+
+### D-151 · One calculator, called only by studio-api · 2026-11-12 · Claude (spec default)
+`shippingFor` in `packages/core` is the only code that works shipping out. Settings live in `meta.site.shipping`; the
+piece's fields in `artworks.shipping`; a cart's pieces in `orders.items` (JSON; `artwork_id` keeps the first piece).
+The site shows what `POST …/shipping/quote` returns and sends back the shipping it showed; a changed figure is a 409.
+Square charges it as a fixed shipping fee, one line per piece.
+
+### D-152 · Platform first, and nothing takes real money without Isaac's OK · 2026-11-12 · Isaac
+The site needs the new contract, so the platform releases first (the exception D-057 lists). The live site gets the
+build with checkout off; live Square keys and the first real payment wait for his yes to that step.
+
+### D-153 · A ZIP estimate for large pieces · 2026-11-12 · Isaac
+UPS Ground (bought through Pirate Ship) from 42503, 2 in of packing on every side, residential surcharge always
+assumed, a 10% cushion, rounded up to the dollar. The rate grid is our own copy of UPS's published daily Ground rates
+(Isaac refreshes it each January); zones from the distance between ZIP prefixes. An oversize box never gets an
+estimate: it's a quote, so nobody is surprised.
+
+### D-154 · A quoted piece becomes buyable when Isaac pins its shipping · 2026-11-12 · Claude (spec default)
+For tier 4, a custom quote or a crated piece, the visitor asks; Isaac sets that piece's shipping price (and, if he
+wants, a hold for that lead), and then it checks out like any other. One-off pay links wait.

@@ -526,3 +526,6 @@ On a hold request, **Approve hold** sets the piece `reserved` for 48 hours (the 
 
 ### D-142 · Leads by email only for now · 2026-11-12 · Isaac
 Asked whether to pay for a text-message service (an account, a number at about $1–2 a month, about a cent a text) for a text per lead, Isaac chose email only for now. Every lead emails him at once and shows on the Leads screen; the daily summary lists them. Texts can be added later as a studio-api sender beside `sendMail`, with the service's key in a secret.
+
+### D-143 · Up to $1 on the visitor assistant's tests without asking · 2026-11-12 · Isaac
+"You can feel free to spend up to $1 on these tests without asking me again… just keep this moving forward." Live eval runs and staging checks that call the model may spend up to $1 in all (two runs so far: about 2 cents). Shipping to production still waits for his look on staging (the gate).

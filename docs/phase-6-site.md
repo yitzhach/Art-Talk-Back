@@ -675,10 +675,11 @@ the nudge.
 #### The rules (data, each with on/off and optional start and end dates)
 
 - **R1 "Mid pairs free"**: a tier 2 piece's $22 is waived when the order holds at least one other piece of any tier.
-- **R2 "Large-work offer"**: a tier 3 piece's shipping is covered when the order holds a qualifying piece: a tier 1 or
-  tier 2 piece priced at or above the minimum (default $500). One qualifier covers one large piece. Isaac covers at
-  most the cap per large piece (default $150); the rest is charged and the cart says so ("we cover $150 of $210").
-  Qualifiers are matched to large pieces highest-shipping first, so the buyer always gets the larger saving.
+- **R2 "Large-work offer"** (Isaac, 2026-11-12): a qualifying piece takes **20% of its own price** off one large
+  piece's shipping. A qualifier is a tier 1 or tier 2 piece priced at or above the minimum ($500, so the smallest
+  saving is $100). One qualifier helps one large piece. The saving is never more than that piece's shipping or the cap
+  per large piece ($150); the rest is charged and the cart says so ("we cover $100 of $120"). The 20% is a setting.
+  Qualifiers are matched to large pieces largest-saving first, so the buyer always gets the most off.
 - **Promotion-eligible** flag on each piece, on by default: off means the piece neither qualifies nor is covered.
 
 Worked examples (a large piece's shipping set at $120):
@@ -690,11 +691,13 @@ Worked examples (a large piece's shipping set at $120):
 | one 18×20 | $22 | tier 2 |
 | 18×20 + 12×12 | free | R1 |
 | one large | $120 | its own price |
-| large + $600 tier 1 | free | R2 |
+| large + $500 tier 1 | $20 | R2: 20% of $500 is $100 |
+| large + $600 tier 1 | free | R2: 20% of $600 is $120 |
 | large + $300 tier 1 | $120 | under the minimum |
-| large + 18×20 ($550) | free | R2 covers the large; R1 waives the $22 |
+| large + 18×20 ($550) | $10 | R2 takes $110 off the large; R1 waives the $22 |
 | two large + one $600 piece | $120 | one qualifier covers one large |
-| large ($210 shipping) + $600 piece | $60 | the cap covers $150 |
+| large ($210 shipping) + $600 piece | $90 | R2 takes $120 off |
+| large ($210 shipping) + $1,000 piece | $60 | 20% is $200, the cap allows $150 |
 | anything + tier 4 | quote | step 1 |
 
 **Later (designed for, not built):** reduced add-on rates, international zones, carrier-calculated rates, a seven-day
@@ -790,7 +793,8 @@ often the offer came up when asked, from the existing chat logs. Nothing new is 
 - **D-146 · Shipping tiers replace D-102 item 4 · Isaac**: four tiers; large works buyable once priced; quotes for
   tier 4.
 - **D-147 · R1, mid pairs free**: the tier 2 rate is waived with any other piece.
-- **D-148 · R2, the large-work offer**: a qualifier covers a large piece's shipping; minimum $500.
+- **D-148 · R2, the large-work offer · Isaac**: a qualifier takes 20% of its price off a large piece's shipping;
+  minimum $500.
 - **D-149 · One qualifier per large piece, cap $150 per large piece**, matched highest-shipping first.
 - **D-150 · Never guess a tier**: suggestions need Isaac's tap; Check size near a boundary or without dimensions.
 - **D-151 · One calculator in `packages/core`, called only by studio-api**; settings in `meta.site.shipping`, piece
@@ -833,7 +837,8 @@ his "ship": platform first, then site.
 
 1. ~~Does every tier 1 or 2 piece qualify, or only one priced at $500 or more?~~ **Answered 2026-11-12: a $500
    minimum** (Isaac, 👍 on the question).
-2. ~~The most Isaac covers per large piece.~~ **Answered 2026-11-12: $150** (Isaac, 👍).
+2. ~~The most Isaac covers per large piece.~~ **Answered 2026-11-12: $150** (Isaac, 👍). Then Isaac changed R2 to
+   20% of the add-on's price; whether the $150 cap still applies is asked again.
 3. Size lines: up to 300 sq in free, up to 500 sq in $22, above that large. Do an 18×20 ($22) and a 20×26 (large)
    land where he expects?
 4. Does the mid tier's $22 drop when paired (R1)? Default: yes.

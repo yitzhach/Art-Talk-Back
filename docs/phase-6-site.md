@@ -644,8 +644,8 @@ Mark paid, the 30-minute and 48-hour holds, one sell path, holds from approved l
 | Tier | Roughly | Buyer pays | Suggested when |
 |---|---|---|---|
 | 1 Free | up to 16×16 or 12×24 | free | area up to 300 sq in and longest side up to 24 in |
-| 2 Mid | around 18×20 | $22 flat | area up to 500 sq in and longest side up to 30 in |
-| 3 Large | 20×26 and up | the ZIP estimate (or a price Isaac pins) | anything bigger |
+| 2 Mid | 18×20 to 20×26 | $22 flat | area under 576 sq in and longest side up to 30 in |
+| 3 Large | 24×24 and up | the ZIP estimate (or a price Isaac pins) | area 576 sq in (24×24) or more, or longest side over 30 in (Isaac, 2026-11-12) |
 | 4 Quote | oversize box, crated, freight | Isaac's estimate, no Buy | the box is oversize for UPS, or flagged crated or custom quote |
 
 - A suggestion is only a suggestion: Isaac taps to accept it, and nothing assigns a tier silently. A piece with no
@@ -870,8 +870,8 @@ his "ship": platform first, then site.
    minimum** (Isaac, 👍 on the question).
 2. ~~The most Isaac covers per large piece.~~ **Answered 2026-11-12: $150** (Isaac, 👍). Then Isaac changed R2 to
    20% of the add-on's price, and then said **no cap**.
-3. Size lines: up to 300 sq in free, up to 500 sq in $22, above that large. Do an 18×20 ($22) and a 20×26 (large)
-   land where he expects?
+3. ~~Size lines?~~ **Answered 2026-11-12: 24×24 and up are large and get the ZIP estimate** (Isaac). Free stays
+   up to 300 sq in and 24 in long; $22 covers the rest below 576 sq in, so an 18×20 and a 20×26 are $22.
 4. Does the mid tier's $22 drop when paired (R1)? Default: yes.
 5. Only the US? Default: yes; everywhere else is a quote.
 6. Local pickup from the studio? Default: off.

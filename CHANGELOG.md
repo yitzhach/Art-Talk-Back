@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### Site 3.0 · stage 5 live: see it on your wall (D-155…D-161)
+- The site's "See it on your wall" (IA-ART-SITE-REPO#6) shipped: live camera view on iPhone/iPad, true size on a photo
+  of your wall on any device. No platform change. Plan, gate and decisions in `docs/phase-6-site.md` → Stage 5 and
+  `DECISIONS.md`; handoff and next-session prompt updated (what's next: stage 4's gate, stage 6, D-161).
+
 ### Site 3.0 · stage 4, shipping tiers, cart and the large-work offer (D-146…D-154)
 - Migration 0014: `artworks.shipping`, `orders.items`, `orders.covered_cents`, `orders.ship_zip` (additive).
 - `@studio/core` `shippingFor`: tiers, R1, R2 (20% of a $500+ piece, no cap), the ZIP estimate (UPS Ground from 42503,

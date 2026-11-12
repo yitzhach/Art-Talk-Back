@@ -594,3 +594,29 @@ estimate: it's a quote, so nobody is surprised.
 ### D-154 · A quoted piece becomes buyable when Isaac pins its shipping · 2026-11-12 · Claude (spec default)
 For tier 4, a custom quote or a crated piece, the visitor asks; Isaac sets that piece's shipping price (and, if he
 wants, a hold for that lead), and then it checks out like any other. One-off pay links wait.
+
+### D-155 · "Art Wall" for the live camera view is AR-WALLE · 2026-11-12 · Isaac
+Isaac confirmed that AR-WALLE (`yitzhach/AR-WALLE`) is the live-camera wall tool stage 5 builds on.
+
+### D-156 · The photo-based wall tool is dm-t1 · 2026-11-12 · Isaac
+Isaac: "Dm-t1 is another repo. This allows user to place art on their own wall and works on desktop." So the photo mode
+of stage 5 comes from `yitzhach/dm-t1`, not `SEEWALLE` (closes D-103).
+
+### D-157 · The wall view runs on the visitor's device · 2026-11-12 · Isaac (approved plan)
+"See it on your wall" builds the AR model and sizes the wall photo in the browser. The site uploads and stores nothing;
+the only request is the piece's own picture.
+
+### D-158 · AR-WALLE's USDZ builder and dm-t1's two-point sizing are copied into the site · 2026-11-12 · Claude (spec default)
+Neither tool is a package. `public/site/wall-core.js` carries both, pinned by the site's tests (size within 2% on test
+photos; the model's front is the record's size in meters within 0.1%; ZIP stored and 64-byte aligned).
+
+### D-159 · No depth on the record shows 1.5 in deep in AR; pinch stays locked · 2026-11-12 · Claude (spec default)
+`#allowsContentScaling=0`, so the size can't drift. Sizes in cm are converted.
+
+### D-160 · Corners, lighting, several pieces and Android live AR wait · 2026-11-12 · Isaac (approved plan)
+None is needed for true size on a wall, and each adds code a buyer downloads. The photo way covers Android and desktop.
+
+### D-161 · Link the full dm-t1 wall tool from the site, works passed to it · 2026-11-12 · Isaac's idea, proposed
+dm-t1 reads a catalogue feed and a config in its address and posts keep / inquire / export back in embed mode. A public
+feed of the studio's works in its shape plus a link would do it; its picture comes back into the inquiry. Waits for
+where dm-t1 is hosted and Isaac's OK; not part of stage 5's gate.

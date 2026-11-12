@@ -819,7 +819,7 @@ Isaac covered, his actual cost where entered, and average order value with and w
 rule per day: shown, suggestion tapped, suggested piece bought (a flag the cart sends at checkout). Assistant: how
 often the offer came up when asked, from the existing chat logs. Nothing new is collected about visitors.
 
-#### Proposed decisions (recorded when built)
+#### Decisions (D-157…D-161)
 
 - **D-146 · Shipping tiers replace D-102 item 4 · Isaac**: four tiers; large works buyable once priced; quotes for
   tier 4.
@@ -1003,6 +1003,78 @@ A first (the contract); C–E against it.
    then Webhooks → the address staging prints → its signature key. Art-Talk-Back → Settings → Secrets and variables →
    Actions → New secret: `SQUARE_ACCESS_TOKEN_SANDBOX`, `SQUARE_LOCATION_ID_SANDBOX`,
    `SQUARE_WEBHOOK_SIGNATURE_KEY_SANDBOX`. Production ones only after the gate.
+
+## Stage 5 — on my wall (approved by Isaac 2026-11-12; gate passed; live 2026-11-12)
+
+### Where it stands (2026-11-12)
+
+- [x] The two tools read (D-155, D-156). **AR-WALLE** (`yitzhach/AR-WALLE`, `public/model.mjs`, `state.mjs`): builds a
+  USDZ in the browser (meters, vertical-plane anchor, front + sides + soft shadow, ZIP_STORED with 64-byte alignment)
+  and opens Apple AR Quick Look from an `a[rel=ar]` with a Blob URL; `#allowsContentScaling=0` locks true size. Never
+  checked with a tape measure (its README's iPhone checklist is still open). **dm-t1** ("Wall Visualizer",
+  `yitzhach/dm-t1`): a 250 KB React page plus 110 KB of mobile UI; scale comes from "Calibrate size" (tap two points on
+  the wall photo, type the real distance: inches per pixel = inches ÷ the points' distance), pieces drag, optional
+  per-piece perspective corners, shadows, lighting. Too big to embed under the 50 KB budget, so its calibration and
+  placement math is carried over, not its page.
+- [x] Isaac's OK on this plan (2026-11-12: "That sounds good").
+- [x] Build (site repo only; no platform change, no migration, no new cost): site branch
+  `claude/project-thread-10m9mf`. Staging smoke 13/13 (wall: 0.33% off on a test photo, live model 1.3 MB); site
+  checks: wall 2%, drag p95 16.7 ms at a 4× slower CPU, Save picture, live model, no errors.
+- [x] CI's Lighthouse LCP on `/works/work-1` read 2.1 s on `main` since the stage 4 merge (the same tree read 1.8 s
+  before it): the check now runs Lighthouse three times and scores the median (1.96 s); 126/126.
+- [x] Gate: Isaac's tape-measure check on his iPhone, staging, Abstract No. 3 (28 × 18 in): "Right" (2026-11-12).
+- [x] Live (2026-11-12, Isaac: "Let's go live"): IA-ART-SITE-REPO#6 merged; "Deploy production site" 5 (Worker
+  version `8ad56c05`); "Smoke production site" 13/13 on the live site (wall 0.35% off).
+
+### What a visitor sees (piece page, any device)
+
+- **See it on your wall** under the facts, on every piece that has a width and height (sold ones too: "a commission
+  like this"). Shown only with scripts; the code (`/site/wall.js`) loads on the tap, so the page's budget is unchanged.
+- A sheet with two ways:
+  1. **Live, through your camera** (iPhone or iPad Safari, where AR Quick Look exists): the piece at its true size on
+     the wall in front of them, pinch locked. Built on the device from the 1600 px picture (made JPEG on a canvas: Quick
+     Look takes no WebP), the record's depth (1.5 in when empty), sides coloured from the picture's edge. AR-WALLE's
+     model builder, unchanged in what it writes.
+  2. **On a photo of your wall** (every device, desktop too): choose or take a photo; it stays on their device and is
+     never uploaded. Tap both ends of something they know (a door's width, a sheet of letter paper, a tape measure) and
+     type its length; the piece appears at true size, drags into place, and a **Save picture** button saves the
+     composite. A note says the photo works best taken straight on. dm-t1's calibration math, plain DOM.
+- Elsewhere (Android, desktop) the live way isn't offered; the photo way is.
+
+### Decisions (D-157…D-161)
+
+- D-157 · The wall view runs on the visitor's device; nothing is uploaded or stored by the site.
+- D-158 · AR-WALLE's USDZ builder and dm-t1's two-point calibration are copied into the site (no shared package):
+  neither tool is published as a package, and the site's own tests pin the parts it uses.
+- D-159 · Pieces with no depth show 1.5 in deep in AR; pinch stays locked so the size can't drift.
+- D-160 · Perspective corners, lighting, several pieces at once and Android live AR wait: none is needed for "true size
+  on my wall", and each would add code a buyer has to download.
+- D-161 · Proposed (Isaac's idea, 2026-11-12): link the full dm-t1 tool from the site, with the studio's works passed
+  to it. dm-t1 already reads a catalogue feed (`catalogUrl`, items `{id, title, src, widthIn, heightIn, price}`) and a
+  config in its address (`#wvcfg=`), and in embed mode posts keep / inquire / export back to the page that opened it.
+  So: a public feed of the studio's works in that shape, an "Open the full wall tool" link, and the tool's picture
+  coming back into the inquiry. Needs: where dm-t1 is hosted, and Isaac's OK. Not part of the stage 5 gate.
+
+### Gate
+
+- Size within 2%: tests draw test photos with a known reference (and use `site3-tests/test-wall-photo.jpg` with
+  marks at known pixels) and check the placed piece's width and height; the built USDZ's front is checked to be the
+  record's width × height in meters within 0.1%.
+- Smooth on a phone: the staging smoke at 390 × 844 opens the photo way, places a piece, drags it and checks frame
+  times; no page errors; the piece page's script budget still under 50 KB.
+- Isaac's check on his iPhone: open a piece, Live, and hold a tape measure to the piece on the wall.
+
+### Task cards
+
+- A: `public/site/wall.js` (sheet, photo way, save picture) and `wall-usdz.js` (AR-WALLE's builder), the button and
+  its data on `pages/piece.ts`, CSS. Tests: calibration and placement math, USDZ geometry and ZIP, piece page markup.
+- B: smoke steps in `tests/staging-smoke.mjs` and the budget check in `tests/site/checks.mjs`.
+
+### Needs Isaac, in order
+
+1. OK on this plan (done).
+2. At the gate: the tape-measure check on his iPhone, on staging.
+3. Later (D-161): where dm-t1 lives, and whether to link it.
 
 ## Open questions — answered 2026-11-10 (D-102, D-103)
 

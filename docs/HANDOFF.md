@@ -1,20 +1,19 @@
 # Handoff — 2026-11-12
 
-Read this first, then `CLAUDE.md`, then `docs/phase-3.md` (assistant) or `docs/phase-5-booth.md`
+Read this first (a final-pass prompt is at the end), then `CLAUDE.md`, then `docs/phase-3.md` (assistant) or `docs/phase-5-booth.md`
 (Booth Studio) or `docs/phase-5-studio-wall.md` (Studio Wall), whichever your task is.
 
 ## Where things stand
 
-- **What's next (2026-11-12, after D-169).** (1) **Stage 6, Collectors, is live** (D-163…D-169; `docs/phase-6-site.md`
-  → "Stage 6"): Art-Talk-Back#55 and IA-ART-SITE-REPO#7, migration 0015, live smoke 15/15. Isaac's standing rule
-  (D-169): until his own domain points at `studio-site`, ship stages live without asking; still his: secrets, money,
-  deleting, a new Worker's first deploy, the domain move, and any real email to his collectors. Left for him: care
-  notes (draft prefilled, hidden until saved); past buyers to invite once the domain is attached. (2) **Stage 7,
-  second studio**, next: needs a test artist (a made-up one is fine for building) and, before billing, a price.
-  (3) **Stage 4's Square gate is moved to a later phase (Isaac, D-162)**: buying is built and merged but switched
-  off; when that phase comes, Isaac adds Square sandbox keys as GitHub secrets, a sandbox purchase runs end to end on
-  staging, then production keys and his "ship". (4) **D-161**, the full dm-t1 wall tool linked from the site, once
-  Isaac says where dm-t1 is hosted. Still open from stage 3: his own visitor questions (22 slots).
+- **What's next (2026-11-12, after D-170).** **Isaac is testing everything first** (D-170): stages 1–6 on the live
+  test address, with `docs/TESTING.md` as his checklist. The next session is a **final pass** that starts from his
+  list of what was wrong (prompt below). **On hold, don't start:** stage 7, the second studio (D-170); the Square card
+  test and everything after it (D-162, checkout's card option stays off). **Stage 6, Collectors, is live**
+  (D-163…D-169): Art-Talk-Back#55/#56 and IA-ART-SITE-REPO#7, migration 0015, live smoke 15/15. Standing rule (D-169):
+  until his own domain points at `studio-site`, ship fixes live without asking; still his: secrets, money, deleting, a
+  new Worker's first deploy, the domain move, and any real email to his collectors. Left for him: care notes (draft
+  prefilled, hidden until saved); past buyers to invite once the domain is attached. Also open: D-161 (where dm-t1 is
+  hosted) and his own visitor questions (22 slots, stage 3).
 
 - **Site 3.0 stage 5 (see it on your wall) live (2026-11-12, D-155…D-160, `docs/phase-6-site.md` → "Stage 5").**
   Every piece page with a width, height and picture has **See it on your wall**: the live camera view on iPhone/iPad
@@ -316,3 +315,16 @@ Isaac's first use of the Show Tracker chat in production (merged 2026-10-06, art
   staging. Done 2026-10-06: "Deploy production assistant" (D-068) and Booth Studio's production
   `ASSISTANT` binding (booth-studio#16). Optional: add `booth-studio` to this repo's `ci` ruleset
   (today it requires `check` and `show-tracker`).
+
+## Prompt for the final pass (Claude Code, Fable)
+
+> You're doing the final pass on Isaac Anderson Art's site 3.0 before he moves it to his own web address. Repos:
+> yitzhach/Art-Talk-Back (platform; default branch `claude/next-steps-y4vrwv`) and yitzhach/IA-ART-SITE-REPO (site,
+> `main`). Read Art-Talk-Back `CLAUDE.md`, `docs/HANDOFF.md`, `docs/TESTING.md` and `docs/phase-6-site.md`, and each
+> repo's `CLAUDE.md`. Isaac tested the live test address with TESTING.md; his notes are: [PASTE YOUR NOTES HERE].
+> 1. Fix each thing he found, smallest fix first, with a test for each. 2. Then run the security review on stages 3–6
+> (tokens, codes, public routes, tenancy) and fix what's real. 3. Deploy to staging, run the smoke, then ship live
+> (platform first when the site needs new routes; D-169 lets you ship without asking). 4. Stage 7 and the Square test
+> stay on hold (D-170, D-162). Never email a real collector, never add secrets, never delete data. Record decisions in
+> `DECISIONS.md`, update this handoff, and give Isaac a short list of what changed. He isn't technical: clicks, not
+> commands.

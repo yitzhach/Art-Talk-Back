@@ -1078,14 +1078,18 @@ A first (the contract); C–E against it.
 2. At the gate: the tape-measure check on his iPhone, on staging.
 3. Later (D-161): where dm-t1 lives, and whether to link it.
 
-## Stage 6 — collectors (proposed 2026-11-12; waiting for Isaac's OK, nothing built)
+## Stage 6 — collectors (approved 2026-11-12; building on `claude/project-thread-kn62cz`)
 
 ### Where it stands (2026-11-12)
 
 - [x] Stage 4's Square sandbox purchase moved to a later phase (Isaac, D-162). Checkout stays off on the live site; no
   card payment exists anywhere until that phase. So stage 6 records collectors and their works without Square.
-- [ ] Isaac's OK on this plan.
-- [ ] Build (both repos, branch `claude/project-thread-kn62cz`), staging, the gate, then his yes for the live site.
+- [x] Isaac's OK on this plan ("Ok", 2026-11-12). Decisions D-163…D-168.
+- [x] Card A, platform: migration 0015, actions, owner and public routes, emails, hourly first-look end, tests
+  (`test/collectors.test.ts`, tenancy sweep), openapi. Differences from the plan: the link token is kept as written
+  (D-163), certificate numbers are worked out, not stored (D-166), commission photos and deposits wait (D-168).
+- [ ] Cards B–D, site: `/c/{token}`, certificate page, follow pages, Studio screens, smoke.
+- [ ] Staging, the gate, then his yes for the live site.
 
 ### Findings (checked 2026-11-12 on the default branches)
 

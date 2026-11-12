@@ -17,7 +17,8 @@ async function snapshotB() {
   const out: Record<string, unknown> = {};
   for (const t of ["artworks", "clients", "shows", "sales", "placements", "files", "studio_settings", "activity_log", "memberships",
     "assistant_policy", "pending_actions", "assistant_messages", "boards", "pins", "board_feedback", "shares",
-    "visitors", "visitor_messages", "visitor_pages", "leads", "assistant_usage", "orders", "payment_events"]) {
+    "visitors", "visitor_messages", "visitor_pages", "leads", "assistant_usage", "orders", "payment_events",
+    "collector_links", "followers", "commissions"]) {
     out[t] = (await env.DB.prepare(`SELECT * FROM ${t} WHERE studio_id = ? ORDER BY 1`).bind(B.studioId).all()).results;
   }
   return out;
@@ -68,7 +69,11 @@ beforeAll(async () => {
   b.opKey = newId();
   await call("/v1/artworks", { method: "POST", cookie: B.cookie, headers: { "Idempotency-Key": b.opKey }, json: { title: "B keyed" } });
   // B's site visitor (Site 3.0 stage 3): a chat, a made page, a hold request.
-  vi.spyOn(globalThis, "fetch").mockImplementation(async () => Response.json({ id: "email" }));
+  let lastMail = "";
+  vi.spyOn(globalThis, "fetch").mockImplementation(async (_u: any, init?: RequestInit) => {
+    try { lastMail = String(JSON.parse(String(init?.body)).text ?? ""); } catch { /* not a mail */ }
+    return Response.json({ id: "email" });
+  });
   const bSlug = await studioSlug(B.studioId);
   const bv = { "x-visitor-key": BVISITOR };
   const start = (await call(`/v1/public/studios/${bSlug}/visitor/turn-start`, { method: "POST", headers: { ...ASSISTANT, ...bv }, json: {} })).data;
@@ -81,6 +86,18 @@ beforeAll(async () => {
     json: { kind: "hold", works: [b.public.work.slug], email: "b-visitor@example.test", name: "B's visitor", threadId: start.threadId } })).data;
   b.order = (await call(`/v1/public/studios/${bSlug}/visitor/orders`, { method: "POST", headers: bv,
     json: { work: b.forSale.work.slug, method: "venmo", name: "B's buyer", email: "b-buyer@example.test", address: { line1: "1 B St", city: "B", state: "NY", postalCode: "10001" } } })).data;
+  // B's collectors (Site 3.0 stage 6): a collector with a link and a commission, a follower, a work in first look.
+  b.collector = (await call("/v1/clients", { method: "POST", cookie: B.cookie, json: { name: "B's collector", email: "b-collector@example.test" } })).data;
+  b.link = (await call(`/v1/collectors/${b.collector.id}/link`, { method: "POST", cookie: B.cookie })).data.link;
+  b.linkToken = b.link.path.split("/").pop();
+  b.commission = (await call("/v1/commissions", { method: "POST", cookie: B.cookie, json: { clientId: b.collector.id, title: "B's commission" } })).data;
+  b.firstLook = await makeWork(B, { title: "B's first look" }, { publish: true });
+  await call(`/v1/artworks/${b.firstLook.work.id}/first-look`, { method: "POST", cookie: B.cookie, json: {} });
+  await call(`/v1/public/studios/${bSlug}/follow/email-code`, { method: "POST", headers: bv, json: { email: "b-fan@example.test" } });
+  b.followCode = /\b(\d{6})\b/.exec(lastMail)![1];
+  b.followerPath = (await call(`/v1/public/studios/${bSlug}/follow/verify`, { method: "POST", headers: bv, json: { email: "b-fan@example.test", code: b.followCode } })).data.path;
+  b.followerToken = b.followerPath.split("/").pop();
+  if (!b.commission?.id || !b.linkToken || !b.followerToken) throw new Error(`B collectors: ${JSON.stringify([b.commission, b.link, b.followerPath])}`);
   if (!b.order?.id) throw new Error(`B order: ${JSON.stringify(b.order)}`);
   if (!b.lead?.id) throw new Error(`B lead: ${JSON.stringify(b.lead)} page: ${JSON.stringify(b.page)}`);
   vi.restoreAllMocks();
@@ -177,6 +194,32 @@ attempt("post", "/artworks/{id}/unpublish", () => call(`/v1/artworks/${b.artwork
 attempt("post", "/artworks/{id}/draft", () => call(`/v1/artworks/${b.artwork.id}/draft`, { method: "POST", cookie: A.cookie, headers: ASSISTANT, json: { description: "pwned" } }));
 attempt("patch", "/files/{id}", () => call(`/v1/files/${b.file.id}`, { method: "PATCH", cookie: A.cookie, headers: { "If-Match": "2" }, json: { altText: "pwned" } }));
 attempt("post", "/files/reorder", () => call("/v1/files/reorder", { method: "POST", cookie: A.cookie, json: { entityType: "artwork", entityId: b.artwork.id, fileIds: [b.file.id] } }));
+// Collectors (Site 3.0 stage 6): B's collectors, links, commissions, followers and first look, from A.
+const aSlug = () => studioSlug(A.studioId);
+const bFile = () => b.firstLook.file.id;
+attempt("get", "/collectors/{id}", () => call(`/v1/collectors/${b.collector.id}`, { cookie: A.cookie }));
+attempt("post", "/collectors/{id}/link", () => call(`/v1/collectors/${b.collector.id}/link`, { method: "POST", cookie: A.cookie }));
+attempt("post", "/collectors/{id}/unlink", () => call(`/v1/collectors/${b.collector.id}/unlink`, { method: "POST", cookie: A.cookie }));
+attempt("post", "/collectors/{id}/invite", () => call(`/v1/collectors/${b.collector.id}/invite`, { method: "POST", cookie: A.cookie, json: {} }));
+attempt("post", "/artworks/{id}/owner", () => call(`/v1/artworks/${b.forSale.work.id}/owner`, { method: "POST", cookie: A.cookie, json: { clientId: null } }));
+attempt("post", "/artworks/{id}/first-look", () => call(`/v1/artworks/${b.firstLook.work.id}/first-look`, { method: "POST", cookie: A.cookie, json: { until: null } }));
+attempt("patch", "/commissions/{id}", () => call(`/v1/commissions/${b.commission.id}`, { method: "PATCH", cookie: A.cookie, headers: { "If-Match": "1" }, json: { title: "pwned" } }));
+attempt("delete", "/commissions/{id}", () => call(`/v1/commissions/${b.commission.id}`, { method: "DELETE", cookie: A.cookie, headers: { "If-Match": "1" } }));
+attempt("post", "/commissions", () => call("/v1/commissions", { method: "POST", cookie: A.cookie, json: { clientId: b.collector.id, title: "A's, for B's client" } }));
+// B's tokens on A's site: nothing.
+attempt("get", "/public/studios/{slug}/collectors/{token}", async () => call(`/v1/public/studios/${await aSlug()}/collectors/${b.linkToken}`));
+attempt("post", "/public/studios/{slug}/collectors/{token}/visit", async () =>
+  call(`/v1/public/studios/${await aSlug()}/collectors/${b.linkToken}/visit`, { method: "POST", headers: { "x-visitor-key": "a".repeat(32) } }));
+attempt("get", "/public/studios/{slug}/collectors/{token}/images/{fileId}/{file}", async () =>
+  call(`/v1/public/studios/${await aSlug()}/collectors/${b.linkToken}/images/${bFile()}/480.webp`));
+attempt("get", "/public/studios/{slug}/followers/{token}", async () => call(`/v1/public/studios/${await aSlug()}/followers/${b.followerToken}`));
+attempt("post", "/public/studios/{slug}/followers/{token}/stop", async () => call(`/v1/public/studios/${await aSlug()}/followers/${b.followerToken}/stop`, { method: "POST" }));
+attempt("get", "/public/studios/{slug}/followers/{token}/images/{fileId}/{file}", async () =>
+  call(`/v1/public/studios/${await aSlug()}/followers/${b.followerToken}/images/${bFile()}/480.webp`));
+attempt("get", "/public/studios/{slug}/shows/{id}", async () => call(`/v1/public/studios/${await aSlug()}/shows/${b.show.id}`));
+// B's token with a picture of a work B's collector doesn't own and isn't in first look: nothing either.
+cases.push(["get", "/public/studios/{slug}/collectors/{token}/images (B's private file)", async () =>
+  call(`/v1/public/studios/${await studioSlug(B.studioId)}/collectors/${b.linkToken}/images/${b.file.id}/480.webp`)]);
 attempt("post", "/auth/studio", () => call("/v1/auth/studio", { method: "POST", cookie: A.cookie, json: { studioId: B.studioId } }));
 
 describe("studio A can't reach studio B", () => {
@@ -351,7 +394,11 @@ describe("studio A can't reach studio B", () => {
         .toEqual({ email: null, threadId: null, messages: [] });
     }],
     ["post", "/public/studios/{slug}/visitor/email-code", async () => {
-      vi.spyOn(globalThis, "fetch").mockImplementation(async () => Response.json({ id: "email" }));
+      let lastMail = "";
+  vi.spyOn(globalThis, "fetch").mockImplementation(async (_u: any, init?: RequestInit) => {
+    try { lastMail = String(JSON.parse(String(init?.body)).text ?? ""); } catch { /* not a mail */ }
+    return Response.json({ id: "email" });
+  });
       expect((await call(`/v1/public/studios/${await studioSlug(A.studioId)}/visitor/email-code`, { method: "POST", headers: { "x-visitor-key": BVISITOR }, json: { email: "x@example.test" } })).status).toBe(204);
       vi.restoreAllMocks();
     }],
@@ -493,6 +540,23 @@ describe("studio A can't reach studio B", () => {
       expect((await call("/v1/assistant/thread/messages", { method: "POST", cookie: A.cookie, headers: ASSISTANT,
         json: { threadId: b.thread, app: null, messages: [{ role: "user", content: "A's words" }] } })).status).toBe(200);
       expect((await call("/v1/assistant/thread", { cookie: B.cookie })).data.messages.map((m: any) => m.content)).toEqual(["B's words"]);
+    }],
+    ["get", "/collectors", async () => {
+      expect((await call("/v1/collectors", { cookie: A.cookie })).data.items.map((x: any) => x.id)).not.toContain(b.collector.id);
+    }],
+    ["get", "/followers", async () => expect((await call("/v1/followers", { cookie: A.cookie })).data.items).toEqual([])],
+    ["post", "/first-look/announce", async () => {
+      // A has nothing in first look; B's work is never announced from A.
+      expect((await call("/v1/first-look/announce", { method: "POST", cookie: A.cookie, json: {} })).status).toBe(400);
+    }],
+    ["post", "/public/studios/{slug}/follow/email-code", async () => {
+      expect((await call(`/v1/public/studios/${await studioSlug(A.studioId)}/follow/email-code`, { method: "POST", headers: { "x-visitor-key": BVISITOR },
+        json: { email: "b-fan@example.test", website: "trap" } })).status).toBe(204);
+    }],
+    ["post", "/public/studios/{slug}/follow/verify", async () => {
+      // B's follower's code doesn't follow A.
+      expect((await call(`/v1/public/studios/${await studioSlug(A.studioId)}/follow/verify`, { method: "POST", headers: { "x-visitor-key": BVISITOR },
+        json: { email: "b-fan@example.test", code: b.followCode } })).status).toBe(400);
     }],
     ["post", "/files/upload-url", async () => {
       const res = await call("/v1/files/upload-url", { method: "POST", cookie: A.cookie, json: { name: "x.jpg", contentType: "image/jpeg", size: 1 } });

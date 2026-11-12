@@ -83,8 +83,30 @@ export async function dailySummaries(env: Env, now = nowIso()): Promise<number> 
   return sent;
 }
 
+/**
+ * Works whose first look ended since the last run (D-165) reach the public site: each such studio's catalogue version
+ * moves on, so its cached pages are made again. The window overlaps the hour so a late run misses nothing.
+ */
+export async function endFirstLooks(env: Env, now = nowIso()): Promise<number> {
+  const since = new Date(Date.parse(now) - 65 * 60_000).toISOString();
+  const { results } = await env.DB.prepare(
+    "SELECT DISTINCT studio_id FROM artworks WHERE public_from > ? AND public_from <= ? AND public = 1 AND deleted_at IS NULL LIMIT 500",
+  ).bind(since, now).all<{ studio_id: string }>();
+  let n = 0;
+  for (const { studio_id: studioId } of results) {
+    try {
+      await runAction(getAction("first_look.ended") as never, {}, { env, actor: systemActor(studioId), origin: "https://studio-api", source: "system" });
+      n++;
+    } catch (e) {
+      console.error("first look end failed", studioId, e);
+    }
+  }
+  return n;
+}
+
 export async function scheduled(event: { cron: string; scheduledTime?: number }, env: Env): Promise<void> {
   await expireHolds(env);
   await expireOrders(env);
+  await endFirstLooks(env);
   if (event.cron === DAILY) await dailySummaries(env);
 }

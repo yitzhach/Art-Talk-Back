@@ -626,3 +626,35 @@ where dm-t1 is hosted and Isaac's OK; not part of stage 5's gate.
 gate (Square sandbox keys, a sandbox purchase on staging, then production keys) waits for a later phase. Checkout stays
 off on the live site; no card payment is taken anywhere until then. Stage 6 goes ahead and records collectors and
 their works without Square (added by Isaac in Studio, or from Venmo/Zelle orders he marks paid).
+
+### D-163 · A collector's page is a private link, no password · 2026-11-12 · Isaac (approved plan)
+`/c/{token}` on the studio's site, unguessable and unlisted. Isaac can make a new link (the old one stops at once) or
+stop it. The token is kept as written, like a made page's (`visitor_pages`), so Studio can show "Copy their link"
+again; the plan's `token_hash` is dropped for that reason. A browser that opens the page sees first look while the link
+is live. A collector who follows with the same email shows as following in Studio; their page is still the link.
+
+### D-164 · Who owns a work stays on the artwork · 2026-11-12 · Isaac (approved plan)
+`artworks.meta.sale.clientId`, as `artwork.mark_sold` and Mark paid already set it. New `artwork.set_owner`: a sold
+work gets its owner (or none); an unsold one is marked sold to them (bumps the catalogue); a reserved one (mid-order)
+is refused with 409.
+
+### D-165 · First look is a date on the work · 2026-11-12 · Isaac (approved plan)
+`artworks.public_from` (migration 0015). Every public query hides a work until then (`live()`); collector and follower
+pages, and browsers that opened one, see it, and only those browsers can hold or buy it. Default length 7 days
+(`site.collectors.firstLookDays`). An hourly job moves the catalogue on when a first look ends, so cached pages show
+it. The first-look email is Isaac's tap (`POST /v1/first-look/announce`); nothing sends on its own.
+
+### D-166 · Certificate numbers are made from the record · 2026-11-12 · Claude (simpler than the plan)
+`{studio initials}-{year}-{last 6 of the work's id}`, e.g. `IAA-2026-7Q2K9D`. Worked out from the record each time, so
+it never changes and needs no storage, unlike the plan's `meta.certificate`. The certificate is a printable page; no
+PDF is stored.
+
+### D-167 · Outside production, collector and follower emails go to the studio's own inbox · 2026-11-12 · Isaac (approved plan)
+Invites, first-look emails and follow codes on staging or dev go to the studio's inbox, subject starting `TEST:` and a
+first line naming who would get it. On staging the first-look email goes out once (one copy is enough to see it).
+
+### D-168 · Commissions get their own table · 2026-11-12 · Isaac (approved plan)
+`commissions` (migration 0015): title, size, price, stage on the five-stage line (surface, layering, color, erosion,
+finished), status, a note per stage, due date. The collector's page shows the stage and notes, never the price.
+Stage photos, a deposit order and an email on a stage change wait for a later card; none is in the gate.
+

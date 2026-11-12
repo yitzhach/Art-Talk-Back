@@ -9,6 +9,7 @@ import { z } from "zod";
 import type { Actor, Env } from "../env";
 import { randomToken, sha256 } from "../lib/crypto";
 import { HttpError } from "../lib/errors";
+import { live } from "../lib/collectors";
 import { r2KeyFor } from "./files";
 import {
   type EntityDef, artworkEntity, bumpCatalogue, checkVersion, clientEntity, defineEntity, fileEntity, getRecord, insertWrite, updateWrite,
@@ -85,12 +86,15 @@ export const visitorActor = (studioId: string, visitorId: string): Actor => ({
 
 type Row = Record<string, unknown>;
 
-/** Public, undeleted works of this studio by slug, in the order asked; any slug that isn't one is left out. */
-export async function publicWorksBySlug(env: Env, studioId: string, slugs: string[]): Promise<Row[]> {
+/**
+ * Public, undeleted works of this studio by slug, in the order asked; any slug that isn't one is left out. A work in
+ * first look counts only for a browser that sees first look (`firstLook`, D-165).
+ */
+export async function publicWorksBySlug(env: Env, studioId: string, slugs: string[], opts: { firstLook?: boolean } = {}): Promise<Row[]> {
   const want = [...new Set(slugs)].slice(0, 90);
   if (!want.length) return [];
   const { results } = await env.DB.prepare(
-    `SELECT * FROM artworks WHERE studio_id = ? AND public = 1 AND deleted_at IS NULL AND kind = 'work'
+    `SELECT * FROM artworks WHERE studio_id = ? AND public = 1 AND deleted_at IS NULL AND kind = 'work'${opts.firstLook ? "" : ` AND ${live()}`}
      AND slug IN (${want.map(() => "?").join(",")})`,
   ).bind(studioId, ...want).all<Row>();
   const bySlug = new Map(results.map((r) => [r.slug as string, r]));
@@ -175,7 +179,8 @@ export const leadCreate = defineAction({
     if ((mine?.n ?? 0) >= LEAD_LIMITS.perVisitorPerDay || (here?.n ?? 0) >= LEAD_LIMITS.perAddressPerDay) {
       throw new HttpError("rate_limited", "That's the limit for today. Please text or call instead.");
     }
-    const works = await publicWorksBySlug(ctx.env, ctx.actor.studioId, input.works);
+    const firstLook = await (await import("./collectors")).firstLookAccess(ctx.env, ctx.actor.studioId, input.visitorId);
+    const works = await publicWorksBySlug(ctx.env, ctx.actor.studioId, input.works, { firstLook });
     if (works.length < input.works.length) throw new HttpError("not_found", "A piece in your list is no longer on the site. Remove it and send again.");
     if (input.kind === "hold") {
       if (works.length !== 1) throw new HttpError("bad_request", "A hold is for one piece.");

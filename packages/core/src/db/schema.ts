@@ -181,6 +181,8 @@ export const artworks = sqliteTable(
     kind: text("kind", { enum: ["work", "site_photo"] }).notNull().default("work"),
     // Migration 0014 (stage 4 revision, D-146): the work's own shipping (ArtworkShipping), null until set.
     shipping: text("shipping", { mode: "json" }).$type<Record<string, unknown> | null>(),
+    // Migration 0015 (stage 6, D-165): first look; hidden from the public site until then.
+    publicFrom: text("public_from"),
   },
   (t) => [
     index("artworks_studio_updated").on(t.studioId, t.updatedAt),
@@ -716,6 +718,66 @@ export const paymentEvents = sqliteTable(
     receivedAt: text("received_at").notNull(),
   },
   (t) => [index("payment_events_received").on(t.receivedAt)],
+);
+
+// Migration 0015 (Site 3.0 stage 6, D-163…D-168): collectors' pages, followers, commissions.
+export const collectorLinks = sqliteTable(
+  "collector_links",
+  {
+    id: text("id").primaryKey(),
+    studioId: text("studio_id").notNull().references(() => studios.id),
+    clientId: text("client_id").notNull().references(() => clients.id),
+    token: text("token").notNull().unique(),
+    revokedAt: text("revoked_at"),
+    invitedAt: text("invited_at"),
+    ...recordColumns(),
+  },
+  (t) => [index("collector_links_client").on(t.studioId, t.clientId), actorCheck("collector_links_actor"), metaCheck("collector_links_meta")],
+);
+
+export const followers = sqliteTable(
+  "followers",
+  {
+    id: text("id").primaryKey(),
+    studioId: text("studio_id").notNull().references(() => studios.id),
+    email: text("email").notNull(),
+    clientId: text("client_id").references(() => clients.id),
+    showId: text("show_id").references(() => shows.id),
+    token: text("token").notNull().unique(),
+    verifiedAt: text("verified_at"),
+    unsubscribedAt: text("unsubscribed_at"),
+    ...recordColumns(),
+  },
+  (t) => [uniqueIndex("followers_studio_email").on(t.studioId, t.email), actorCheck("followers_actor"), metaCheck("followers_meta")],
+);
+
+export const COMMISSION_STAGES = ["surface", "layering", "color", "erosion", "finished"] as const;
+export const commissions = sqliteTable(
+  "commissions",
+  {
+    id: text("id").primaryKey(),
+    studioId: text("studio_id").notNull().references(() => studios.id),
+    clientId: text("client_id").notNull().references(() => clients.id),
+    title: text("title").notNull(),
+    size: text("size"),
+    priceCents: integer("price_cents"),
+    currency: text("currency").notNull().default("USD"),
+    stage: text("stage", { enum: COMMISSION_STAGES }).notNull().default("surface"),
+    status: text("status", { enum: ["open", "done", "cancelled"] }).notNull().default("open"),
+    notes: text("notes", { mode: "json" }).$type<Record<string, string>>().notNull().default(sql`'{}'`),
+    dueOn: text("due_on"),
+    ...recordColumns(),
+  },
+  (t) => [
+    index("commissions_client").on(t.studioId, t.clientId),
+    check("commissions_price", sql`price_cents IS NULL OR price_cents >= 0`),
+    check("commissions_currency", sql`length(currency) = 3`),
+    check("commissions_stage", sql`stage IN ('surface','layering','color','erosion','finished')`),
+    check("commissions_status", sql`status IN ('open','done','cancelled')`),
+    check("commissions_notes", sql`json_valid(notes)`),
+    actorCheck("commissions_actor"),
+    metaCheck("commissions_meta"),
+  ],
 );
 
 export type ArtworkRow = typeof artworks.$inferSelect;

@@ -12,6 +12,7 @@ import type { Context } from "hono";
 import { z } from "zod";
 import { sizeKey } from "../actions/files";
 import type { AppEnv } from "../env";
+import { live } from "../lib/collectors";
 import { notFound } from "../lib/errors";
 import { publicWorkShipping, shippingOf } from "../lib/shipping";
 import { siteFor } from "../lib/site-mail";
@@ -181,7 +182,7 @@ publicRoutes.openapi(
     const { slug } = c.req.valid("param");
     const q = c.req.valid("query");
     const studio = await studioOf(c, slug);
-    const where = ["studio_id = ?", "public = 1", "deleted_at IS NULL", "kind = ?"];
+    const where = ["studio_id = ?", "public = 1", "deleted_at IS NULL", "kind = ?", live()];
     const args: unknown[] = [studio.id, q.kind];
     if (q.status) { where.push("status = ?"); args.push(q.status); }
     if (q.collection) { where.push("collection = ?"); args.push(q.collection); }
@@ -229,7 +230,7 @@ publicRoutes.openapi(
   async (c) => {
     const { slug, artworkSlug } = c.req.valid("param");
     const studio = await studioOf(c, slug);
-    const work = await c.env.DB.prepare(`SELECT ${COLS} FROM artworks WHERE studio_id = ? AND slug = ? AND public = 1 AND deleted_at IS NULL AND kind = 'work'`)
+    const work = await c.env.DB.prepare(`SELECT ${COLS} FROM artworks WHERE studio_id = ? AND slug = ? AND public = 1 AND deleted_at IS NULL AND kind = 'work' AND ${live()}`)
       .bind(studio.id, artworkSlug).first<Row>();
     if (!work) throw notFound("Work");
     const files = await filesOf(c, studio.id, [work.id as string]);
@@ -247,7 +248,7 @@ publicRoutes.openapi(
   async (c) => {
     const studio = await studioOf(c, c.req.valid("param").slug);
     const { results } = await c.env.DB.prepare(
-      `SELECT collection AS name, COUNT(*) AS n FROM artworks WHERE studio_id = ? AND public = 1 AND deleted_at IS NULL AND kind = 'work' AND collection IS NOT NULL
+      `SELECT collection AS name, COUNT(*) AS n FROM artworks WHERE studio_id = ? AND public = 1 AND deleted_at IS NULL AND kind = 'work' AND ${live()} AND collection IS NOT NULL
        GROUP BY collection ORDER BY name COLLATE NOCASE`,
     ).bind(studio.id).all<Row>();
     return reply(c, { items: results.map((r) => ({ name: r.name as string, count: Number(r.n) })) }, studio.version);
@@ -273,7 +274,7 @@ publicRoutes.openapi(
     const row = await c.env.DB.prepare(
       `SELECT f.r2_key AS r2_key, f.meta AS meta FROM files f JOIN artworks a ON a.id = f.entity_id AND a.studio_id = f.studio_id
        WHERE f.id = ? AND f.studio_id = ? AND f.status = 'ready' AND f.deleted_at IS NULL AND f.locked = 0 AND f.kind = 'photo' AND f.entity_type = 'artwork'
-       AND a.public = 1 AND a.deleted_at IS NULL`,
+       AND a.public = 1 AND a.deleted_at IS NULL AND ${live("a.")}`,
     ).bind(fileId, studio.id).first<Row>();
     if (!row || !sizesOf(parse<Row>(row.meta, {})).includes(width)) throw notFound("Picture");
     const obj = await c.env.FILES.get(sizeKey(row.r2_key as string, width));
@@ -340,7 +341,7 @@ publicRoutes.openapi(
     for (let i = 0; i < ids.length; i += 90) {
       const part = ids.slice(i, i + 90);
       const { results } = await c.env.DB.prepare(
-        `SELECT id, title, slug, kind, primary_file_id FROM artworks WHERE studio_id = ? AND public = 1 AND deleted_at IS NULL
+        `SELECT id, title, slug, kind, primary_file_id FROM artworks WHERE studio_id = ? AND public = 1 AND deleted_at IS NULL AND ${live()}
          AND id IN (${part.map(() => "?").join(",")})`,
       ).bind(studio.id, ...part).all<Row>();
       for (const r of results) rows.set(r.id as string, r);

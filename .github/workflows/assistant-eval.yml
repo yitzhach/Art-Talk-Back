@@ -15,7 +15,7 @@ on:
         options: [owner, visitor]
         default: owner
       record:
-        description: Also record the model's replies (visitor suite: uploaded as an artifact)
+        description: "Also record the model's replies (visitor suite: uploaded as an artifact)"
         type: boolean
         default: false
 

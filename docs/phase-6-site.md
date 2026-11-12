@@ -554,7 +554,7 @@ its HttpOnly cookie `sv` (D-134).
 **Public routes on studio-api (through the site's `/v1` forward; no sign-in):**
 | Route | What |
 |---|---|
-| `GET /v1/public/studios/{slug}/assistant` | `PublicAssistant`: name, greeting, suggestions, replyTime, answers by topic, `available` |
+| `GET /v1/public/studios/{slug}/assistant` | `PublicAssistant`: name, artistName, greeting, suggestions, replyTime, answers by topic, `available` |
 | `GET /v1/public/studios/{slug}/digest` | `PublicDigest`: every public work's public fields (≤ 300), for search without the chat |
 | `GET /v1/public/studios/{slug}/pages/{token}` | `PublicVisitorPage`: a made page's title, question and still-public works (`x-robots-tag: noindex`) |
 | `GET /v1/public/studios/{slug}/visitor` (key) | `VisitorState`: proven email or null, current threadId, messages `{ role, text, works: slug[], at }` |
@@ -571,7 +571,7 @@ its HttpOnly cookie `sv` (D-134).
 | `GET /v1/leads/{id}` | `LeadDetail` = `Lead` + `chat: VisitorMessage[]`. Pictures: `fileIds` → `GET /v1/files/{id}/download-url` |
 | `POST /v1/leads/{id}/approve-hold` · `/decline` · `/close` (`If-Match: <version>`) | `Lead`. Approve: piece reserved 48 h (`expiresAt`); decline releases a held piece |
 | `GET /v1/site/assistant-usage` | `AssistantUsageOut { month, turns, spentCents, budgetCents, capped }` |
-| `PATCH /v1/settings` with `meta.site.assistant` | `SiteAssistant { enabled?, greeting?, suggestions? (≤3), replyTime?, budgetCents?, answers?: { commissionPrice, commissionTimeline, deposit, shipping, returns, trade, visits, whereToSee, materials, outdoorUse, weight, hanging, care, other } }` |
+| `PATCH /v1/settings` with `meta.site.assistant` | `SiteAssistant { enabled?, artistName? ("Isaac"), greeting?, suggestions? (≤3), replyTime?, budgetCents?, answers?: { commissionPrice, commissionTimeline, deposit, shipping, returns, trade, visits, whereToSee, materials, outdoorUse, weight, hanging, care, other } }` |
 
 ### Needs Isaac, in order
 

@@ -12995,6 +12995,9 @@
                     "name": {
                       "type": "string"
                     },
+                    "artistName": {
+                      "type": "string"
+                    },
                     "greeting": {
                       "type": "string"
                     },
@@ -13066,6 +13069,7 @@
                   },
                   "required": [
                     "name",
+                    "artistName",
                     "greeting",
                     "suggestions",
                     "replyTime",
@@ -14055,88 +14059,6 @@
             "in": "header"
           }
         ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "kind": {
-                    "type": "string",
-                    "enum": [
-                      "inquiry",
-                      "hold"
-                    ]
-                  },
-                  "source": {
-                    "type": "string",
-                    "enum": [
-                      "chat",
-                      "form",
-                      "inquiry_list"
-                    ],
-                    "default": "form"
-                  },
-                  "works": {
-                    "type": "array",
-                    "items": {
-                      "type": "string",
-                      "minLength": 1,
-                      "maxLength": 80,
-                      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
-                    },
-                    "maxItems": 24,
-                    "default": []
-                  },
-                  "name": {
-                    "type": "string",
-                    "maxLength": 120
-                  },
-                  "email": {
-                    "type": "string",
-                    "maxLength": 200,
-                    "format": "email"
-                  },
-                  "phone": {
-                    "type": "string",
-                    "pattern": "^\\+?[0-9 ().-]{7,24}$"
-                  },
-                  "note": {
-                    "type": "string",
-                    "maxLength": 3000
-                  },
-                  "threadId": {
-                    "type": "string",
-                    "description": "ULID"
-                  },
-                  "website": {
-                    "type": "string",
-                    "maxLength": 200
-                  }
-                },
-                "required": [
-                  "kind"
-                ],
-                "additionalProperties": false
-              }
-            },
-            "multipart/form-data": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "lead": {
-                    "type": "string"
-                  },
-                  "picture": {}
-                },
-                "required": [
-                  "lead"
-                ]
-              }
-            }
-          }
-        },
         "responses": {
           "201": {
             "description": "OK",

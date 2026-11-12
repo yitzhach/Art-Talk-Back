@@ -125,7 +125,7 @@ visitorRoutes.openapi(
     const used = await spend(c, studio.id, nowIso());
     const available = a.enabled && Number(used?.cost_millicents ?? 0) < a.budgetCents * 1000;
     return new Response(JSON.stringify({
-      name, greeting: a.greeting, suggestions: a.suggestions, replyTime: a.replyTime, answers: a.answers, available,
+      name, artistName: a.artistName, greeting: a.greeting, suggestions: a.suggestions, replyTime: a.replyTime, answers: a.answers, available,
       catalogueVersion: studio.version,
     } satisfies z.infer<typeof PublicAssistant>), { headers: { "content-type": "application/json", "cache-control": "public, max-age=30" } }) as never;
   },

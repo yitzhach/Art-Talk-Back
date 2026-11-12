@@ -25,6 +25,7 @@ export async function siteFor(env: Env, studioId: string): Promise<{ site: z.inf
 
 export interface AssistantSettings {
   enabled: boolean;
+  artistName: string;
   greeting: string;
   suggestions: string[];
   replyTime: string | null;
@@ -37,6 +38,7 @@ export function assistantSettings(site: z.infer<typeof SiteProfile>): AssistantS
   const a = site.assistant ?? {};
   return {
     enabled: a.enabled !== false,
+    artistName: a.artistName ?? "the artist",
     greeting: a.greeting ?? "I'm the studio's assistant, an AI. Ask about any piece, size, colour or commission.",
     suggestions: a.suggestions ?? ["What's available now?", "Something blue for a living room", "How do commissions work?"],
     replyTime: a.replyTime ?? null,

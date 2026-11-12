@@ -161,6 +161,8 @@ export const AssistantTopic = z.enum([
 export const SiteAssistant = z.object({
   /** false turns the chat off: the site shows search and the contact sheet only. */
   enabled: z.boolean().optional(),
+  /** What the assistant calls the artist, e.g. "Isaac" (D-125). Default: "the artist". */
+  artistName: z.string().trim().min(1).max(60).optional(),
   greeting: z.string().trim().min(1).max(300).optional(),
   /** Up to three questions the sheet offers as buttons. */
   suggestions: z.array(z.string().trim().min(1).max(80)).max(3).optional(),
@@ -324,6 +326,7 @@ export const PublicSitePhotos = z.object({
 /** What the site's chat sheet needs to open (no sign-in). Never the budget or what was spent. */
 export const PublicAssistant = z.object({
   name: z.string(),
+  artistName: z.string(),
   greeting: z.string(),
   suggestions: z.array(z.string()),
   replyTime: z.string().nullable(),

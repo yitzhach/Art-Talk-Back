@@ -62,3 +62,9 @@ jobs:
           name: visitor-eval-recording
           path: workers/assistant/evals/visitor-cases.recorded.json
           if-no-files-found: warn
+      - name: Print the recording (for sessions that can't download artifacts)
+        if: always() && inputs.suite == 'visitor' && inputs.record
+        run: |
+          f=workers/assistant/evals/visitor-cases.recorded.json
+          [ -f "$f" ] || exit 0
+          echo "RECORDING-BEGIN"; gzip -c "$f" | base64 -w0; echo; echo "RECORDING-END"

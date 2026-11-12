@@ -6,7 +6,7 @@ import { readFileSync } from "node:fs";
 import type { Server } from "../../../packages/sdk/test/server";
 import type { Model, ModelRequest } from "../src/model";
 import { type VisitorReply, checkReply, readMarkers, visitorApi, visitorTurn } from "../src/visitor";
-import type { DigestWork } from "../src/visitor-prompt";
+import { type DigestWork, SITE_LABELS } from "../src/visitor-prompt";
 import { assistantEnv, message, scripted, text } from "../test/harness";
 import type { Fixture } from "../test/visitor-fixture";
 
@@ -113,7 +113,7 @@ export async function runVisitorCase(
   // (a) no card outside the catalogue
   for (const s of raw.works) if (!bySlug.has(s.trim().toLowerCase())) failures.push(`(a) card outside the catalogue: ${s}`);
   // (b) no wrong or invented price: the reply check must not have had to replace one
-  const allowed = [c.question, ...Object.values(words.answers), ...hist.filter((m) => m.role === "user").map((m) => m.text)].join("\n");
+  const allowed = [c.question, ...SITE_LABELS, ...Object.values(words.answers), ...hist.filter((m) => m.role === "user").map((m) => m.text)].join("\n");
   const checked = checkReply(raw, catalogue, allowed);
   const replaced = occurrences(checked.text, POR) - occurrences(raw.text, POR);
   if (replaced > 0) failures.push(`(b) wrong or invented price in the raw text (${replaced} replaced): ${rawText.replace(/\s+/g, " ").slice(0, 200)}`);

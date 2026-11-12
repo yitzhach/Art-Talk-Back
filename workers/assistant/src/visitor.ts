@@ -7,7 +7,7 @@ import type Anthropic from "@anthropic-ai/sdk";
 import type { Env } from "./env";
 import type { Model, ModelRequest } from "./model";
 import {
-  type DigestWork, LIMITED_TEXT, type StudioWords, VISITOR_SYSTEM, priceLine, sizeLine, studioBlock, visitorContext,
+  type DigestWork, LIMITED_TEXT, SITE_LABELS, type StudioWords, VISITOR_SYSTEM, priceLine, sizeLine, studioBlock, visitorContext,
 } from "./visitor-prompt";
 
 type MessageParam = Anthropic.Beta.Messages.BetaMessageParam;
@@ -183,7 +183,8 @@ export async function visitorTurn(deps: { api: VisitorApi; model: Model; setting
   const model = deps.settings.model ?? VISITOR_MODEL;
   const system: Anthropic.Beta.Messages.BetaTextBlockParam[] = [
     { type: "text", text: VISITOR_SYSTEM },
-    { type: "text", text: studioBlock(words, catalogue) },
+    // A breakpoint here: every visitor of this studio shares the rules, the studio's words and the catalogue.
+    { type: "text", text: studioBlock(words, catalogue), cache_control: { type: "ephemeral" } },
   ];
   // The chat so far, as plain text: the cards shown are named so a follow-up ("the second one") makes sense.
   const history: MessageParam[] = start.history.map((m) => ({
@@ -231,7 +232,7 @@ export async function visitorTurn(deps: { api: VisitorApi; model: Model; setting
   const marked = readMarkers(refused || !final.trim()
     ? `I can't help with that one here. ${words.artistName === "the artist" ? "The artist" : words.artistName} can answer directly by text, email or call. [[ask_artist]]`
     : final);
-  const allowed = [input.message, ...Object.values(words.answers), ...start.history.filter((m) => m.role === "user").map((m) => m.text)].join("\n");
+  const allowed = [input.message, ...SITE_LABELS.map((l) => `“${l}”`), ...Object.values(words.answers), ...start.history.filter((m) => m.role === "user").map((m) => m.text)].join("\n");
   const checked = checkReply(marked, catalogue, allowed);
   // A price the check replaced is a question the artist should answer.
   const askArtist = marked.askArtist || checked.fixed > 0 && /price on request/.test(checked.text);

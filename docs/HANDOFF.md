@@ -6,8 +6,9 @@ Read this first, then `CLAUDE.md`, then `docs/phase-3.md` (assistant) or `docs/p
 ## Where things stand
 
 - **What's next (2026-11-12, after D-162).** (1) **Stage 6, Collectors**: approved by Isaac; plan in `docs/phase-6-site.md` →
-  "Stage 6 — collectors" (D-163…D-168); card A (platform) built and tested on branch `claude/project-thread-kn62cz`,
-  site cards B–D next, then staging and his yes for the live site;
+  "Stage 6 — collectors" (D-163…D-168); built in both repos on branch `claude/project-thread-kn62cz` and on staging (2026-11-12, smoke green);
+  waiting on Isaac's look on staging, his care notes (a draft is prefilled in Studio → Collectors), then his yes for
+  the live site (site PR first, then platform PR; migration 0015 applies on the platform deploy);
   gate: a test collector goes invite → first look → purchase, the purchase by Venmo/Zelle with Mark paid. (2) **Stage
   4's Square gate is moved to a later phase (Isaac, D-162)**: buying is built and merged but switched off; when that
   phase comes, Isaac adds Square sandbox keys as GitHub secrets, a sandbox purchase runs end to end on staging, then

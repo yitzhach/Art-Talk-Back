@@ -1088,8 +1088,11 @@ A first (the contract); C–E against it.
 - [x] Card A, platform: migration 0015, actions, owner and public routes, emails, hourly first-look end, tests
   (`test/collectors.test.ts`, tenancy sweep), openapi. Differences from the plan: the link token is kept as written
   (D-163), certificate numbers are worked out, not stored (D-166), commission photos and deposits wait (D-168).
-- [ ] Cards B–D, site: `/c/{token}`, certificate page, follow pages, Studio screens, smoke.
-- [ ] Staging, the gate, then his yes for the live site.
+- [x] Cards B–D, site: `/c/{token}`, certificate page, follow pages, Studio screens, smoke (IA-ART-SITE-REPO branch
+  `claude/project-thread-kn62cz`; site CI 25 green).
+- [x] Staging: "Deploy staging" 39 (migration 0015 on studio-db-staging, both Workers, smoke green), 2026-11-12.
+  Security pass by hand: nothing to fix.
+- [ ] The gate on staging (Isaac's look: invite → first look → Venmo order → Mark paid), then his yes for the live site.
 
 ### Findings (checked 2026-11-12 on the default branches)
 

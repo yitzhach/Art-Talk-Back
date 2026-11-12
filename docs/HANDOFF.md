@@ -5,13 +5,13 @@ Read this first, then `CLAUDE.md`, then `docs/phase-3.md` (assistant) or `docs/p
 
 ## Where things stand
 
-- **What's next (2026-11-12).** In order: (1) **stage 4's gate** (buying is built and merged but switched off:
-  Isaac adds Square **sandbox** keys as GitHub secrets, then a sandbox purchase end to end on staging, then production
-  keys and his "ship"); (2) **stage 6, Collectors** (`docs/phase-6-site.md` → Stages and gates: follow, first look,
-  collection page, certificate, commission tracker, show QR; gate: a test collector goes invite → first look →
-  purchase; needs his list of past buyers to invite), planned and shown to Isaac before any code; (3) **D-161**, the
-  full dm-t1 wall tool linked from the site, once Isaac says where dm-t1 is hosted. Still open from stage 3: his own
-  visitor questions (22 slots).
+- **What's next (2026-11-12, after D-162).** (1) **Stage 6, Collectors**: plan written in `docs/phase-6-site.md` →
+  "Stage 6 — collectors" (proposed, waiting for Isaac's OK; branch `claude/project-thread-kn62cz` in both repos);
+  gate: a test collector goes invite → first look → purchase, the purchase by Venmo/Zelle with Mark paid. (2) **Stage
+  4's Square gate is moved to a later phase (Isaac, D-162)**: buying is built and merged but switched off; when that
+  phase comes, Isaac adds Square sandbox keys as GitHub secrets, a sandbox purchase runs end to end on staging, then
+  production keys and his "ship". (3) **D-161**, the full dm-t1 wall tool linked from the site, once Isaac says where
+  dm-t1 is hosted. Still open from stage 3: his own visitor questions (22 slots).
 
 - **Site 3.0 stage 5 (see it on your wall) live (2026-11-12, D-155…D-160, `docs/phase-6-site.md` → "Stage 5").**
   Every piece page with a width, height and picture has **See it on your wall**: the live camera view on iPhone/iPad

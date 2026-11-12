@@ -620,3 +620,9 @@ None is needed for true size on a wall, and each adds code a buyer downloads. Th
 dm-t1 reads a catalogue feed and a config in its address and posts keep / inquire / export back in embed mode. A public
 feed of the studio's works in its shape plus a link would do it; its picture comes back into the inquiry. Waits for
 where dm-t1 is hosted and Isaac's OK; not part of stage 5's gate.
+
+### D-162 · The Square test purchase moves to a later phase · 2026-11-12 · Isaac
+"Let's push the test with Square to another phase. I'm not quite ready for that yet, but otherwise continue." Stage 4's
+gate (Square sandbox keys, a sandbox purchase on staging, then production keys) waits for a later phase. Checkout stays
+off on the live site; no card payment is taken anywhere until then. Stage 6 goes ahead and records collectors and
+their works without Square (added by Isaac in Studio, or from Venmo/Zelle orders he marks paid).

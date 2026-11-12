@@ -11,8 +11,9 @@ Read this first, then `CLAUDE.md`, then `docs/phase-3.md` (assistant) or `docs/p
   (Ask sheet, `/ask`, `/p/{token}`, `/inquiry`, contact sheet, `/contact`, Leads screen, Site → Assistant), branch
   `claude/admiring-mayer-ev7zky` in both, CI green. "Deploy staging" applied 0012 to `studio-db-staging` and deployed
   every staging Worker from these branches. Not merged: waiting for Isaac's look on staging.
-  - Gate: cost measured by "Assistant eval (live)" `suite: visitor` (Isaac OK'd two runs; first: 29/38, no invented
-    work or price, $0.0004 a turn, about 23,600 answers per $10); the cap, limits, tenancy, inquiry list and leads are
+  - Gate: cost measured by "Assistant eval (live)" `suite: visitor` (Isaac OK'd two runs: 29/38 then 36/38 after
+    tuning, no invented work or price in either; with the shared cache $0.0002 a turn, about 63,000 answers per $10;
+    the second run's replies are recorded, so CI replays all 38); the cap, limits, tenancy, inquiry list and leads are
     covered by tests; `/security-review` on both diffs: no findings. Still open: Isaac's own visitor questions, the
     oddest one, where his work can be seen, the general facts and the deposit wording (22 slots in
     `workers/assistant/evals/visitor-cases.json`; D-132), and his look on staging.

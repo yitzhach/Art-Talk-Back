@@ -433,7 +433,11 @@ A first (the contract); B–F in parallel against it.
 - [x] Card A: migration 0012, the contract below, tenancy tests (2026-11-12, D-134…D-141).
 - [x] Card B: the visitor assistant (`/assistant/visitor`, Haiku 5.5, the check before a reply is shown) (2026-11-12).
 - [x] Card C: the test set (38 coverage cases, 22 slots for Isaac's) and its eval; replays wait for the first live run (2026-11-12).
-- [ ] Cards D–F (the site).
+- [x] Cards D–F (the site): IA-ART-SITE-REPO#3 (2026-11-12).
+- [x] Gate 2–4: cost measured (live eval 36/38, no invented work or price, $0.0002 a turn, ~63,000 answers per $10);
+  the cap, limits and tenancy tested; the inquiry list tested (downloads not yet tried in a real browser);
+  `/security-review` on both diffs: no findings.
+- [ ] Gate 1: Isaac's own questions into the 22 slots. Gate 5: his look on staging.
 
 **Goal.** On any page of the site, a visitor taps **Ask**, chats with "Isaac's studio assistant, an AI", and gets short
 answers with real pieces as cards. Everything it says about a work or a price comes from the catalogue; everything

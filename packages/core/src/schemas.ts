@@ -150,6 +150,28 @@ export const SitePage = z.object({
   sections: z.array(SiteSection).max(30).optional(),
 }).strict();
 export const SitePageKey = z.enum(["home", "commissions", "process", "about"]);
+/**
+ * What the visitor assistant may say beyond a piece's record (D-126, D-128), in the studio's own words. Each is
+ * plain text; a topic left out is handed to the artist. A piece's record wins over a general fact.
+ */
+export const AssistantTopic = z.enum([
+  "commissionPrice", "commissionTimeline", "deposit", "shipping", "returns", "trade", "visits", "whereToSee",
+  "materials", "outdoorUse", "weight", "hanging", "care", "other",
+]);
+export const SiteAssistant = z.object({
+  /** false turns the chat off: the site shows search and the contact sheet only. */
+  enabled: z.boolean().optional(),
+  /** What the assistant calls the artist, e.g. "Isaac" (D-125). Default: "the artist". */
+  artistName: z.string().trim().min(1).max(60).optional(),
+  greeting: z.string().trim().min(1).max(300).optional(),
+  /** Up to three questions the sheet offers as buttons. */
+  suggestions: z.array(z.string().trim().min(1).max(80)).max(3).optional(),
+  /** e.g. "Isaac usually replies within a day." */
+  replyTime: z.string().trim().max(200).optional(),
+  /** What a month of chat may cost, in cents (D-130). Default 1000. */
+  budgetCents: z.number().int().min(0).max(1_000_000).optional(),
+  answers: z.partialRecord(AssistantTopic, z.string().trim().max(1500)).optional(),
+}).strict();
 /** Calls taken between these times, studio time (`settings.timezone`); 24-hour HH:MM. */
 const Hhmm = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, "HH:MM, 24-hour");
 /**
@@ -168,6 +190,8 @@ export const SiteProfile = z.object({
   pages: z.partialRecord(SitePageKey, SitePage).optional(),
   /** Each place's photos, in order: ids of the studio's artworks (site photos or works). Only public ones ever show. */
   photos: z.record(SitePlace, z.array(Id).max(12)).refine((p) => Object.keys(p).length <= 40, "At most 40 places").optional(),
+  /** The visitor assistant's words, greeting and budget (D-126, D-136). */
+  assistant: SiteAssistant.optional(),
 }).strict();
 
 // ------------------------------------------------------------------- files
@@ -295,6 +319,127 @@ export const PublicSitePhoto = PublicImage.extend({
 export const PublicSitePhotos = z.object({
   places: z.record(z.string(), z.array(PublicSitePhoto)),
   catalogueVersion: z.number().int(),
+});
+
+// ---------------------------------------------------------------- the visitor assistant (Site 3.0 stage 3)
+
+/** What the site's chat sheet needs to open (no sign-in). Never the budget or what was spent. */
+export const PublicAssistant = z.object({
+  name: z.string(),
+  artistName: z.string(),
+  greeting: z.string(),
+  suggestions: z.array(z.string()),
+  replyTime: z.string().nullable(),
+  answers: z.partialRecord(AssistantTopic, z.string()),
+  /** false: the chat is off or this month's budget is spent; the sheet shows search and Ask the artist. */
+  available: z.boolean(),
+  catalogueVersion: z.number().int(),
+});
+
+/** One work in the catalogue digest the assistant reads (public fields only). */
+export const DigestWork = z.object({
+  slug: Slug,
+  title: z.string(),
+  medium: z.string().nullable(),
+  year: z.number().int().nullable(),
+  width: z.number().nullable(),
+  height: z.number().nullable(),
+  depth: z.number().nullable(),
+  sizeUnit: SizeUnit,
+  status: ArtworkStatus,
+  priceCents: z.number().int().nullable(),
+  currency: Currency.nullable(),
+  collection: z.string().nullable(),
+  tags: z.array(z.string()),
+  palette: z.array(PaletteSwatch),
+  /** The first sentence or so of the description. */
+  blurb: z.string().nullable(),
+  /** The cover at 480 px, a path on this API, or null. */
+  image: z.string().nullable(),
+});
+export const PublicDigest = z.object({ works: z.array(DigestWork), catalogueVersion: z.number().int() });
+
+/** A message as the visitor sees it again: text and the works shown as cards. */
+export const VisitorMessage = z.object({
+  role: z.enum(["user", "assistant"]),
+  text: z.string(),
+  works: z.array(z.string()),
+  at: z.string(),
+});
+export const VisitorState = z.object({
+  /** The visitor's proven email, or null. */
+  email: z.string().nullable(),
+  threadId: z.string().nullable(),
+  messages: z.array(VisitorMessage),
+});
+
+/** A made page (D-131): read-only, unlisted. */
+export const VisitorPageInput = z.object({
+  title: z.string().trim().min(1).max(120),
+  question: z.string().trim().max(500).optional(),
+  works: z.array(Slug).min(1).max(24),
+}).strict();
+export const PublicVisitorPage = z.object({
+  token: z.string(),
+  title: z.string(),
+  question: z.string().nullable(),
+  works: z.array(PublicArtwork),
+  createdAt: z.string(),
+  catalogueVersion: z.number().int(),
+});
+
+export const LeadKind = z.enum(["inquiry", "hold"]);
+export const LeadSource = z.enum(["chat", "form", "inquiry_list"]);
+export const LeadStatus = z.enum(["new", "held", "declined", "closed"]);
+export const LEAD_LIMITS = { pictures: 5, pictureBytes: 8 * 1024 * 1024, note: 3000, works: 24, perVisitorPerDay: 6, perAddressPerDay: 20 } as const;
+/**
+ * A lead from the site (D-129, D-133): JSON, or multipart with this as the `lead` field plus up to five `picture`
+ * files. A hold is one available work (D-127). `website` is the form's hidden trap: anything in it, nothing is sent.
+ */
+export const LeadInput = z.object({
+  kind: LeadKind,
+  source: LeadSource.default("form"),
+  works: z.array(Slug).max(LEAD_LIMITS.works).default([]),
+  name: z.string().trim().max(120).optional(),
+  email: z.email().max(200).optional(),
+  phone: z.string().trim().regex(/^\+?[0-9 ().-]{7,24}$/, "A phone number").optional(),
+  note: z.string().trim().max(LEAD_LIMITS.note).optional(),
+  /** The chat this came from, so Isaac sees it with the lead. */
+  threadId: Id.optional(),
+  website: z.string().max(200).optional(),
+}).strict()
+  .refine((v) => !!v.email || !!v.phone, { message: "An email or a phone number, so Isaac can reply", path: ["email"] })
+  .refine((v) => v.kind !== "hold" || v.works.length === 1, { message: "A hold is for one piece", path: ["works"] });
+
+/** A lead as the owner sees it. */
+export const Lead = z.object({
+  id: Id,
+  version: z.number().int(),
+  kind: LeadKind,
+  source: LeadSource,
+  status: LeadStatus,
+  name: z.string().nullable(),
+  email: z.string().nullable(),
+  phone: z.string().nullable(),
+  note: z.string().nullable(),
+  works: z.array(z.object({ id: Id, slug: z.string().nullable(), title: z.string(), status: ArtworkStatus, priceCents: z.number().int().nullable(), currency: Currency.nullable() })),
+  fileIds: z.array(Id),
+  clientId: Id.nullable(),
+  threadId: z.string().nullable(),
+  /** For a held piece: when the hold ends (48 hours after Approve hold). */
+  expiresAt: z.string().nullable(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+});
+export const LeadDetail = Lead.extend({ chat: z.array(VisitorMessage) });
+
+export const AssistantUsageOut = z.object({
+  month: z.string(),
+  turns: z.number().int(),
+  /** This month's spend in cents, to two decimals. */
+  spentCents: z.number(),
+  budgetCents: z.number().int(),
+  capped: z.boolean(),
 });
 
 // ---------------------------------------------------------------- activity

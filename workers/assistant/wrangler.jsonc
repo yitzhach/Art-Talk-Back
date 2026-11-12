@@ -9,12 +9,18 @@
   "compatibility_date": "2026-08-15",
   "compatibility_flags": ["nodejs_compat"],
   "services": [{ "binding": "STUDIO_API", "service": "studio-api-dev" }],
+  // Reached only through service bindings (the apps' and the site's Workers): no public address, so nobody can call
+  // the visitor route directly and skip the site's limits (Site 3.0 stage 3 security review).
+  "workers_dev": false,
+  "preview_urls": false,
   "vars": {
     // One model for v0 (D-054); Haiku routing comes when the eval shows it holds up.
     "ASSISTANT_MODEL": "claude-sonnet-5-5",
     "ASSISTANT_EFFORT": "low",
     // The draft job looks at a work's cover and drafts its words (Site 3.0).
     "DRAFT_MODEL": "claude-haiku-5-5",
+    // The public site's visitor assistant (D-130): Haiku 5.5; move up only if its test answers aren't good enough.
+    "VISITOR_MODEL": "claude-haiku-5-5",
     // https://gateway.ai.cloudflare.com/v1/<account id>/<gateway>/anthropic — empty = straight to the API.
     "AI_GATEWAY_URL": ""
   },
@@ -26,13 +32,17 @@
   "env": {
     "staging": {
       "name": "studio-assistant-staging",
+      "workers_dev": false,
+      "preview_urls": false,
       "services": [{ "binding": "STUDIO_API", "service": "studio-api-staging" }],
-      "vars": { "ASSISTANT_MODEL": "claude-sonnet-5-5", "ASSISTANT_EFFORT": "low", "DRAFT_MODEL": "claude-haiku-5-5", "AI_GATEWAY_URL": "" }
+      "vars": { "ASSISTANT_MODEL": "claude-sonnet-5-5", "ASSISTANT_EFFORT": "low", "DRAFT_MODEL": "claude-haiku-5-5", "VISITOR_MODEL": "claude-haiku-5-5", "AI_GATEWAY_URL": "" }
     },
     "production": {
       "name": "studio-assistant",
+      "workers_dev": false,
+      "preview_urls": false,
       "services": [{ "binding": "STUDIO_API", "service": "studio-api" }],
-      "vars": { "ASSISTANT_MODEL": "claude-sonnet-5-5", "ASSISTANT_EFFORT": "low", "DRAFT_MODEL": "claude-haiku-5-5", "AI_GATEWAY_URL": "" }
+      "vars": { "ASSISTANT_MODEL": "claude-sonnet-5-5", "ASSISTANT_EFFORT": "low", "DRAFT_MODEL": "claude-haiku-5-5", "VISITOR_MODEL": "claude-haiku-5-5", "AI_GATEWAY_URL": "" }
     }
   }
 }

@@ -10,6 +10,7 @@ import "./actions/booth";
 import "./actions/boards";
 import "./actions/shares";
 import "./actions/catalogue";
+import "./actions/visitors";
 import { loadAuth } from "./auth/session";
 import type { AppEnv } from "./env";
 import { safeEqual, sha256 } from "./lib/crypto";
@@ -22,6 +23,8 @@ import { publicRoutes } from "./routes/public";
 import { recordRoutes } from "./routes/records";
 import { shareRoutes } from "./routes/shares";
 import { syncRoutes } from "./routes/sync";
+import { visitorRoutes } from "./routes/visitors";
+import { scheduled } from "./jobs";
 
 const v1 = new OpenAPIHono<AppEnv>();
 
@@ -49,6 +52,7 @@ v1.route("/", syncRoutes);
 v1.route("/", assistantRoutes);
 v1.route("/", shareRoutes);
 v1.route("/", publicRoutes);
+v1.route("/", visitorRoutes);
 
 const docConfig = {
   openapi: "3.1.0",
@@ -78,4 +82,7 @@ app.onError((err, c) => {
   return c.json(apiError("internal", "Something went wrong"), 500);
 });
 
-export default app;
+/** The Worker: the API, plus its scheduled work (jobs.ts: holds ending, the daily summary). */
+export default Object.assign(app, {
+  scheduled: (event: ScheduledController, env: AppEnv["Bindings"], ctx: ExecutionContext) => ctx.waitUntil(scheduled(event, env)),
+});

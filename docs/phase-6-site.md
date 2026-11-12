@@ -429,8 +429,15 @@ A first (the contract); B–F in parallel against it.
 - [x] Isaac's OK: build now (D-132). Added at his request: the inquiry list and the contact sheet (D-133, card F).
 - [ ] His own visitor questions (1), the oddest one (3), where his work can be seen (19), the general facts (15) and
   the deposit wording (12): coming "soon enough". They complete the test set; the gate waits for them.
-- [ ] His choice on lead texts (a text-message service); email until then.
-- [ ] Build, from card A.
+- [x] His choice on lead texts: email only for now (D-142).
+- [x] Card A: migration 0012, the contract below, tenancy tests (2026-11-12, D-134…D-141).
+- [x] Card B: the visitor assistant (`/assistant/visitor`, Haiku 5.5, the check before a reply is shown) (2026-11-12).
+- [x] Card C: the test set (38 coverage cases, 22 slots for Isaac's) and its eval; replays wait for the first live run (2026-11-12).
+- [x] Cards D–F (the site): IA-ART-SITE-REPO#3 (2026-11-12).
+- [x] Gate 2–4: cost measured (live eval 36/38, no invented work or price, $0.0002 a turn, ~63,000 answers per $10);
+  the cap, limits and tenancy tested; the inquiry list tested (downloads not yet tried in a real browser);
+  `/security-review` on both diffs: no findings.
+- [ ] Gate 1: Isaac's own questions into the 22 slots. Gate 5: his look on staging.
 
 **Goal.** On any page of the site, a visitor taps **Ask**, chats with "Isaac's studio assistant, an AI", and gets short
 answers with real pieces as cards. Everything it says about a work or a price comes from the catalogue; everything
@@ -529,6 +536,48 @@ It can make a page of the pieces it suggested, keep the chat across devices with
 | F | Inquiry list `/inquiry`, contact sheet, email form with pictures, download sheet (PDF/PNG/JPEG), protected number, `/contact` without scripts (D-133) | Sonnet 5.5 | site |
 
 A first (the contract, including `lead.create` with pictures for F); B–F in parallel against it.
+
+### The contract (card A, built 2026-11-12; D-134…D-141)
+
+All shapes are Zod schemas in `packages/core/src/schemas.ts` (search the names) and in `docs/openapi.json`.
+`{slug}` is the site's `STUDIO_SLUG`. "Key" = the header `x-visitor-key`, which **only the site's Worker sets**, from
+its HttpOnly cookie `sv` (D-134).
+
+**The site's Worker (card D owns this plumbing):**
+- Every response that needs a visitor makes sure the browser has `sv` (32 random URL-safe characters; `HttpOnly; Secure;
+  SameSite=Lax; Path=/; Max-Age=31536000`). On `/v1/*` and `/ask/*` it deletes any `x-visitor-key` the page sent and
+  adds its own from the cookie (making one if missing).
+- `POST /ask/chat` → `ASSISTANT` service `POST /assistant/visitor` with headers `x-visitor-key`, `x-studio-slug`
+  (= `STUDIO_SLUG`), `x-visitor-ip` (= `cf-connecting-ip`), `x-site-origin` (= the request's origin). Body passed through:
+  `{ message: string (1–1000), fresh?: boolean, piece?: slug of the piece the visitor is looking at }`.
+  Answer (JSON, not streamed, D-135):
+  `{ threadId, text, works: DigestWork[] (≤ 6, cards: image path, title, size, status, priceCents/currency or null),
+     replies: string[] (≤ 3 suggested follow-ups), askArtist: boolean (show Text / Email / Call prominently),
+     limited: null | "off" | "budget" | "daily" | "burst" }`. When `limited` is set, `text` is one line saying why and
+  the sheet becomes plain search (`/works?q=`… or the digest filtered in the page) plus the contact sheet.
+  Errors: `{ error: { code, message } }` with 400 / 429 / 502.
+
+**Public routes on studio-api (through the site's `/v1` forward; no sign-in):**
+| Route | What |
+|---|---|
+| `GET /v1/public/studios/{slug}/assistant` | `PublicAssistant`: name, artistName, greeting, suggestions, replyTime, answers by topic, `available` |
+| `GET /v1/public/studios/{slug}/digest` | `PublicDigest`: every public work's public fields (≤ 300), for search without the chat |
+| `GET /v1/public/studios/{slug}/pages/{token}` | `PublicVisitorPage`: a made page's title, question and still-public works (`x-robots-tag: noindex`) |
+| `GET /v1/public/studios/{slug}/visitor` (key) | `VisitorState`: proven email or null, current threadId, messages `{ role, text, works: slug[], at }` |
+| `POST …/visitor/email-code` (key) `{ email }` | 204; emails a six-digit code ("Keep this chat") |
+| `POST …/visitor/email-verify` (key) `{ email, code }` | `VisitorState` after linking |
+| `POST …/visitor/pages` (key) `VisitorPageInput { title, question?, works: slug[1–24] }` | 201 `{ token, path: "/p/{token}" }` |
+| `POST …/visitor/leads` (key) | 201 `{ id, kind, status }`. JSON `LeadInput`, or multipart: field `lead` = that JSON, plus up to 5 `picture` files (≤ 8 MB each). `LeadInput = { kind: "inquiry"\|"hold", source: "chat"\|"form"\|"inquiry_list", works: slug[≤24], name?, email?, phone?, note? (≤3000), threadId?, website? (the hidden trap: leave empty) }`; email or phone required; a hold is exactly one available work |
+| `POST …/visitor/turn-start`, `POST …/visitor/turn` | assistant only (`X-Studio-Assistant`); never from a page |
+
+**Owner routes (signed in, `/studio`; card E):**
+| Route | What |
+|---|---|
+| `GET /v1/leads?status=open\|new\|held\|declined\|closed\|all` | `{ items: Lead[] }`, newest first (open = new + held) |
+| `GET /v1/leads/{id}` | `LeadDetail` = `Lead` + `chat: VisitorMessage[]`. Pictures: `fileIds` → `GET /v1/files/{id}/download-url` |
+| `POST /v1/leads/{id}/approve-hold` · `/decline` · `/close` (`If-Match: <version>`) | `Lead`. Approve: piece reserved 48 h (`expiresAt`); decline releases a held piece |
+| `GET /v1/site/assistant-usage` | `AssistantUsageOut { month, turns, spentCents, budgetCents, capped }` |
+| `PATCH /v1/settings` with `meta.site.assistant` | `SiteAssistant { enabled?, artistName? ("Isaac"), greeting?, suggestions? (≤3), replyTime?, budgetCents?, answers?: { commissionPrice, commissionTimeline, deposit, shipping, returns, trade, visits, whereToSee, materials, outdoorUse, weight, hanging, care, other } }` |
 
 ### Needs Isaac, in order
 

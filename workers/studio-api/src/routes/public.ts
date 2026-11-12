@@ -26,7 +26,7 @@ const SlugParam = z.object({ slug: z.string().meta({ param: { name: "slug", in: 
 const P = "/public/studios/{slug}";
 
 type Row = Record<string, unknown>;
-const parse = <T>(v: unknown, fallback: T): T => {
+export const parse = <T>(v: unknown, fallback: T): T => {
   try { return typeof v === "string" ? (JSON.parse(v) as T) : fallback; } catch { return fallback; }
 };
 
@@ -35,7 +35,7 @@ const reply = (c: Context<AppEnv>, data: unknown, version: number): never =>
     status: 200, headers: { "content-type": "application/json", "cache-control": "public, max-age=60" },
   }) as never;
 
-async function studioOf(c: Context<AppEnv>, slug: string): Promise<{ id: string; version: number; name: string }> {
+export async function studioOf(c: Context<AppEnv>, slug: string): Promise<{ id: string; version: number; name: string }> {
   if (!Slug.safeParse(slug).success && !/^[A-Za-z0-9_-]{1,100}$/.test(slug)) throw notFound("Studio");
   const row = await c.env.DB.prepare("SELECT id, name, catalogue_version FROM studios WHERE slug = ? AND deleted_at IS NULL").bind(slug).first<Row>();
   if (!row) throw notFound("Studio");
@@ -75,7 +75,7 @@ function bestMatch(palette: { hex: string; share: number }[], want: [number, num
 
 // ------------------------------------------------------------------ mapping
 
-const imageUrl = (slug: string, fileId: string, width: number) => `/v1/public/studios/${slug}/images/${fileId}/${width}.webp`;
+export const imageUrl = (slug: string, fileId: string, width: number) => `/v1/public/studios/${slug}/images/${fileId}/${width}.webp`;
 const WIDTHS = new Set<number>(IMAGE_WIDTHS);
 const sizesOf = (meta: Row): number[] => {
   const raw = meta.sizes;
@@ -104,7 +104,7 @@ function imagesOf(slug: string, files: Row[], cover: string | null): z.infer<typ
     });
 }
 
-function publicWork(slug: string, a: Row, files: Row[]): z.infer<typeof PublicArtwork> {
+export function publicWork(slug: string, a: Row, files: Row[]): z.infer<typeof PublicArtwork> {
   const priced = a.status === "available" && a.price_cents !== null && a.price_cents !== undefined;
   const cover = a.primary_file_id as string | null;
   const images = imagesOf(slug, files, cover);
@@ -131,7 +131,7 @@ function publicWork(slug: string, a: Row, files: Row[]): z.infer<typeof PublicAr
 }
 
 /** The ready, unlocked, undeleted pictures of these works, in one query. */
-async function filesOf(c: Context<AppEnv>, studioId: string, ids: string[]): Promise<Map<string, Row[]>> {
+export async function filesOf(c: Context<AppEnv>, studioId: string, ids: string[]): Promise<Map<string, Row[]>> {
   const out = new Map<string, Row[]>();
   // D1 binds at most 100 values a query; a page of works is 48, a site's places up to 480 ids.
   for (let i = 0; i < ids.length; i += 90) {
@@ -153,7 +153,7 @@ const unb64 = <T>(s: string): T | null => {
   try { return JSON.parse(atob(s.replace(/-/g, "+").replace(/_/g, "/"))) as T; } catch { return null; }
 };
 
-const COLS = "id, title, medium, year, width, height, depth, size_unit, price_cents, currency, status, description, primary_file_id, slug, collection, tags, palette, edition_size, published_at";
+export const COLS = "id, title, medium, year, width, height, depth, size_unit, price_cents, currency, status, description, primary_file_id, slug, collection, tags, palette, edition_size, published_at";
 
 // ------------------------------------------------------------------ routes
 
@@ -282,7 +282,7 @@ publicRoutes.openapi(
 // ------------------------------------------------------------------ the site (D-118, D-119)
 
 /** The studio's site profile as stored, or an empty one if it was never set or no longer parses. */
-async function siteOf(c: Context<AppEnv>, studioId: string): Promise<{ site: z.infer<typeof SiteProfile>; timezone: string }> {
+export async function siteOf(c: Context<AppEnv>, studioId: string): Promise<{ site: z.infer<typeof SiteProfile>; timezone: string }> {
   const row = await c.env.DB.prepare("SELECT meta, timezone FROM studio_settings WHERE studio_id = ? AND deleted_at IS NULL")
     .bind(studioId).first<Row>();
   const meta = parse<Row>(row?.meta, {});

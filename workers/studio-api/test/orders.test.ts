@@ -367,4 +367,15 @@ describe("cart and shipping (D-146…D-154)", () => {
     const r = await quote(slug, "p", { works: [w.slug] });
     expect(r.data).toMatchObject({ ok: true, subtotalCents: 80_000, shippingCents: 4000 });
   });
+
+  it("Studio lists each work's tier with a suggestion that never sets it", async () => {
+    const { s } = await setup();
+    await work(s, { title: "A small", width: 8, height: 10, shipping: null });
+    await work(s, { title: "B large", width: 30, height: 24, shipping: null });
+    await work(s, { title: "C set", shipping: { tier: 2 } });
+    const items = (await call("/v1/artworks/shipping", { cookie: s.cookie })).data.items;
+    expect(items.map((x: any) => [x.title, x.shipping?.tier ?? null, x.suggestion.tier])).toEqual([
+      ["A small", null, 1], ["B large", null, 3], ["C set", 2, 1], // 12×16 suggests 1; the set tier stands
+    ]);
+  });
 });

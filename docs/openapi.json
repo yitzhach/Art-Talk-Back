@@ -3166,6 +3166,246 @@
         }
       }
     },
+    "/artworks/shipping": {
+      "get": {
+        "tags": [
+          "records"
+        ],
+        "summary": "Every work's shipping tier and the tier its size suggests",
+        "description": "A suggestion never sets a tier: the owner accepts it (PATCH the work's `shipping`). `check` marks a size near a line or missing.",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "title": {
+                            "type": "string"
+                          },
+                          "slug": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "status": {
+                            "type": "string"
+                          },
+                          "public": {
+                            "type": "boolean"
+                          },
+                          "priceCents": {
+                            "type": [
+                              "integer",
+                              "null"
+                            ]
+                          },
+                          "width": {
+                            "type": [
+                              "number",
+                              "null"
+                            ]
+                          },
+                          "height": {
+                            "type": [
+                              "number",
+                              "null"
+                            ]
+                          },
+                          "depth": {
+                            "type": [
+                              "number",
+                              "null"
+                            ]
+                          },
+                          "sizeUnit": {
+                            "type": "string"
+                          },
+                          "version": {
+                            "type": "integer"
+                          },
+                          "shipping": {
+                            "type": [
+                              "object",
+                              "null"
+                            ],
+                            "properties": {
+                              "tier": {
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                    "enum": [
+                                      1
+                                    ]
+                                  },
+                                  {
+                                    "type": "number",
+                                    "enum": [
+                                      2
+                                    ]
+                                  },
+                                  {
+                                    "type": "number",
+                                    "enum": [
+                                      3
+                                    ]
+                                  },
+                                  {
+                                    "type": "number",
+                                    "enum": [
+                                      4
+                                    ]
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "cents": {
+                                "type": [
+                                  "integer",
+                                  "null"
+                                ],
+                                "minimum": 0,
+                                "maximum": 1000000
+                              },
+                              "weightLb": {
+                                "type": [
+                                  "number",
+                                  "null"
+                                ],
+                                "minimum": 0,
+                                "maximum": 500
+                              },
+                              "promo": {
+                                "type": "boolean"
+                              },
+                              "crated": {
+                                "type": "boolean"
+                              },
+                              "customQuote": {
+                                "type": "boolean"
+                              },
+                              "fragile": {
+                                "type": "boolean"
+                              },
+                              "pairsWith": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string",
+                                  "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$"
+                                },
+                                "maxItems": 3
+                              }
+                            },
+                            "additionalProperties": false
+                          },
+                          "suggestion": {
+                            "type": "object",
+                            "properties": {
+                              "tier": {
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                    "enum": [
+                                      1
+                                    ]
+                                  },
+                                  {
+                                    "type": "number",
+                                    "enum": [
+                                      2
+                                    ]
+                                  },
+                                  {
+                                    "type": "number",
+                                    "enum": [
+                                      3
+                                    ]
+                                  },
+                                  {
+                                    "type": "number",
+                                    "enum": [
+                                      4
+                                    ]
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "check": {
+                                "type": "boolean"
+                              },
+                              "reason": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "tier",
+                              "check",
+                              "reason"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "title",
+                          "slug",
+                          "status",
+                          "public",
+                          "priceCents",
+                          "width",
+                          "height",
+                          "depth",
+                          "sizeUnit",
+                          "version",
+                          "shipping",
+                          "suggestion"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "items"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not allowed for your role",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/artworks": {
       "get": {
         "tags": [

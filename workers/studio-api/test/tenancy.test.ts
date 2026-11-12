@@ -451,6 +451,10 @@ describe("studio A can't reach studio B", () => {
       const board = (await call("/v1/boards", { method: "POST", cookie: A.cookie, json: { name: "A's" } })).data;
       expect((await call("/v1/feedback", { method: "POST", cookie: A.cookie, json: { boardId: board.id, text: "a" } })).data.studioId).toBe(A.studioId);
     }],
+    ["get", "/artworks/shipping", async () => {
+      const items = (await call("/v1/artworks/shipping", { cookie: A.cookie })).data.items;
+      expect(items.map((x: any) => x.title)).not.toContain("B's small heron");
+    }],
     ["get", "/artworks/collections", async () => {
       expect((await call("/v1/artworks/collections", { cookie: A.cookie })).data.items.map((x: any) => x.name)).not.toContain("B's collection");
     }],

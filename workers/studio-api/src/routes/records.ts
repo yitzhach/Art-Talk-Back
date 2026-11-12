@@ -15,6 +15,9 @@ import {
 import { boothSummary } from "../actions/booth";
 import { boardEntity, feedbackEntity, pinEntity } from "../actions/boards";
 import { HttpError } from "../lib/errors";
+import { shipWorkOf, shippingOf } from "../lib/shipping";
+import { siteFor } from "../lib/site-mail";
+import { ArtworkShipping, ShipTier, suggestTier } from "@studio/core";
 import { type Snapshot, getAction, runAction } from "../actions/runner";
 import { publicFile } from "../actions/files";
 import type { Db } from "../env";
@@ -140,6 +143,40 @@ recordRoutes.openapi(
       .where(and(eq(t.studioId, actor.studioId), isNull(t.deletedAt), sql`${t.collection} IS NOT NULL`))
       .groupBy(t.collection).orderBy(t.collection);
     return send(c, { items: rows });
+  },
+);
+
+// Studio's shipping list (D-150): every work with its tier and the size's suggestion, which counts only once accepted.
+recordRoutes.openapi(
+  createRoute({
+    method: "get", path: "/artworks/shipping", tags: ["records"], summary: "Every work's shipping tier and the tier its size suggests",
+    description: "A suggestion never sets a tier: the owner accepts it (PATCH the work's `shipping`). `check` marks a size near a line or missing.",
+    responses: {
+      200: json(z.object({ items: z.array(z.object({
+        id: z.string(), title: z.string(), slug: z.string().nullable(), status: z.string(), public: z.boolean(), priceCents: z.number().int().nullable(),
+        width: z.number().nullable(), height: z.number().nullable(), depth: z.number().nullable(), sizeUnit: z.string(), version: z.number().int(),
+        shipping: ArtworkShipping.nullable(),
+        suggestion: z.object({ tier: ShipTier.nullable(), check: z.boolean(), reason: z.string() }),
+      })) })),
+      401: errors[401], 403: errors[403],
+    },
+  }),
+  async (c) => {
+    const actor = requireActor(c);
+    requirePermission(actor.role, "artworks:read");
+    const s = shippingOf((await siteFor(c.env, actor.studioId)).site);
+    const { results } = await c.env.DB.prepare(
+      `SELECT id, title, slug, status, public, price_cents, width, height, depth, size_unit, version, shipping FROM artworks
+       WHERE studio_id = ? AND deleted_at IS NULL AND kind = 'work' ORDER BY title LIMIT 2000`,
+    ).bind(actor.studioId).all<Record<string, unknown>>();
+    return send(c, { items: results.map((r) => {
+      const w = shipWorkOf(r);
+      return {
+        id: w.id, title: w.title, slug: w.slug, status: w.status, public: !!r.public, priceCents: w.priceCents,
+        width: w.width, height: w.height, depth: w.depth, sizeUnit: w.sizeUnit, version: Number(r.version), shipping: w.shipping,
+        suggestion: suggestTier(w, s),
+      };
+    }) });
   },
 );
 

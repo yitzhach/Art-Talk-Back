@@ -594,3 +594,7 @@ estimate: it's a quote, so nobody is surprised.
 ### D-154 · A quoted piece becomes buyable when Isaac pins its shipping · 2026-11-12 · Claude (spec default)
 For tier 4, a custom quote or a crated piece, the visitor asks; Isaac sets that piece's shipping price (and, if he
 wants, a hold for that lead), and then it checks out like any other. One-off pay links wait.
+
+### D-155 · The Art Wall repo is AR-WALLE · 2026-11-12 · Isaac
+Answers D-103: asked "Is that the one?" about `yitzhach/AR-WALLE`, Isaac said "Yea". Stage 5 (On my wall) starts by
+reading that repo.

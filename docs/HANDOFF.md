@@ -5,7 +5,26 @@ Read this first, then `CLAUDE.md`, then `docs/phase-3.md` (assistant) or `docs/p
 
 ## Where things stand
 
-- **Site 3.0 stage 3 built, on staging, at Isaac's gate (2026-11-12, D-134…D-142, `docs/phase-6-site.md` → Stage 3).**
+- **Next: Site 3.0 stage 4 (buying), plan drafted, waiting for Isaac's OK (`docs/phase-6-site.md` → "Stage 4").**
+  Stripe Checkout (hosted), a 30-minute set-aside, the signed webhook as the only thing that sells, migration 0013
+  (`orders`, `payment_events`), Orders in Studio, deposit links; cards A–E and a test-mode gate. Nothing built yet. Needs
+  from Isaac, one question at a time: his OK; a Stripe account with **test** keys added as GitHub secrets
+  (`STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`; never in a chat); a flat shipping rate and the small/large line
+  (default: longest side 36 in, US only); return wording; Stripe Tax on or off; deposit wording. Live keys only after
+  the gate passes.
+
+- **Site 3.0 stage 3 shipped to production (2026-11-12, Isaac's "Ship").** Merged Art-Talk-Back #51 and site #3, then the
+  follow-up site #4 (Leads pictures with no resized copies load; "The artist" capitalised). Runs: "Deploy production API" 234 (0012 applied; `studio-api` `1c040c4d`; restore
+  bookmark `000000f6-00000008-00005121-1712920b9ac51d02eec98c951bd77f82`, previous Worker `992545f4`); "Deploy production
+  assistant" 7; "Deploy production site" 3 (slug `isaac-anderson-art-ddm6dy`, site `main`).
+  Live check: Actions → "Smoke production site" (new; the site's phone-sized smoke test against the live site, two
+  assistant questions, no leads). Its first run is in Actions; see the task's report for the result.
+  - Still Isaac's: his own visitor questions (22 eval slots in `workers/assistant/evals/visitor-cases.json`, D-132);
+    whether to unpublish the 5 test photo-works on production; the two TEST lead emails in his inbox and the PDF
+    download on his phone were not seen by Claude.
+  - Leads approve/decline was checked in staging Studio (Approve hold → Reserved 48 h; Decline → Available).
+
+- **Site 3.0 stage 3 (history: built and checked on staging before shipping) (2026-11-12, D-134…D-142, `docs/phase-6-site.md` → Stage 3).**
   PRs: [Art-Talk-Back#51](https://github.com/yitzhach/Art-Talk-Back/pull/51) (platform: migration 0012, visitor routes,
   leads, cron, `/assistant/visitor`, the test set) and [IA-ART-SITE-REPO#3](https://github.com/yitzhach/IA-ART-SITE-REPO/pull/3)
   (Ask sheet, `/ask`, `/p/{token}`, `/inquiry`, contact sheet, `/contact`, Leads screen, Site → Assistant), branch

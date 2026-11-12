@@ -10,6 +10,7 @@
 - Public: `GET …/checkout`, `POST …/visitor/orders`, `GET …/visitor/orders/{id}`. Square: `POST /v1/square/webhook`
   (signature checked). Owner: `GET /v1/orders`, `/orders/{id}`, and `mark-paid`, `ship`, `cancel`, `extend`.
 - Order emails to the buyer and the studio; unpaid orders end hourly. Staging deploy sets the Square sandbox secrets.
+- The site's assistant knows the Buy button (points to it; never takes payment or places an order).
 
 ### Site 3.0 · stage 4 plan (buying)
 - Reworked for Square (cards, hosted checkout, signed webhook) with Venmo and Zelle by hand (D-144); Stripe dropped.

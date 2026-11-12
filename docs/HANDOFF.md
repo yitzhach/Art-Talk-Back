@@ -5,13 +5,10 @@ Read this first, then `CLAUDE.md`, then `docs/phase-3.md` (assistant) or `docs/p
 
 ## Where things stand
 
-- **Next: Site 3.0 stage 4 (buying), plan drafted, waiting for Isaac's OK (`docs/phase-6-site.md` → "Stage 4").**
-  Stripe Checkout (hosted), a 30-minute set-aside, the signed webhook as the only thing that sells, migration 0013
-  (`orders`, `payment_events`), Orders in Studio, deposit links; cards A–E and a test-mode gate. Nothing built yet. Needs
-  from Isaac, one question at a time: his OK; a Stripe account with **test** keys added as GitHub secrets
-  (`STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`; never in a chat); a flat shipping rate and the small/large line
-  (default: longest side 36 in, US only); return wording; Stripe Tax on or off; deposit wording. Live keys only after
-  the gate passes.
+- **Site 3.0 stage 4 (buying) under way (2026-11-12, D-144, `docs/phase-6-site.md` → "Stage 4").** Isaac said start
+  now, with cards through his **Square** account (hosted checkout, signed webhook) and **Venmo / Zelle** by hand (held
+  48 hours, sold on his Mark paid). Stripe is out. Built in Square's sandbox first; production credentials only after
+  the gate. Branch `claude/project-thread-ionjj5` in both repos. Isaac's answers come one at a time ("Needs Isaac").
 
 - **Site 3.0 stage 3 shipped to production (2026-11-12, Isaac's "Ship").** Merged Art-Talk-Back #51 and site #3, then the
   follow-up site #4 (Leads pictures with no resized copies load; "The artist" capitalised). Runs: "Deploy production API" 234 (0012 applied; `studio-api` `1c040c4d`; restore

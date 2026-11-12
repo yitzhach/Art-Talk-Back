@@ -6,6 +6,7 @@
 - Production: migration 0012 applied, `studio-api`, `studio-assistant` and `studio-site` deployed (site #3 and #4). New workflow "Smoke production site": the site's phone-sized smoke test against the live site (two assistant questions, no leads). Handoff and next-session prompt updated.
 
 ### Site 3.0 · stage 4 plan (buying)
+- Reworked for Square (cards, hosted checkout, signed webhook) with Venmo and Zelle by hand (D-144); Stripe dropped.
 - `docs/phase-6-site.md` → "Stage 4 — buying": Stripe Checkout per piece and for commission deposits, the webhook as the only thing that sells, migration 0013 (`orders`, `payment_events`), the gate and what Isaac needs to provide. Plan only; no code or keys.
 
 ### Site 3.0 · stage 3, A: visitors, leads, made pages, usage and the cap (D-134…D-141)

@@ -587,123 +587,134 @@ its HttpOnly cookie `sv` (D-134).
    plus about a cent a text). Spending and a secret are his call; until then leads come by email only.
 4. At the gate: a look on his phone on staging.
 
-## Stage 4 — buying (plan drafted 2026-11-12, waiting for Isaac's OK)
+## Stage 4 — buying (approved 2026-11-12, D-144: Square for cards, Venmo and Zelle by hand)
 
 ### Where it stands (2026-11-12)
 
-- [ ] Isaac's OK on this plan.
-- [ ] Stripe account and **test-mode** keys, added by Isaac as GitHub secrets (the secure form; never in a chat).
-- [ ] His shipping and returns answers (below, "Needs Isaac").
-- [ ] Cards A–E, then the gate. Nothing in this stage moves real money until the live keys go in, after the gate.
+- [x] Isaac's OK: "Yes, start building it and right now." Cards through his Square account; Venmo and Zelle as manual
+  options (D-144). Stripe is out.
+- [ ] His answers below ("Needs Isaac"), one at a time.
+- [ ] Square **sandbox** credentials added by Isaac as GitHub secrets (never in a chat).
+- [ ] Cards A–E, then the gate. Nothing moves real money until the production credentials go in, after the gate.
 
-**Goal.** A piece with a listed price that is available gets a **Buy** button. The visitor pays on Stripe's own
-checkout page; the piece is sold everywhere the moment Stripe confirms (site, Studio, the Show Tracker, the assistant),
-and Isaac gets an email with the buyer and the address to ship to. A visitor whose hold Isaac approved (D-127, D-140)
-can buy that piece during the 48 hours; nobody else can. A commission's deposit can be paid online from a link Isaac
-sends. One piece can never sell twice.
+**Goal.** A piece with a listed price that is available gets a **Buy** button with two ways to pay: **card** on Square's
+own checkout page (Apple Pay and Google Pay where Square offers them), or **Venmo / Zelle** to Isaac by hand. A card
+payment sells the piece the moment Square confirms it; a Venmo or Zelle order holds the piece until Isaac taps
+**Mark paid** in Studio. A visitor whose hold Isaac approved (D-127, D-140) can buy that piece during the 48 hours;
+nobody else can. A commission's deposit uses the same two ways from a link Isaac sends. One piece can never sell twice.
 
-**Not in this stage:** refunds from Studio (Isaac refunds in Stripe's dashboard; the webhook marks the sale refunded),
-payment plans beyond a deposit, prints and editions, other studios' Stripe accounts (Connect, stage 7).
+**Not in this stage:** refunds from Studio (Isaac refunds in Square's dashboard or by hand; card refunds reach us from
+Square and mark the sale refunded), payment plans beyond a deposit, prints and editions, other studios' accounts
+(stage 7).
 
 ### What a visitor sees (phone first)
 
-- Piece page, available with a price: **Buy · $1,600** beside Hold / Add to inquiry. The price line adds "plus shipping
-  and tax at checkout" (or "shipping quoted" for large works, which keep inquiry instead of Buy, D-102).
-- Tap Buy → Stripe Checkout (Stripe's page: card, Apple Pay / Google Pay, shipping address, tax). The piece is set aside
-  for that visitor for 30 minutes while they pay; the page says so.
-- Paid → back on the site at `/thanks/{order}`: the piece, what was paid, "Isaac will email you about delivery", the
-  return terms. Stripe emails its receipt.
-- Abandoned or failed → back on the piece page after the 30 minutes; it is for sale again.
-- Ask: the assistant may say a piece can be bought on its page and link the page; it never starts a checkout or quotes a
-  total (shipping and tax come from checkout).
-- Commission deposit: a link Isaac sends opens `/pay/{token}`: the commission, the agreed amount, the deposit (50% by
-  default, D-126), Pay → Stripe Checkout.
+- Piece page, available with a price: **Buy · $1,600** beside Hold / Add to inquiry; "plus shipping" under it (large
+  works keep inquiry instead of Buy, D-102).
+- Tap Buy → `/buy/{slug}`: the piece, shipping, the total, the return terms, and two buttons:
+  - **Pay by card** → Square's checkout page (address, card). The piece is set aside for 30 minutes while they pay.
+    Paid → `/thanks/{order}`: what was paid, "Isaac will email you about delivery". Square emails its receipt.
+  - **Pay by Venmo or Zelle** → name, email, phone, shipping address → `/thanks/{order}` shows the amount, Isaac's
+    Venmo name and Zelle address, and the order code to put in the payment note. The piece is set aside for 48 hours;
+    the visitor gets the same in an email. Isaac confirms by hand; the visitor gets an email when he does.
+- Abandoned card checkout → for sale again after 30 minutes. An unpaid Venmo/Zelle order → for sale again after 48 hours
+  (Isaac can extend or cancel it in Orders).
+- Ask: the assistant may say a piece can be bought on its page and link the page; it never starts an order or quotes a
+  total.
+- Commission deposit: a link Isaac sends opens `/pay/{token}`: the commission, the deposit (50% by default, D-126),
+  and the same two ways to pay.
 
 ### What Isaac sees
 
-- An email per sale: piece, price, shipping, tax, buyer's name, email, phone, shipping address.
-- Studio → **Orders** (beside Leads): paid, waiting to ship, shipped (he adds a carrier and tracking number; the buyer
-  gets one email), refunded. Each links to the payment in Stripe.
-- A commission's page: **Request deposit** (amount prefilled from his percentage) makes the `/pay` link; he sends it
-  himself (copy link, or an email from Studio after his tap).
-- Site screen → Checkout: on/off, flat shipping rate for small works, the small/large line, return terms, the deposit
-  percentage. Off until the gate passes.
+- An email per order: piece, total, how they're paying, buyer, shipping address. Venmo/Zelle orders say "not paid yet:
+  tap Mark paid when the money arrives".
+- Studio → **Orders** (beside Leads): waiting for payment (Venmo/Zelle, with Mark paid, Extend, Cancel), paid, shipped
+  (he adds a carrier and tracking; the buyer gets one email), refunded.
+- A commission's page: **Request deposit** makes the `/pay` link; he sends it himself.
+- Site screen → Checkout: on/off, the flat shipping rate and the small/large line, return terms, the deposit
+  percentage, his Venmo name and Zelle address, whether each way to pay is on. Off until the gate passes.
 
 ### Shape (proposals; each becomes a decision when built)
 
-1. **Stripe Checkout, hosted, one payment per order.** No card field on the site, no Stripe script on content pages
-   (the budgets of stage 2 hold). Sessions are made by studio-api with `price_data` (the piece's title, picture and
-   price from the catalogue, never from the request), `shipping_address_collection`, a flat shipping rate, an
-   `expires_at` of 30 minutes, and the order id in `metadata` and as the idempotency key.
-2. **Isaac's own Stripe account; keys as secrets.** `STRIPE_SECRET_KEY` (a restricted key: Checkout Sessions write,
-   read on payments) and `STRIPE_WEBHOOK_SECRET` on `studio-api` (staging gets test keys, production live keys, each
-   from a GitHub secret Isaac adds; the deploy workflow sets them like `RESEND_API_KEY`). One studio has checkout for
-   now; per-studio accounts are stage 7 (Connect, no platform share).
+1. **Square's hosted checkout, one link per order.** studio-api calls Square's `POST /v2/online-checkout/payment-links`
+   (fetch, no SDK) with an `order` built from the catalogue (title, price, the flat shipping as a second line, the
+   order id as `reference_id`), never from the request; `ask_for_shipping_address`, a `redirect_url` to `/thanks`,
+   and an idempotency key from the order id. No card field and no Square script on the site.
+2. **Isaac's own Square account; credentials as secrets.** `SQUARE_ACCESS_TOKEN`, `SQUARE_LOCATION_ID` and
+   `SQUARE_WEBHOOK_SIGNATURE_KEY` on `studio-api`: sandbox values on staging (`connect.squareupsandbox.com`),
+   production values on production, each from a GitHub secret the deploy workflow sets like `RESEND_API_KEY`, and
+   skipped when unset (checkout stays off).
 3. **The piece is set aside atomically.** `order.start` (public, visitor) writes the order and moves the artwork
    `available → reserved` in one batch with the version check, so a second buyer gets 409 "someone is buying this
-   now". A piece on an approved hold is reserved already; only the hold's own lead (a token in its email and its
-   chat) can start its order. `checkout.session.expired` (or 35 minutes with no event, the hourly cron) puts it back.
-4. **The webhook is the only thing that sells.** `POST /v1/stripe/webhook` (no session; the studio is found from the
-   order the event names, never from the body's other fields) checks the `Stripe-Signature` HMAC with Web Crypto and a
-   5-minute tolerance, refuses a bad or old signature with 400, and records each event id once (`payment_events`,
-   unique) so a replay changes nothing. `checkout.session.completed` with `payment_status: paid` → `order.paid`:
-   the order paid, the artwork `sold` (as `artwork.mark_sold`, D-029), a `sales` row (`source: stripe`,
-   `payment_method: online`, `external_id` the payment), the client matched or made (as D-138), the lead (if any)
-   done, emails to Isaac. `charge.refunded` → the order and sale marked refunded; the piece stays sold until Isaac
-   puts it back.
-5. **Money from Stripe, not from us.** The order keeps what Stripe reports (amount, shipping, tax, currency) in cents.
-   Tax: Stripe Tax (`automatic_tax`) as D-102 says, which needs Stripe Tax turned on in his account and has Stripe's
-   own fee per sale; until he turns it on, checkout runs without tax and the plan says so on the Site screen.
-6. **Deposits are orders too.** `kind: deposit`, tied to a client and a commission record (`meta.commission` on the
-   client until a commissions table is needed), amount set by Isaac's tap (`deposit.request`, owner only); paying it
-   writes a `sales` row marked deposit and emails him.
-7. **The assistant never sells.** No checkout tool, no order data in its context. A visitor's order is visible only to
+   now". Only an approved hold's own lead can start its order. The hourly cron puts expired orders' pieces back and
+   deletes their unused payment links at Square.
+4. **For a card, Square's webhook is the only thing that sells.** `POST /v1/square/webhook` (no session; the studio is
+   found from the order the payment names) checks `x-square-hmacsha256-signature` (HMAC-SHA256 of the webhook's own
+   address plus the raw body, Web Crypto, constant-time compare), refuses a bad one with 401, and records each event id
+   once (`payment_events`, unique). `payment.updated` with status `COMPLETED` → `order.paid`: the order paid, the
+   artwork `sold` (as `artwork.mark_sold`, D-029), a `sales` row (`source: square`, `payment_method: card`,
+   `external_id` the payment), the client matched or made (as D-138), the lead (if any) done, emails. `refund.updated`
+   completed → the sale marked refunded; the piece stays sold until Isaac puts it back.
+5. **Venmo and Zelle are confirmed by Isaac, never by us.** `order.start` with `method: venmo|zelle` reserves the piece
+   for 48 hours and emails both sides; only the owner's **Mark paid** (`order.mark_paid`, with the amount received
+   and an optional note) sells it, through the same path as a card. No Venmo or Zelle account is connected; we only
+   show his public handles.
+6. **Money from the source.** A card order keeps what Square reports (amount, shipping, tax, currency) in cents; a
+   manual order keeps the total shown and what Isaac enters. Tax: none at checkout unless Isaac sets a rate (Square
+   applies a fixed rate he configures; it does not work out tax by address).
+7. **Deposits are orders too.** `kind: deposit`, tied to a client and a commission (`meta.commission` on the client for
+   now), amount from Isaac's tap (`deposit.request`, owner only).
+8. **The assistant never sells.** No order tool, no order data in its context. A visitor's order is visible only to
    the visitor's own browser (`x-visitor-key`) and to the owner.
 
 ### Data (migration 0013, additive)
 
-- `orders`: id, studio_id, kind (`piece`, `deposit`), artwork_id, lead_id, client_id, visitor_id, status (`pending`,
-  `paid`, `expired`, `refunded`, `cancelled`), amount_cents, shipping_cents, tax_cents, currency, stripe_session_id
-  (unique), stripe_payment_id, buyer name / email / phone, shipping address (JSON), shipped_at, carrier, tracking,
-  expires_at, pay_token_hash (deposits), plus the standard columns.
-- `payment_events`: stripe event id (unique), studio_id, order_id, type, received_at. Kept 90 days.
+- `orders`: id, studio_id, kind (`piece`, `deposit`), method (`card`, `venmo`, `zelle`), artwork_id, lead_id,
+  client_id, visitor_id, status (`pending`, `awaiting_payment`, `paid`, `expired`, `cancelled`, `refunded`), code
+  (short, for the Venmo/Zelle note), amount_cents, shipping_cents, tax_cents, currency, square_link_id,
+  square_order_id (unique), square_payment_id, buyer name / email / phone, shipping address (JSON), paid_at, shipped_at,
+  carrier, tracking, expires_at, pay_token_hash (deposits), plus the standard columns.
+- `payment_events`: Square event id (unique), studio_id, order_id, type, received_at. Kept 90 days.
 
 ### Gate
 
-1. **Test-mode purchase end to end on staging**: Buy → Stripe's test checkout (test card) → webhook → piece sold on
-   the site, in Studio and in the Show Tracker's sales; Isaac's email; `/thanks`; Orders shows it; shipped + tracking
-   email. The same for a deposit link. A phone-sized browser run in "Deploy staging" (`smoke`), Stripe test mode only.
-2. **Webhook signature checked**: wrong secret, changed body, old timestamp → 400 and nothing written; a replayed
-   event → no second sale (tests, plus Stripe's own test events on staging).
-3. **One piece can't sell twice**: two checkouts at once → one 409; a paid event for an expired order on a piece sold
-   meanwhile → never a second sale: flagged to Isaac by email and on Orders for a refund in Stripe (his call); tests for each.
-4. **Holds**: an approved hold's piece can be bought only from that lead's link; when the hold ends it is for sale.
-5. `/security-review` on both diffs; tenancy sweep covers every new route.
-6. Isaac's look on staging, then live keys and a first real sale he watches (he can buy and refund his own piece).
+1. **Sandbox card purchase end to end on staging**: Buy → Square's sandbox checkout (test card) → webhook → piece sold
+   on the site, in Studio and in the Show Tracker's sales; emails; `/thanks`; Orders; shipped + tracking email. The same
+   for a deposit link. A phone-sized browser run in "Deploy staging" (`smoke`), sandbox only.
+2. **Venmo/Zelle order on staging**: piece reserved, both emails, Mark paid → sold; an unpaid one expires and the piece
+   is for sale again.
+3. **Webhook signature checked**: wrong key, changed body, wrong address → 401 and nothing written; a replayed event →
+   no second sale (tests, plus Square's own test event on staging).
+4. **One piece can't sell twice**: two orders at once → one 409; a card payment for an order that expired while the
+   piece sold another way → never a second sale: flagged to Isaac on Orders and by email for a refund (his call).
+5. **Holds**: an approved hold's piece can be bought only from that lead's link; when the hold ends it is for sale.
+6. `/security-review` on both diffs; tenancy sweep covers every new route.
+7. Isaac's look on staging, then production credentials and a first real sale he watches.
 
 ### Task cards
 
 | # | Card | Who | Repo |
 |---|---|---|---|
-| A | 0013, `order.start` / `order.paid` / `order.expire` / `order.ship` / `deposit.request`, the webhook route and signature check, Stripe client (fetch, no SDK), cron, emails, tests, openapi | Lead (Opus 5.5), `backend-builder` | Art-Talk-Back |
-| B | Deploy workflows: Stripe secrets (test on staging, live on production) and a skip when unset; webhook endpoint notes | Lead | Art-Talk-Back |
-| C | Buy button, `/buy/{slug}` (works without scripts: a form post), `/thanks/{order}`, `/pay/{token}`, price line | Sonnet 5.5 | site |
-| D | Studio → Orders (list, detail, Mark shipped), commission Request deposit, Site → Checkout settings | Sonnet 5.5 | site |
-| E | Smoke test with Stripe test mode; assistant prompt line on buying (no tool) and two eval cases | Sonnet 5.5 | both |
+| A | 0013, `order.start` / `order.paid` / `order.mark_paid` / `order.expire` / `order.ship` / `deposit.request`, the webhook route and signature check, Square client (fetch), cron, emails, tests, openapi | Lead | Art-Talk-Back |
+| B | Deploy workflows: Square secrets (sandbox on staging, production on production), skipped when unset | Lead | Art-Talk-Back |
+| C | Buy button, `/buy/{slug}` (works without scripts), `/thanks/{order}`, `/pay/{token}`, price line | Lead | site |
+| D | Studio → Orders (list, detail, Mark paid, Mark shipped), Request deposit, Site → Checkout settings | Lead | site |
+| E | Smoke test with Square's sandbox; assistant prompt line on buying (no tool) and two eval cases | Lead | both |
 
 A first (the contract); C–E against it.
 
-### Needs Isaac, in order
+### Needs Isaac, one at a time
 
-1. OK this plan.
-2. A Stripe account (stripe.com, his business details and bank) and its **test** keys added as GitHub secrets: Art-Talk-Back
-   → Settings → Secrets and variables → Actions → New secret, `STRIPE_SECRET_KEY_TEST` and, after the first staging
-   deploy prints the webhook address, `STRIPE_WEBHOOK_SECRET_TEST`. Live keys only after the gate.
-3. Shipping: the flat rate for small works, where "small" ends (default: longest side up to 36 in), and whether he
-   ships outside the US (default: US only).
-4. Returns wording for checkout (default from D-102: seven days on available works, none on commissions).
-5. Stripe Tax on or off (it has Stripe's own fee per sale).
-6. The deposit wording (already asked in stage 3, question 12).
+1. Shipping: the flat rate for small works, where "small" ends (default: longest side up to 36 in), and US only
+   (default).
+2. Returns wording (default from D-102: seven days on available works, none on commissions).
+3. Tax: none at checkout (default), or a fixed rate he gives.
+4. His Venmo name and the Zelle email or phone buyers should send to (shown on the order page).
+5. Deposit wording (stage 3, question 12).
+6. Square **sandbox** credentials as GitHub secrets: Square Developer → his app → Sandbox → access token and location id,
+   then Webhooks → the address staging prints → its signature key. Art-Talk-Back → Settings → Secrets and variables →
+   Actions → New secret: `SQUARE_ACCESS_TOKEN_SANDBOX`, `SQUARE_LOCATION_ID_SANDBOX`,
+   `SQUARE_WEBHOOK_SIGNATURE_KEY_SANDBOX`. Production ones only after the gate.
 
 ## Open questions — answered 2026-11-10 (D-102, D-103)
 

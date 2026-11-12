@@ -529,3 +529,12 @@ Asked whether to pay for a text-message service (an account, a number at about $
 
 ### D-143 · Up to $1 on the visitor assistant's tests without asking · 2026-11-12 · Isaac
 "You can feel free to spend up to $1 on these tests without asking me again… just keep this moving forward." Live eval runs and staging checks that call the model may spend up to $1 in all (two runs so far: about 2 cents). Shipping to production still waits for his look on staging (the gate).
+
+### D-144 · Stage 4 starts now: Square for cards, Venmo and Zelle by hand · 2026-11-12 · Isaac
+"Yes, start building it and right now. I have a Square account and so I would probably allow manual payments to
+connect to my Square account and then other payment options would include Venmo Zelle and that's probably it for
+now." Card payments go through his own Square account (Square's hosted checkout page; a signed webhook sells the
+piece), replacing the Stripe plan. Venmo and Zelle are shown as manual options: the piece is held 48 hours and sells
+only when Isaac taps Mark paid, since neither can be confirmed automatically. Built and tested in Square's sandbox
+first; production credentials only after the gate (`docs/phase-6-site.md` → Stage 4).
+

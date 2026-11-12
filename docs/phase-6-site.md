@@ -431,7 +431,9 @@ A first (the contract); B–F in parallel against it.
   the deposit wording (12): coming "soon enough". They complete the test set; the gate waits for them.
 - [ ] His choice on lead texts (a text-message service); email until then.
 - [x] Card A: migration 0012, the contract below, tenancy tests (2026-11-12, D-134…D-141).
-- [ ] Cards B–F.
+- [x] Card B: the visitor assistant (`/assistant/visitor`, Haiku 5.5, the check before a reply is shown) (2026-11-12).
+- [x] Card C: the test set (38 coverage cases, 22 slots for Isaac's) and its eval; replays wait for the first live run (2026-11-12).
+- [ ] Cards D–F (the site).
 
 **Goal.** On any page of the site, a visitor taps **Ask**, chats with "Isaac's studio assistant, an AI", and gets short
 answers with real pieces as cards. Everything it says about a work or a price comes from the catalogue; everything

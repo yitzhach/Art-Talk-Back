@@ -1078,7 +1078,7 @@ A first (the contract); C–E against it.
 2. At the gate: the tape-measure check on his iPhone, on staging.
 3. Later (D-161): where dm-t1 lives, and whether to link it.
 
-## Stage 6 — collectors (approved 2026-11-12; building on `claude/project-thread-kn62cz`)
+## Stage 6 — collectors (approved 2026-11-12; gate passed by the smoke; live 2026-11-12)
 
 ### Where it stands (2026-11-12)
 
@@ -1094,7 +1094,10 @@ A first (the contract); C–E against it.
   Security pass by hand: nothing to fix.
 - [x] Gate on staging by the automatic smoke and tests (Isaac asked not to test each step himself, D-169); his yes for
   the live site: "Yes. Make that live too" (2026-11-12).
-- [ ] Live: Art-Talk-Back PR (platform first, D-169), then IA-ART-SITE-REPO PR and "Deploy production site".
+- [x] Live (2026-11-12): Art-Talk-Back#55 merged, "Deploy production API" 272 applied 0015 (restore point saved);
+  IA-ART-SITE-REPO#7 merged; "Deploy production site" 6 (`isaac-anderson-art-ddm6dy`); "Smoke production site" 15/15.
+- [ ] Later, Isaac's: care notes (a draft is prefilled in Studio → Collectors; collectors see nothing until saved);
+  past buyers to invite (Show Tracker's clients, answer 9), once his own domain is attached so links don't change.
 
 ### Findings (checked 2026-11-12 on the default branches)
 

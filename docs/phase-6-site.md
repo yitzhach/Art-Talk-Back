@@ -603,7 +603,8 @@ its HttpOnly cookie `sv` (D-134).
 - [x] Cards C–E (2026-11-12): site Buy button, `/buy`, `/thanks`, Orders screen, Checkout settings (site repo); the
   assistant's Buy line.
 - [ ] The gate (sandbox purchase end to end on staging), then production. Nothing moves real money until the production credentials go in, after the gate.
-- [ ] **Revision (proposed 2026-11-12, waiting for Isaac's review): shipping tiers, a cart and the large-work offer.**
+- [ ] **Revision (2026-11-12, Isaac's questions all answered; build waits for his "build"): shipping tiers, a cart, the
+  large-work offer and a ZIP estimator.**
   Isaac's brief "Shipping information" (2026-11-12). Planning only: nothing below is built until he says "build".
   Payments stay Square for cards and Venmo/Zelle by hand (D-144); the brief's Stripe steps read as Square here.
 
@@ -830,6 +831,8 @@ often the offer came up when asked, from the existing chat logs. Nothing new is 
 - **D-150 · Never guess a tier**: suggestions need Isaac's tap; Check size near a boundary or without dimensions.
 - **D-151 · One calculator in `packages/core`, called only by studio-api**; settings in `meta.site.shipping`, piece
   fields as artwork columns, multi-piece orders as `order_items`.
+- **D-153 · A ZIP estimate for large pieces · Isaac**: UPS via Pirate Ship from 42503, 2 in packing a side, residential
+  assumed, a 10% cushion, our own rate grid; oversize boxes get Isaac's estimate.
 - **D-152 · This project ships platform first, and production needs Isaac's OK · Isaac**: the exception D-057 already
   lists (the site needs the new contract), and nothing reaches production before his "ship".
 
@@ -864,7 +867,7 @@ Sequence: F and G (platform PR, then staging), H and I (site PR, same branch nam
 staging phone-sized in Square's sandbox, then one staging link and a short checklist for Isaac. Production only after
 his "ship": platform first, then site.
 
-#### Questions for Isaac on the revision (each has a default)
+#### Questions for Isaac on the revision (all answered 2026-11-12)
 
 1. ~~Does every tier 1 or 2 piece qualify, or only one priced at $500 or more?~~ **Answered 2026-11-12: a $500
    minimum** (Isaac, 👍 on the question).
@@ -874,7 +877,7 @@ his "ship": platform first, then site.
    up to 300 sq in and 24 in long; $22 covers the rest below 576 sq in, so an 18×20 and a 20×26 are $22.
 4. ~~Does the mid tier's $22 drop when paired (R1)?~~ **Answered 2026-11-12: yes** (Isaac).
 5. ~~Only the US?~~ **Answered 2026-11-12: US only; everywhere else is a quote** (Isaac).
-6. Local pickup from the studio? Default: off.
+6. ~~Local pickup from the studio?~~ **Answered 2026-11-12: off for now** (Isaac).
 7. ~~The estimator: only large pieces use the ZIP estimate?~~ **Answered 2026-11-12: yes** (Isaac); tiers 1 and 2
    stay free and $22.
 8. ~~Packing on each side?~~ **Answered 2026-11-12: 2 in** (Isaac).

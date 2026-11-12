@@ -873,7 +873,7 @@ his "ship": platform first, then site.
 3. ~~Size lines?~~ **Answered 2026-11-12: 24×24 and up are large and get the ZIP estimate** (Isaac). Free stays
    up to 300 sq in and 24 in long; $22 covers the rest below 576 sq in, so an 18×20 and a 20×26 are $22.
 4. ~~Does the mid tier's $22 drop when paired (R1)?~~ **Answered 2026-11-12: yes** (Isaac).
-5. Only the US? Default: yes; everywhere else is a quote.
+5. ~~Only the US?~~ **Answered 2026-11-12: US only; everywhere else is a quote** (Isaac).
 6. Local pickup from the studio? Default: off.
 7. ~~The estimator: only large pieces use the ZIP estimate?~~ **Answered 2026-11-12: yes** (Isaac); tiers 1 and 2
    stay free and $22.

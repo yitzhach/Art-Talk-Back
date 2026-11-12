@@ -5,21 +5,29 @@ Read this first, then `CLAUDE.md`, then `docs/phase-3.md` (assistant) or `docs/p
 
 ## Where things stand
 
-- **Site 3.0 stage 2 (the public site) built, at its gate on staging (2026-11-11, D-116…D-123, `docs/phase-6-site.md`).**
-  Site repo `yitzhach/IA-ART-SITE-REPO` (Workers `studio-site`, `studio-site-staging`); both repos on
-  `claude/gallant-thompson-91hmzi`.
+- **Site 3.0 stage 3 (visitor assistant) planned, waiting for Isaac (2026-11-11, D-125…D-131, `docs/phase-6-site.md` → Stage 3).**
+  His answers to the stage 3 questions are recorded. Still to come from him: his real visitor questions (the test
+  set), the oddest one, where his work can be seen, the general facts (materials, outdoor use, weight, hanging, care),
+  the deposit wording; then his OK on the plan, and whether to pay for a text-message service for lead texts.
+  Nothing built. Next session: take his list, finish the plan's test set, get the OK, build from card A.
+
+- **Site 3.0 stage 2 (the public site) shipped to production (2026-11-12, D-116…D-124, `docs/phase-6-site.md`).**
+  Site repo `yitzhach/IA-ART-SITE-REPO` (Workers `studio-site`, `studio-site-staging`); Art-Talk-Back #48, site #2.
+  - Live: https://studio-site.bobdylan2000.workers.dev/ (owner's area `/studio`), production studio slug
+    `isaac-anderson-art-ddm6dy` (input `studio_slug` of "Deploy production site"; staging's is
+    `isaac-anderson-art-sbtwkm`). 40 works public (Isaac tapped "Approve all drafts" for testing, D-115), site photos
+    in 11 places. isaacandersonart.com still points at the old site until Isaac moves the domain.
   - Platform: migration 0011 (`artworks.kind`), `SiteProfile` in `settings.meta.site`, public routes
     `GET /v1/public/studios/{slug}` and `…/site-photos`. Site: public pages from `worker/site/`, the Plaster template,
     the Site screen `/studio/site`, the import's words-and-photos step. Checks: `npm run test:site` (scripts off,
     budgets, Lighthouse mobile ≥ 95) in the site's CI.
-  - Staging: https://studio-site-staging.bobdylan2000.workers.dev/ (owner's area `/studio`), studio slug
-    `isaac-anderson-art-sbtwkm`. Staging's words and photo places appear once Isaac taps "Bring in the words and
-    photos" on the Site screen (the stage 1 import already ran there, so it won't start by itself).
-  - Isaac's OK on staging given (2026-11-11). Then production, all at once, in order: merge Art-Talk-Back's PR
-    (0011 runs with "Deploy production API"), then the site's PR; "Deploy production assistant" (Claude, confirm
-    word `studio-assistant`; adds `/assistant/draft`); "Deploy production site" (new; Isaac's first deploy, confirm
-    word `studio-site`, site name left empty); Isaac signs in at production `/studio`, the import and its words step
-    run; he copies the site name from the Site screen; Claude reruns "Deploy production site" with it (D-123).
+  - Production runs: "Deploy production API" 202 (0011 applied; `studio-api` `bff4aa89`; restore bookmark
+    `000000f3-00000000-00005120-8461d13f0f7b2d812da66f2832f3c571`, previous Worker `c8b039c0`); "Deploy production
+    assistant" 6; "Deploy production site" 1 (Isaac, first deploy, empty slug) and 2 (Claude, with the slug). Undo the
+    site: Cloudflare → Workers & Pages → `studio-site` → Deployments → Rollback.
+  - CI caught a layout shift on Works (filters rewrapping when fonts arrived; Lighthouse 88); fixed in site #2 (filter
+    rows on one line, two more fonts preloaded).
+  - Staging: https://studio-site-staging.bobdylan2000.workers.dev/.
   - Stage 1 production restore points still apply: bookmark `000000f2-00000004-00005120-c36ac75ce1c0bb4915fab086971db40b`,
     previous Worker `f552dcf1` (before 0010).
   - Known: 20 of the 65 photos exist only below 960 px on the old site; Green Horizon names two different works; the

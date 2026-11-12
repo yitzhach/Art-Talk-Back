@@ -1,6 +1,6 @@
 # Phase 6, the site — Site 3.0: a public studio site with a visitor assistant
 
-**Status: stage 1 shipped (2026-11-11, #47; production import waits for Isaac's OK). Stage 2 approved by Isaac (2026-11-11), building.** Isaac asked on 2026-11-10 for a ground-up rebuild of
+**Status: stages 1 and 2 shipped (2026-11-12: live at https://studio-site.bobdylan2000.workers.dev/). Stage 3 planned, waiting for Isaac's visitor questions and OK.** Isaac asked on 2026-11-10 for a ground-up rebuild of
 isaacandersonart.com that he can later sell to other artists, galleries and art shows (D-096…D-101).
 The drawing he reviewed (eight phone screens, ideas, stages, questions):
 https://claude.ai/artifact/TjfVTjJFCHcaGEc2gjEpTw (private to Isaac).
@@ -293,7 +293,7 @@ A and the contract come first; B–G build to it in parallel.
 4. During review: sizes, prices and statuses for the works he approves (typed on his phone).
 5. OK to run the import on production once staging looks right.
 
-## Stage 2 — the site (approved by Isaac 2026-11-11)
+## Stage 2 — the site (approved by Isaac 2026-11-11; gate passed, shipped 2026-11-12)
 
 ### Where it stands (2026-11-11)
 
@@ -310,7 +310,7 @@ A and the contract come first; B–G build to it in parallel.
   960 px size is 303 KB (budget 200 KB). Left as known: re-check on Isaac's phone; if it feels slow, lower the upload's
   WebP quality (0.82) for new photos.
 - [x] Isaac's look and OK on his phone on staging (2026-11-11: "looked at the staging site on my phone and it's OK").
-- [ ] Production, in order: merge both PRs (platform first: 0011 runs with "Deploy production API"); "Deploy production assistant" (Claude); "Deploy production site" (Isaac's first deploy, D-123); he signs in, the import runs; Claude reruns "Deploy production site" with the site name he copies.
+- [x] Production (2026-11-12): Art-Talk-Back #48 merged, "Deploy production API" applied 0011; site #2 merged (after a CI fix: Works' filters no longer rewrap as fonts load); "Deploy production assistant" (Claude); "Deploy production site" (Isaac's first deploy, empty slug); he signed in, the import ran, he approved all drafts; Claude reran the deploy with `isaac-anderson-art-ddm6dy`. Live at https://studio-site.bobdylan2000.workers.dev/.
 
 **Changes from the plan.** The import's site step publishes only the site photos it places; a work placed on a page waits
 for Isaac's approval (D-122). The live site learns its studio on a second run of its deploy (D-123).

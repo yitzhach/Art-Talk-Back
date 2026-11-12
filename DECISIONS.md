@@ -668,3 +668,8 @@ checks each stage on staging itself and asks him only for what needs his yes.
 Isaac, same day: "the live site is still only a testing site until I move it over and attach it to my actual URL",
 so until his own domain points at `studio-site`, Claude ships stages live without asking first. Still his: secrets,
 spending money, deleting data or Workers, a new Worker's first deploy, and the domain move itself.
+
+### D-170 · Stage 7 (second studio) on hold; Isaac tests everything first · 2026-11-12 · Isaac
+"No need to build that out just yet. Let's put in the notes to hold on that. I will fully test this first." Stage 7
+is not started until he says so. He tests stages 1–6 on the live test address (`docs/TESTING.md`), then a final pass
+in Claude Code works from what he found. The Square card test stays deferred (D-162).

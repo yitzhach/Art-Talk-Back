@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Testing guide and holds (D-170)
+- `docs/TESTING.md`: Isaac's click-through test of stages 1–6 on the live test address. Stage 7 on hold; handoff has
+  the final-pass prompt.
+
 ### Site 3.0 · stage 6 live (D-169)
 - Art-Talk-Back#55 and IA-ART-SITE-REPO#7 merged, platform first; migration 0015 on production; live smoke 15/15.
   Isaac's rule: ship without asking until his own domain is attached (D-169).

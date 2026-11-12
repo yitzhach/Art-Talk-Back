@@ -660,8 +660,8 @@ Isaac: buyers type their ZIP and see an estimate, so shipping never surprises th
 estimate instead of a scary number. He ships from **42503** (Kentucky), mostly UPS through Pirate Ship, usually to
 homes (residential surcharge).
 
-- **The box.** The piece's size plus packing on every side (setting, default 2.5 in a side, so +5 in on each
-  dimension). Billable weight = the larger of the actual weight (the piece's weight plus a packing allowance, default
+- **The box.** The piece's size plus packing on every side (setting, **2 in a side**, Isaac 2026-11-12, so +4 in on
+  each dimension). Billable weight = the larger of the actual weight (the piece's weight plus a packing allowance, default
   3 lb) and the box's size weight (L × W × H ÷ 139, rounded up). No weight entered → size weight only.
 - **The price.** Zone from the origin ZIP to the buyer's ZIP (UPS's zone chart for 425, stored as data), then a rate
   grid (zone × billable pound) taken from Pirate Ship's own rate calculator from 42503, plus the residential surcharge
@@ -678,9 +678,9 @@ homes (residential surcharge).
   uncached, the ZIP kept only in that browser); the cart asks once for the ZIP and uses it for every large piece; the
   checkout total uses the same calculation with the ZIP, so the number never changes unseen. Square's address must
   match the ZIP's zone, or the buyer confirms the new total first.
-- **What it means for sizes (2.5 in packing).** A 20×26 becomes a 25×31 box, over UPS's 30 in second side, so it
-  would be oversize; with 2 in packing it's 24×30 and isn't. A 24×36 is oversize either way (length plus girth). So
-  roughly, pieces up to about 24×30 get a ZIP estimate and bigger ones get Isaac's.
+- **What it means for sizes (2 in packing, 1.5 in deep).** A 20×26 is a 24×30 box and a 24×30 a 28×34 box, both
+  under UPS's lines; a 24×36 (length plus girth 107 in) is oversize. So roughly, pieces up to about 24×30 get a ZIP
+  estimate and bigger ones get Isaac's.
 
 #### The calculator (one pure function in `packages/core`, called only by studio-api)
 
@@ -877,7 +877,7 @@ his "ship": platform first, then site.
 6. Local pickup from the studio? Default: off.
 7. ~~The estimator: only large pieces use the ZIP estimate?~~ **Answered 2026-11-12: yes** (Isaac); tiers 1 and 2
    stay free and $22.
-8. Packing on each side: 2 or 3 in (default 2.5)? 2 in keeps a 20×26 out of oversize.
+8. ~~Packing on each side?~~ **Answered 2026-11-12: 2 in** (Isaac).
 
 
 ### The built plan (cards A–E, one piece per order; the revision above changes it where its table says)

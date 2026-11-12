@@ -5,11 +5,16 @@ Read this first, then `CLAUDE.md`, then `docs/phase-3.md` (assistant) or `docs/p
 
 ## Where things stand
 
-- **Site 3.0 stage 3 (visitor assistant) planned, waiting for Isaac (2026-11-11, D-125…D-131, `docs/phase-6-site.md` → Stage 3).**
-  His answers to the stage 3 questions are recorded. Still to come from him: his real visitor questions (the test
-  set), the oddest one, where his work can be seen, the general facts (materials, outdoor use, weight, hanging, care),
-  the deposit wording; then his OK on the plan, and whether to pay for a text-message service for lead texts.
-  Nothing built. Next session: take his list, finish the plan's test set, get the OK, build from card A.
+- **Site 3.0 stage 3 approved, to build next (2026-11-12, D-125…D-133, `docs/phase-6-site.md` → Stage 3).**
+  Isaac: "for the AI assistant, let's add it now"; his own visitor questions, the oddest one, where his work can be
+  seen, the general facts (materials, outdoor use, weight, hanging, care) and the deposit wording follow "soon
+  enough" and complete the test set (the gate waits for them, D-132). He added the inquiry list and contact sheet
+  (D-133, card F): a cart-like `/inquiry` page, Email as a form with pictures or a downloadable PDF/PNG/JPEG sheet,
+  Text/Call through a sheet with the number kept from spam bots. Still his: whether to pay for a text-message service
+  for lead texts (email until then). He hasn't tested the live site on his phone yet; design tweaks come near the end.
+  `/studio` already edits on the fly (add a work, photos, edit, sold, unpublish, delete, undo; the Site screen's
+  words, contact and photos); the live site shows a change within about 10 s (D-124).
+  Next session: build stage 3 from card A (migration 0012), `backend-builder` for the platform half.
 
 - **Site 3.0 stage 2 (the public site) shipped to production (2026-11-12, D-116…D-124, `docs/phase-6-site.md`).**
   Site repo `yitzhach/IA-ART-SITE-REPO` (Workers `studio-site`, `studio-site-staging`); Art-Talk-Back #48, site #2.

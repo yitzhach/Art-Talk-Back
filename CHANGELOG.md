@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+### Site 3.0 · stage 3 approved; the inquiry list added (D-132, D-133)
+- Isaac OK'd building the visitor assistant now (his test questions follow) and asked for a cart-like inquiry page and a contact sheet; `docs/phase-6-site.md` → Stage 3 gains card F and a gate step. Handoff and next-session prompt updated. Docs only.
+
 ### Site 3.0 · stage 2 in production (2026-11-12)
 - 0011 applied by "Deploy production API"; production `studio-assistant` and `studio-site` deployed; the live site shows studio `isaac-anderson-art-ddm6dy`. Docs only here.
 

@@ -875,7 +875,8 @@ his "ship": platform first, then site.
 4. Does the mid tier's $22 drop when paired (R1)? Default: yes.
 5. Only the US? Default: yes; everywhere else is a quote.
 6. Local pickup from the studio? Default: off.
-7. The estimator: tiers 1 and 2 stay free and $22, and only large pieces use the ZIP estimate? Default: yes.
+7. ~~The estimator: only large pieces use the ZIP estimate?~~ **Answered 2026-11-12: yes** (Isaac); tiers 1 and 2
+   stay free and $22.
 8. Packing on each side: 2 or 3 in (default 2.5)? 2 in keeps a 20×26 out of oversize.
 
 

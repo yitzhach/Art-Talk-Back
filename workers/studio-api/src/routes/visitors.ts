@@ -362,7 +362,7 @@ visitorRoutes.openapi(
     let room = MAIL_ATTACH_BYTES;
     const attach = pics.filter((p) => (room -= p.bytes.byteLength) >= 0);
     const mail = sendLeadMail(c.env, studio.id, {
-      kind: lead.kind, name: lead.name ?? null, email: lead.email ?? null, phone: lead.phone ?? null, note: lead.note ?? null, works, origin, chat,
+      kind: lead.kind, name: lead.name ?? null, email: lead.email?.toLowerCase() ?? null, phone: lead.phone ?? null, note: lead.note ?? null, works, origin, chat,
       pictures: attach.map((p) => ({ filename: p.meta.name, content: toBase64(p.bytes) })), morePictures: pics.length - attach.length, studioName: name,
     });
     try { c.executionCtx.waitUntil(mail); } catch { await mail; }

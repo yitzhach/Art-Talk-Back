@@ -6,6 +6,7 @@ import type { Env } from "./env";
 import { type Model, anthropicModel, modelSettings } from "./model";
 import { StudioError, studioFor } from "./studio";
 import { type DeviceAction, type TurnEvent, type TurnInput, runTurn } from "./turn";
+import { handleVisitor } from "./visitor";
 
 /** Device actions an app may declare (D-079): names the model sees, schemas it fills. */
 const MAX_DEVICE_ACTIONS = 40;
@@ -89,6 +90,8 @@ export function makeHandler(modelFor: (env: Env) => Model = anthropicModel) {
     async fetch(req: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
       const url = new URL(req.url);
       if (url.pathname === "/assistant/draft") return draft(req, env, ctx);
+      // A visitor on a studio's public site (Site 3.0 stage 3): public data only, never an owner session (D-135).
+      if (url.pathname === "/assistant/visitor") return handleVisitor(req, env, modelFor);
       if (url.pathname !== "/assistant/chat") return json(404, "not_found", "No such route");
       if (req.method !== "POST") return json(405, "bad_request", "POST a message");
       const input = parse((await req.json().catch(() => ({}))) as ChatBody);

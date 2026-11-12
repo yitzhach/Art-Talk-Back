@@ -25,8 +25,8 @@ export async function expireHolds(env: Env, now = nowIso()): Promise<number> {
   let n = 0;
   for (const l of results) {
     try {
-      await runAction(getAction("lead.expire_hold") as never, { id: l.id }, { env, actor: systemActor(l.studio_id), origin: "https://studio-api", source: "system" });
-      n++;
+      const r = await runAction(getAction("lead.expire_hold") as never, { id: l.id }, { env, actor: systemActor(l.studio_id), origin: "https://studio-api", source: "system" });
+      if (r.activityIds.length) n++;
     } catch (e) {
       console.error("hold expiry failed", l.id, e);
     }

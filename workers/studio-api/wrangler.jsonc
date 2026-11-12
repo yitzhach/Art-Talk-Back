@@ -23,6 +23,8 @@
     }
   ],
   "r2_buckets": [{ "binding": "FILES", "bucket_name": "studio-files-dev" }],
+  // Holds ending (hourly) and the site's daily summary email (src/jobs.ts, D-137).
+  "triggers": { "crons": ["7 * * * *", "23 15 * * *"] },
 
   // Secrets (set with `wrangler secret put`, or .dev.vars locally — never committed):
   //   SIGNING_KEY       HMAC key for file links (D-020). Required.
@@ -39,7 +41,8 @@
       "d1_databases": [
         { "binding": "DB", "database_name": "studio-db-staging", "database_id": "b9f0970a-71e0-4ead-ab68-556506cce029", "migrations_dir": "migrations" }
       ],
-      "r2_buckets": [{ "binding": "FILES", "bucket_name": "studio-files-staging" }]
+      "r2_buckets": [{ "binding": "FILES", "bucket_name": "studio-files-staging" }],
+      "triggers": { "crons": ["7 * * * *", "23 15 * * *"] }
     },
     "production": {
       "name": "studio-api",
@@ -47,7 +50,8 @@
       "d1_databases": [
         { "binding": "DB", "database_name": "studio-db-prod", "database_id": "4d735f82-6196-4c5c-96c7-8cfcea91f4c8", "migrations_dir": "migrations" }
       ],
-      "r2_buckets": [{ "binding": "FILES", "bucket_name": "iaa-files" }]
+      "r2_buckets": [{ "binding": "FILES", "bucket_name": "iaa-files" }],
+      "triggers": { "crons": ["7 * * * *", "23 15 * * *"] }
     }
   }
 }

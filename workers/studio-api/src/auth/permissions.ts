@@ -12,8 +12,11 @@ export type Permission =
   | "settings:read" | "settings:write"
   | "activity:read" | "activity:undo"
   | "assistant:use"
-  | "shares:guest";
+  | "shares:guest"
+  /** A visitor on a studio's public site (Site 3.0 stage 3): their own leads, pages and email only. */
+  | "site:visitor";
 
+// A guest is someone with a client link (D-092) or a visitor on the public site (D-134).
 // D-023: staff can do day-to-day work but not delete or change settings.
 // Client-role users get nothing here until the client portal (Phase 4).
 const STAFF: readonly Permission[] = [
@@ -25,7 +28,7 @@ const STAFF: readonly Permission[] = [
 
 export function can(role: Role, permission: Permission): boolean {
   // A guest (someone with a client link, D-092) can do only what the link's own actions allow.
-  if (role === "guest") return permission === "shares:guest";
+  if (role === "guest") return permission === "shares:guest" || permission === "site:visitor";
   if (role === "owner") return true;
   if (role === "staff") return STAFF.includes(permission);
   return false;

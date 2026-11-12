@@ -6,6 +6,7 @@ import { SYNC_PUSH_MAX_OPS, newId } from "@studio/core";
 import { beforeAll, describe, expect, it } from "vitest";
 import { makeWork, studioSlug } from "./catalogue-helpers";
 import { ASSISTANT, BASE, call, makeStudio, type Studio } from "./helpers";
+import { vi } from "vitest";
 
 let A: Studio;
 let B: Studio;
@@ -15,7 +16,8 @@ const b: Record<string, any> = {};
 async function snapshotB() {
   const out: Record<string, unknown> = {};
   for (const t of ["artworks", "clients", "shows", "sales", "placements", "files", "studio_settings", "activity_log", "memberships",
-    "assistant_policy", "pending_actions", "assistant_messages", "boards", "pins", "board_feedback", "shares"]) {
+    "assistant_policy", "pending_actions", "assistant_messages", "boards", "pins", "board_feedback", "shares",
+    "visitors", "visitor_messages", "visitor_pages", "leads", "assistant_usage"]) {
     out[t] = (await env.DB.prepare(`SELECT * FROM ${t} WHERE studio_id = ? ORDER BY 1`).bind(B.studioId).all()).results;
   }
   return out;
@@ -62,7 +64,22 @@ beforeAll(async () => {
     json: { meta: { ...bs.meta, site: { name: "B's site", phone: "5551234567", photos: { "home.hero": [b.banner.work.id, b.public.work.id] } } } } });
   b.opKey = newId();
   await call("/v1/artworks", { method: "POST", cookie: B.cookie, headers: { "Idempotency-Key": b.opKey }, json: { title: "B keyed" } });
+  // B's site visitor (Site 3.0 stage 3): a chat, a made page, a hold request.
+  vi.spyOn(globalThis, "fetch").mockImplementation(async () => Response.json({ id: "email" }));
+  const bSlug = await studioSlug(B.studioId);
+  const bv = { "x-visitor-key": BVISITOR };
+  const start = (await call(`/v1/public/studios/${bSlug}/visitor/turn-start`, { method: "POST", headers: { ...ASSISTANT, ...bv }, json: {} })).data;
+  b.visitorThread = start.threadId;
+  await call(`/v1/public/studios/${bSlug}/visitor/turn`, { method: "POST", headers: { ...ASSISTANT, ...bv }, json: {
+    threadId: start.threadId, user: "B's visitor question", reply: "B's answer", works: [b.public.work.slug], askArtist: false, fixed: 0,
+    model: "claude-haiku-5-5", usage: { inputTokens: 10, outputTokens: 10, cacheReadTokens: 0, cacheWriteTokens: 0 } } });
+  b.page = (await call(`/v1/public/studios/${bSlug}/visitor/pages`, { method: "POST", headers: bv, json: { title: "B's page", works: [b.public.work.slug] } })).data;
+  b.lead = (await call(`/v1/public/studios/${bSlug}/visitor/leads`, { method: "POST", headers: bv,
+    json: { kind: "hold", works: [b.public.work.slug], email: "b-visitor@example.test", name: "B's visitor", threadId: start.threadId } })).data;
+  if (!b.lead?.id) throw new Error(`B lead: ${JSON.stringify(b.lead)} page: ${JSON.stringify(b.page)}`);
+  vi.restoreAllMocks();
 });
+const BVISITOR = "b".repeat(32);
 
 const covered = new Set<string>();
 const cases: [string, string, () => Promise<{ status: number; data: any }>][] = [];
@@ -71,6 +88,10 @@ const attempt = (method: string, path: string, fn: () => Promise<{ status: numbe
   cases.push([method, path, fn]);
 };
 
+attempt("get", "/leads/{id}", () => call(`/v1/leads/${b.lead.id}`, { cookie: A.cookie }));
+attempt("post", "/leads/{id}/approve-hold", () => call(`/v1/leads/${b.lead.id}/approve-hold`, { method: "POST", cookie: A.cookie, headers: { "If-Match": "1" } }));
+attempt("post", "/leads/{id}/decline", () => call(`/v1/leads/${b.lead.id}/decline`, { method: "POST", cookie: A.cookie, headers: { "If-Match": "1" } }));
+attempt("post", "/leads/{id}/close", () => call(`/v1/leads/${b.lead.id}/close`, { method: "POST", cookie: A.cookie, headers: { "If-Match": "1" } }));
 attempt("get", "/artworks/{id}", () => call(`/v1/artworks/${b.artwork.id}`, { cookie: A.cookie }));
 attempt("patch", "/artworks/{id}", () => call(`/v1/artworks/${b.artwork.id}`, { method: "PATCH", cookie: A.cookie, headers: { "If-Match": "1" }, json: { title: "pwned" } }));
 attempt("delete", "/artworks/{id}", () => call(`/v1/artworks/${b.artwork.id}`, { method: "DELETE", cookie: A.cookie, headers: { "If-Match": "1" } }));
@@ -302,6 +323,53 @@ describe("studio A can't reach studio B", () => {
       expect(got.places).toEqual({ "home.hero": [] });
       const theirs = (await call(`/v1/public/studios/${await studioSlug(B.studioId)}/site-photos`)).data;
       expect(theirs.places["home.hero"].map((p: any) => p.title)).toEqual(["B's banner", "B's public heron"]);
+    }],
+    // The visitor routes (Site 3.0 stage 3): A's slug never reaches B's visitors, pages, leads or catalogue, and B's
+    // visitor key means nothing on A's site.
+    ["get", "/public/studios/{slug}/assistant", async () => {
+      expect(JSON.stringify((await call(`/v1/public/studios/${await studioSlug(A.studioId)}/assistant`)).data)).not.toContain("B's");
+    }],
+    ["get", "/public/studios/{slug}/digest", async () => {
+      expect((await call(`/v1/public/studios/${await studioSlug(A.studioId)}/digest`)).data.works.map((w: any) => w.title)).not.toContain("B's public heron");
+    }],
+    ["get", "/public/studios/{slug}/pages/{token}", async () => {
+      expect((await call(`/v1/public/studios/${await studioSlug(A.studioId)}/pages/${b.page.token}`)).status).toBe(404);
+    }],
+    ["get", "/public/studios/{slug}/visitor", async () => {
+      expect((await call(`/v1/public/studios/${await studioSlug(A.studioId)}/visitor`, { headers: { "x-visitor-key": BVISITOR } })).data)
+        .toEqual({ email: null, threadId: null, messages: [] });
+    }],
+    ["post", "/public/studios/{slug}/visitor/email-code", async () => {
+      vi.spyOn(globalThis, "fetch").mockImplementation(async () => Response.json({ id: "email" }));
+      expect((await call(`/v1/public/studios/${await studioSlug(A.studioId)}/visitor/email-code`, { method: "POST", headers: { "x-visitor-key": BVISITOR }, json: { email: "x@example.test" } })).status).toBe(204);
+      vi.restoreAllMocks();
+    }],
+    ["post", "/public/studios/{slug}/visitor/email-verify", async () => {
+      expect((await call(`/v1/public/studios/${await studioSlug(A.studioId)}/visitor/email-verify`, { method: "POST", headers: { "x-visitor-key": BVISITOR }, json: { email: "x@example.test", code: "000000" } })).status).toBe(400);
+    }],
+    ["post", "/public/studios/{slug}/visitor/pages", async () => {
+      expect((await call(`/v1/public/studios/${await studioSlug(A.studioId)}/visitor/pages`, { method: "POST", headers: { "x-visitor-key": BVISITOR }, json: { title: "x", works: [b.public.work.slug] } })).status).toBe(404);
+    }],
+    ["post", "/public/studios/{slug}/visitor/leads", async () => {
+      expect((await call(`/v1/public/studios/${await studioSlug(A.studioId)}/visitor/leads`, { method: "POST", headers: { "x-visitor-key": BVISITOR }, json: { kind: "inquiry", works: [b.public.work.slug], email: "x@example.test" } })).status).toBe(404);
+    }],
+    ["post", "/public/studios/{slug}/visitor/turn-start", async () => {
+      const got = (await call(`/v1/public/studios/${await studioSlug(A.studioId)}/visitor/turn-start`, { method: "POST", headers: { ...ASSISTANT, "x-visitor-key": BVISITOR }, json: {} })).data;
+      expect(got.history).toEqual([]);
+      expect(got.threadId).not.toBe(b.visitorThread);
+    }],
+    ["post", "/public/studios/{slug}/visitor/turn", async () => {
+      // A's visitor (B's key on A's site) can't write into B's thread: it's another studio's, so it starts fresh in A.
+      const r = await call(`/v1/public/studios/${await studioSlug(A.studioId)}/visitor/turn`, { method: "POST", headers: { ...ASSISTANT, "x-visitor-key": BVISITOR }, json: {
+        threadId: b.visitorThread, user: "x", reply: "y", works: [], askArtist: false, fixed: 0, model: "claude-haiku-5-5",
+        usage: { inputTokens: 1, outputTokens: 1, cacheReadTokens: 0, cacheWriteTokens: 0 } } });
+      expect(r.status).toBe(200);
+    }],
+    ["get", "/leads", async () => expect((await call("/v1/leads?status=all", { cookie: A.cookie })).data.items).toEqual([])],
+    ["get", "/site/assistant-usage", async () => {
+      // Only A's own turns (the visitor case above may have made one), never B's.
+      const mine = Number((await env.DB.prepare("SELECT coalesce(sum(turns), 0) AS n FROM assistant_usage WHERE studio_id = ?").bind(A.studioId).first("n")) ?? 0);
+      expect((await call("/v1/site/assistant-usage", { cookie: A.cookie })).data.turns).toBe(mine);
     }],
     ["get", "/artworks", async () => expect((await call("/v1/artworks", { cookie: A.cookie })).data.items).toEqual([])],
     ["get", "/clients", async () => expect((await call("/v1/clients", { cookie: A.cookie })).data.items).toEqual([])],

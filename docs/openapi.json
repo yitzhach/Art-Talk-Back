@@ -12966,6 +12966,2878 @@
           }
         }
       }
+    },
+    "/public/studios/{slug}/assistant": {
+      "get": {
+        "tags": [
+          "visitor"
+        ],
+        "security": [],
+        "summary": "What the site's chat sheet needs: greeting, suggestions, the studio's answers, and whether the chat is on (no sign-in)",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "slug",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "type": "string"
+                    },
+                    "greeting": {
+                      "type": "string"
+                    },
+                    "suggestions": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "replyTime": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "answers": {
+                      "type": "object",
+                      "properties": {
+                        "commissionPrice": {
+                          "type": "string"
+                        },
+                        "commissionTimeline": {
+                          "type": "string"
+                        },
+                        "deposit": {
+                          "type": "string"
+                        },
+                        "shipping": {
+                          "type": "string"
+                        },
+                        "returns": {
+                          "type": "string"
+                        },
+                        "trade": {
+                          "type": "string"
+                        },
+                        "visits": {
+                          "type": "string"
+                        },
+                        "whereToSee": {
+                          "type": "string"
+                        },
+                        "materials": {
+                          "type": "string"
+                        },
+                        "outdoorUse": {
+                          "type": "string"
+                        },
+                        "weight": {
+                          "type": "string"
+                        },
+                        "hanging": {
+                          "type": "string"
+                        },
+                        "care": {
+                          "type": "string"
+                        },
+                        "other": {
+                          "type": "string"
+                        }
+                      }
+                    },
+                    "available": {
+                      "type": "boolean"
+                    },
+                    "catalogueVersion": {
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "name",
+                    "greeting",
+                    "suggestions",
+                    "replyTime",
+                    "answers",
+                    "available",
+                    "catalogueVersion"
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (or in another studio)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/public/studios/{slug}/digest": {
+      "get": {
+        "tags": [
+          "visitor"
+        ],
+        "security": [],
+        "summary": "The catalogue in brief for the assistant: every public work's public fields, newest first, up to 300 (no sign-in)",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "slug",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "works": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "slug": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 80,
+                            "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+                          },
+                          "title": {
+                            "type": "string"
+                          },
+                          "medium": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "year": {
+                            "type": [
+                              "integer",
+                              "null"
+                            ]
+                          },
+                          "width": {
+                            "type": [
+                              "number",
+                              "null"
+                            ]
+                          },
+                          "height": {
+                            "type": [
+                              "number",
+                              "null"
+                            ]
+                          },
+                          "depth": {
+                            "type": [
+                              "number",
+                              "null"
+                            ]
+                          },
+                          "sizeUnit": {
+                            "type": "string",
+                            "enum": [
+                              "in",
+                              "cm"
+                            ]
+                          },
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "available",
+                              "reserved",
+                              "sold",
+                              "not_for_sale",
+                              "archived"
+                            ]
+                          },
+                          "priceCents": {
+                            "type": [
+                              "integer",
+                              "null"
+                            ]
+                          },
+                          "currency": {
+                            "type": [
+                              "string",
+                              "null"
+                            ],
+                            "pattern": "^[A-Z]{3}$"
+                          },
+                          "collection": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "tags": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          },
+                          "palette": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "hex": {
+                                  "type": "string",
+                                  "pattern": "^#[0-9a-fA-F]{6}$"
+                                },
+                                "share": {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 10000
+                                }
+                              },
+                              "required": [
+                                "hex",
+                                "share"
+                              ]
+                            }
+                          },
+                          "blurb": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "image": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "slug",
+                          "title",
+                          "medium",
+                          "year",
+                          "width",
+                          "height",
+                          "depth",
+                          "sizeUnit",
+                          "status",
+                          "priceCents",
+                          "currency",
+                          "collection",
+                          "tags",
+                          "palette",
+                          "blurb",
+                          "image"
+                        ]
+                      }
+                    },
+                    "catalogueVersion": {
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "works",
+                    "catalogueVersion"
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (or in another studio)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/public/studios/{slug}/pages/{token}": {
+      "get": {
+        "tags": [
+          "visitor"
+        ],
+        "security": [],
+        "summary": "A made page: its title, the question and its works that are still public (no sign-in; unlisted)",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "slug",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "token",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "token": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "question": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "works": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "slug": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 80,
+                            "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+                          },
+                          "title": {
+                            "type": "string"
+                          },
+                          "medium": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "year": {
+                            "type": [
+                              "integer",
+                              "null"
+                            ]
+                          },
+                          "width": {
+                            "type": [
+                              "number",
+                              "null"
+                            ]
+                          },
+                          "height": {
+                            "type": [
+                              "number",
+                              "null"
+                            ]
+                          },
+                          "depth": {
+                            "type": [
+                              "number",
+                              "null"
+                            ]
+                          },
+                          "sizeUnit": {
+                            "type": "string",
+                            "enum": [
+                              "in",
+                              "cm"
+                            ]
+                          },
+                          "editionSize": {
+                            "type": [
+                              "integer",
+                              "null"
+                            ]
+                          },
+                          "collection": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "tags": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          },
+                          "palette": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "hex": {
+                                  "type": "string",
+                                  "pattern": "^#[0-9a-fA-F]{6}$"
+                                },
+                                "share": {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 10000
+                                }
+                              },
+                              "required": [
+                                "hex",
+                                "share"
+                              ]
+                            }
+                          },
+                          "description": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "available",
+                              "reserved",
+                              "sold",
+                              "not_for_sale",
+                              "archived"
+                            ]
+                          },
+                          "priceCents": {
+                            "type": [
+                              "integer",
+                              "null"
+                            ]
+                          },
+                          "currency": {
+                            "type": [
+                              "string",
+                              "null"
+                            ],
+                            "pattern": "^[A-Z]{3}$"
+                          },
+                          "images": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "fileId": {
+                                  "type": "string",
+                                  "description": "ULID"
+                                },
+                                "altText": {
+                                  "type": [
+                                    "string",
+                                    "null"
+                                  ]
+                                },
+                                "aspectRatio": {
+                                  "type": [
+                                    "number",
+                                    "null"
+                                  ],
+                                  "exclusiveMinimum": 0
+                                },
+                                "sizes": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object",
+                                    "properties": {
+                                      "width": {
+                                        "anyOf": [
+                                          {
+                                            "type": "number",
+                                            "enum": [
+                                              480
+                                            ]
+                                          },
+                                          {
+                                            "type": "number",
+                                            "enum": [
+                                              960
+                                            ]
+                                          },
+                                          {
+                                            "type": "number",
+                                            "enum": [
+                                              1600
+                                            ]
+                                          }
+                                        ]
+                                      },
+                                      "url": {
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": [
+                                      "width",
+                                      "url"
+                                    ]
+                                  }
+                                }
+                              },
+                              "required": [
+                                "fileId",
+                                "altText",
+                                "aspectRatio",
+                                "sizes"
+                              ]
+                            }
+                          },
+                          "publishedAt": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "slug",
+                          "title",
+                          "medium",
+                          "year",
+                          "width",
+                          "height",
+                          "depth",
+                          "sizeUnit",
+                          "editionSize",
+                          "collection",
+                          "tags",
+                          "palette",
+                          "description",
+                          "status",
+                          "priceCents",
+                          "currency",
+                          "images",
+                          "publishedAt"
+                        ]
+                      }
+                    },
+                    "createdAt": {
+                      "type": "string"
+                    },
+                    "catalogueVersion": {
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "token",
+                    "title",
+                    "question",
+                    "works",
+                    "createdAt",
+                    "catalogueVersion"
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (or in another studio)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/public/studios/{slug}/visitor": {
+      "get": {
+        "tags": [
+          "visitor"
+        ],
+        "security": [],
+        "summary": "This browser's chat (and any other browser's that proved the same email): to open the sheet where it was",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "slug",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "The site's per-browser key (D-134)"
+            },
+            "required": false,
+            "description": "The site's per-browser key (D-134)",
+            "name": "x-visitor-key",
+            "in": "header"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "email": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "threadId": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "messages": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "role": {
+                            "type": "string",
+                            "enum": [
+                              "user",
+                              "assistant"
+                            ]
+                          },
+                          "text": {
+                            "type": "string"
+                          },
+                          "works": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          },
+                          "at": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "role",
+                          "text",
+                          "works",
+                          "at"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "email",
+                    "threadId",
+                    "messages"
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (or in another studio)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/public/studios/{slug}/visitor/email-code": {
+      "post": {
+        "tags": [
+          "visitor"
+        ],
+        "security": [],
+        "summary": "Keep this chat: email a six-digit code to the visitor (D-131)",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "slug",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "The site's per-browser key (D-134)"
+            },
+            "required": false,
+            "description": "The site's per-browser key (D-134)",
+            "name": "x-visitor-key",
+            "in": "header"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "maxLength": 200,
+                    "format": "email"
+                  }
+                },
+                "required": [
+                  "email"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Sent (204 for any address)"
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (or in another studio)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many codes",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/public/studios/{slug}/visitor/email-verify": {
+      "post": {
+        "tags": [
+          "visitor"
+        ],
+        "security": [],
+        "summary": "Keep this chat: the code proves the email; this browser's chats now follow it",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "slug",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "The site's per-browser key (D-134)"
+            },
+            "required": false,
+            "description": "The site's per-browser key (D-134)",
+            "name": "x-visitor-key",
+            "in": "header"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "maxLength": 200,
+                    "format": "email"
+                  },
+                  "code": {
+                    "type": "string",
+                    "pattern": "^\\d{6}$"
+                  }
+                },
+                "required": [
+                  "email",
+                  "code"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "email": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "threadId": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "messages": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "role": {
+                            "type": "string",
+                            "enum": [
+                              "user",
+                              "assistant"
+                            ]
+                          },
+                          "text": {
+                            "type": "string"
+                          },
+                          "works": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          },
+                          "at": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "role",
+                          "text",
+                          "works",
+                          "at"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "email",
+                    "threadId",
+                    "messages"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (or in another studio)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many tries",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/public/studios/{slug}/visitor/pages": {
+      "post": {
+        "tags": [
+          "visitor"
+        ],
+        "security": [],
+        "summary": "Open these as a page: save works from a chat at their own unlisted link (D-131)",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "slug",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "The site's per-browser key (D-134)"
+            },
+            "required": false,
+            "description": "The site's per-browser key (D-134)",
+            "name": "x-visitor-key",
+            "in": "header"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "title": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 120
+                  },
+                  "question": {
+                    "type": "string",
+                    "maxLength": 500
+                  },
+                  "works": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 80,
+                      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+                    },
+                    "minItems": 1,
+                    "maxItems": 24
+                  }
+                },
+                "required": [
+                  "title",
+                  "works"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "token": {
+                      "type": "string"
+                    },
+                    "path": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "token",
+                    "path"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (or in another studio)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many pages today",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/public/studios/{slug}/visitor/leads": {
+      "post": {
+        "tags": [
+          "visitor"
+        ],
+        "security": [],
+        "summary": "Send Isaac an inquiry or a 48-hour hold request: JSON, or multipart with `lead` (JSON) and up to 5 `picture` files (D-129, D-133)",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "slug",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "The site's per-browser key (D-134)"
+            },
+            "required": false,
+            "description": "The site's per-browser key (D-134)",
+            "name": "x-visitor-key",
+            "in": "header"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "enum": [
+                      "inquiry",
+                      "hold"
+                    ]
+                  },
+                  "source": {
+                    "type": "string",
+                    "enum": [
+                      "chat",
+                      "form",
+                      "inquiry_list"
+                    ],
+                    "default": "form"
+                  },
+                  "works": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 80,
+                      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+                    },
+                    "maxItems": 24,
+                    "default": []
+                  },
+                  "name": {
+                    "type": "string",
+                    "maxLength": 120
+                  },
+                  "email": {
+                    "type": "string",
+                    "maxLength": 200,
+                    "format": "email"
+                  },
+                  "phone": {
+                    "type": "string",
+                    "pattern": "^\\+?[0-9 ().-]{7,24}$"
+                  },
+                  "note": {
+                    "type": "string",
+                    "maxLength": 3000
+                  },
+                  "threadId": {
+                    "type": "string",
+                    "description": "ULID"
+                  },
+                  "website": {
+                    "type": "string",
+                    "maxLength": 200
+                  }
+                },
+                "required": [
+                  "kind"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "lead": {
+                    "type": "string"
+                  },
+                  "picture": {}
+                },
+                "required": [
+                  "lead"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "description": "ULID"
+                    },
+                    "kind": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "kind",
+                    "status"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (or in another studio)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Over today's limit",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/public/studios/{slug}/visitor/turn-start": {
+      "post": {
+        "tags": [
+          "visitor"
+        ],
+        "summary": "The assistant asks whether this visitor may have a turn (limits, budget) and gets the conversation so far",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "slug",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "The site's per-browser key (D-134)"
+            },
+            "required": false,
+            "description": "The site's per-browser key (D-134)",
+            "name": "x-visitor-key",
+            "in": "header"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "fresh": {
+                    "type": "boolean"
+                  },
+                  "ip": {
+                    "type": "string",
+                    "maxLength": 64
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "allowed": {
+                          "type": "boolean",
+                          "enum": [
+                            true
+                          ]
+                        },
+                        "threadId": {
+                          "type": "string"
+                        },
+                        "visitorId": {
+                          "type": "string",
+                          "description": "ULID"
+                        },
+                        "history": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "role": {
+                                "type": "string",
+                                "enum": [
+                                  "user",
+                                  "assistant"
+                                ]
+                              },
+                              "text": {
+                                "type": "string"
+                              },
+                              "works": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string"
+                                }
+                              }
+                            },
+                            "required": [
+                              "role",
+                              "text",
+                              "works"
+                            ]
+                          }
+                        }
+                      },
+                      "required": [
+                        "allowed",
+                        "threadId",
+                        "visitorId",
+                        "history"
+                      ]
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "allowed": {
+                          "type": "boolean",
+                          "enum": [
+                            false
+                          ]
+                        },
+                        "reason": {
+                          "type": "string",
+                          "enum": [
+                            "off",
+                            "budget",
+                            "daily",
+                            "burst"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "allowed",
+                        "reason"
+                      ]
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not allowed for your role",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (or in another studio)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/public/studios/{slug}/visitor/turn": {
+      "post": {
+        "tags": [
+          "visitor"
+        ],
+        "summary": "The assistant records a finished turn: the visitor's message, the checked reply and what it cost (D-136)",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "slug",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "The site's per-browser key (D-134)"
+            },
+            "required": false,
+            "description": "The site's per-browser key (D-134)",
+            "name": "x-visitor-key",
+            "in": "header"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "threadId": {
+                    "type": "string",
+                    "description": "ULID"
+                  },
+                  "user": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 1000
+                  },
+                  "reply": {
+                    "type": "string",
+                    "maxLength": 4000
+                  },
+                  "works": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "maxLength": 80
+                    },
+                    "maxItems": 12
+                  },
+                  "askArtist": {
+                    "type": "boolean"
+                  },
+                  "fixed": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 100
+                  },
+                  "model": {
+                    "type": "string",
+                    "maxLength": 60
+                  },
+                  "usage": {
+                    "type": "object",
+                    "properties": {
+                      "inputTokens": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "outputTokens": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "cacheReadTokens": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "cacheWriteTokens": {
+                        "type": "integer",
+                        "minimum": 0
+                      }
+                    },
+                    "required": [
+                      "inputTokens",
+                      "outputTokens",
+                      "cacheReadTokens",
+                      "cacheWriteTokens"
+                    ]
+                  },
+                  "ip": {
+                    "type": "string",
+                    "maxLength": 64
+                  },
+                  "origin": {
+                    "type": "string",
+                    "maxLength": 200
+                  }
+                },
+                "required": [
+                  "threadId",
+                  "user",
+                  "reply",
+                  "works",
+                  "askArtist",
+                  "fixed",
+                  "model",
+                  "usage"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": {
+                      "type": "boolean"
+                    },
+                    "capped": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "ok",
+                    "capped"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not allowed for your role",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (or in another studio)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/leads": {
+      "get": {
+        "tags": [
+          "leads"
+        ],
+        "summary": "Leads from the site, newest first: open (new and held) by default",
+        "parameters": [
+          {
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "enum": [
+                    "new",
+                    "held",
+                    "declined",
+                    "closed"
+                  ]
+                },
+                {
+                  "type": "string",
+                  "enum": [
+                    "open",
+                    "all"
+                  ]
+                }
+              ],
+              "default": "open"
+            },
+            "required": false,
+            "name": "status",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "description": "ULID"
+                          },
+                          "version": {
+                            "type": "integer"
+                          },
+                          "kind": {
+                            "type": "string",
+                            "enum": [
+                              "inquiry",
+                              "hold"
+                            ]
+                          },
+                          "source": {
+                            "type": "string",
+                            "enum": [
+                              "chat",
+                              "form",
+                              "inquiry_list"
+                            ]
+                          },
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "new",
+                              "held",
+                              "declined",
+                              "closed"
+                            ]
+                          },
+                          "name": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "email": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "phone": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "note": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "works": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "id": {
+                                  "type": "string",
+                                  "description": "ULID"
+                                },
+                                "slug": {
+                                  "type": [
+                                    "string",
+                                    "null"
+                                  ]
+                                },
+                                "title": {
+                                  "type": "string"
+                                },
+                                "status": {
+                                  "type": "string",
+                                  "enum": [
+                                    "available",
+                                    "reserved",
+                                    "sold",
+                                    "not_for_sale",
+                                    "archived"
+                                  ]
+                                },
+                                "priceCents": {
+                                  "type": [
+                                    "integer",
+                                    "null"
+                                  ]
+                                },
+                                "currency": {
+                                  "type": [
+                                    "string",
+                                    "null"
+                                  ],
+                                  "pattern": "^[A-Z]{3}$"
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "slug",
+                                "title",
+                                "status",
+                                "priceCents",
+                                "currency"
+                              ]
+                            }
+                          },
+                          "fileIds": {
+                            "type": "array",
+                            "items": {
+                              "type": "string",
+                              "description": "ULID"
+                            }
+                          },
+                          "clientId": {
+                            "type": [
+                              "string",
+                              "null"
+                            ],
+                            "description": "ULID"
+                          },
+                          "threadId": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "expiresAt": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "createdAt": {
+                            "type": "string"
+                          },
+                          "updatedAt": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "version",
+                          "kind",
+                          "source",
+                          "status",
+                          "name",
+                          "email",
+                          "phone",
+                          "note",
+                          "works",
+                          "fileIds",
+                          "clientId",
+                          "threadId",
+                          "expiresAt",
+                          "createdAt",
+                          "updatedAt"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "items"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not allowed for your role",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/leads/{id}": {
+      "get": {
+        "tags": [
+          "leads"
+        ],
+        "summary": "One lead with the chat it came from",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "description": "ULID"
+                    },
+                    "version": {
+                      "type": "integer"
+                    },
+                    "kind": {
+                      "type": "string",
+                      "enum": [
+                        "inquiry",
+                        "hold"
+                      ]
+                    },
+                    "source": {
+                      "type": "string",
+                      "enum": [
+                        "chat",
+                        "form",
+                        "inquiry_list"
+                      ]
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "new",
+                        "held",
+                        "declined",
+                        "closed"
+                      ]
+                    },
+                    "name": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "email": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "phone": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "note": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "works": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "description": "ULID"
+                          },
+                          "slug": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "title": {
+                            "type": "string"
+                          },
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "available",
+                              "reserved",
+                              "sold",
+                              "not_for_sale",
+                              "archived"
+                            ]
+                          },
+                          "priceCents": {
+                            "type": [
+                              "integer",
+                              "null"
+                            ]
+                          },
+                          "currency": {
+                            "type": [
+                              "string",
+                              "null"
+                            ],
+                            "pattern": "^[A-Z]{3}$"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "slug",
+                          "title",
+                          "status",
+                          "priceCents",
+                          "currency"
+                        ]
+                      }
+                    },
+                    "fileIds": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "description": "ULID"
+                      }
+                    },
+                    "clientId": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "description": "ULID"
+                    },
+                    "threadId": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "expiresAt": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "createdAt": {
+                      "type": "string"
+                    },
+                    "updatedAt": {
+                      "type": "string"
+                    },
+                    "chat": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "role": {
+                            "type": "string",
+                            "enum": [
+                              "user",
+                              "assistant"
+                            ]
+                          },
+                          "text": {
+                            "type": "string"
+                          },
+                          "works": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          },
+                          "at": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "role",
+                          "text",
+                          "works",
+                          "at"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "version",
+                    "kind",
+                    "source",
+                    "status",
+                    "name",
+                    "email",
+                    "phone",
+                    "note",
+                    "works",
+                    "fileIds",
+                    "clientId",
+                    "threadId",
+                    "expiresAt",
+                    "createdAt",
+                    "updatedAt",
+                    "chat"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not allowed for your role",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (or in another studio)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/leads/{id}/approve-hold": {
+      "post": {
+        "tags": [
+          "leads"
+        ],
+        "summary": "Approve a hold request: the piece is reserved for 48 hours",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Record version the change was based on"
+            },
+            "required": false,
+            "description": "Record version the change was based on",
+            "name": "if-match",
+            "in": "header"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "description": "ULID"
+                    },
+                    "version": {
+                      "type": "integer"
+                    },
+                    "kind": {
+                      "type": "string",
+                      "enum": [
+                        "inquiry",
+                        "hold"
+                      ]
+                    },
+                    "source": {
+                      "type": "string",
+                      "enum": [
+                        "chat",
+                        "form",
+                        "inquiry_list"
+                      ]
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "new",
+                        "held",
+                        "declined",
+                        "closed"
+                      ]
+                    },
+                    "name": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "email": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "phone": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "note": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "works": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "description": "ULID"
+                          },
+                          "slug": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "title": {
+                            "type": "string"
+                          },
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "available",
+                              "reserved",
+                              "sold",
+                              "not_for_sale",
+                              "archived"
+                            ]
+                          },
+                          "priceCents": {
+                            "type": [
+                              "integer",
+                              "null"
+                            ]
+                          },
+                          "currency": {
+                            "type": [
+                              "string",
+                              "null"
+                            ],
+                            "pattern": "^[A-Z]{3}$"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "slug",
+                          "title",
+                          "status",
+                          "priceCents",
+                          "currency"
+                        ]
+                      }
+                    },
+                    "fileIds": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "description": "ULID"
+                      }
+                    },
+                    "clientId": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "description": "ULID"
+                    },
+                    "threadId": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "expiresAt": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "createdAt": {
+                      "type": "string"
+                    },
+                    "updatedAt": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "version",
+                    "kind",
+                    "source",
+                    "status",
+                    "name",
+                    "email",
+                    "phone",
+                    "note",
+                    "works",
+                    "fileIds",
+                    "clientId",
+                    "threadId",
+                    "expiresAt",
+                    "createdAt",
+                    "updatedAt"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not allowed for your role",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (or in another studio)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The record changed since you loaded it",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/leads/{id}/decline": {
+      "post": {
+        "tags": [
+          "leads"
+        ],
+        "summary": "Decline a hold request or set an inquiry aside; a held piece goes back on sale",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Record version the change was based on"
+            },
+            "required": false,
+            "description": "Record version the change was based on",
+            "name": "if-match",
+            "in": "header"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "description": "ULID"
+                    },
+                    "version": {
+                      "type": "integer"
+                    },
+                    "kind": {
+                      "type": "string",
+                      "enum": [
+                        "inquiry",
+                        "hold"
+                      ]
+                    },
+                    "source": {
+                      "type": "string",
+                      "enum": [
+                        "chat",
+                        "form",
+                        "inquiry_list"
+                      ]
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "new",
+                        "held",
+                        "declined",
+                        "closed"
+                      ]
+                    },
+                    "name": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "email": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "phone": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "note": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "works": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "description": "ULID"
+                          },
+                          "slug": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "title": {
+                            "type": "string"
+                          },
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "available",
+                              "reserved",
+                              "sold",
+                              "not_for_sale",
+                              "archived"
+                            ]
+                          },
+                          "priceCents": {
+                            "type": [
+                              "integer",
+                              "null"
+                            ]
+                          },
+                          "currency": {
+                            "type": [
+                              "string",
+                              "null"
+                            ],
+                            "pattern": "^[A-Z]{3}$"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "slug",
+                          "title",
+                          "status",
+                          "priceCents",
+                          "currency"
+                        ]
+                      }
+                    },
+                    "fileIds": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "description": "ULID"
+                      }
+                    },
+                    "clientId": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "description": "ULID"
+                    },
+                    "threadId": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "expiresAt": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "createdAt": {
+                      "type": "string"
+                    },
+                    "updatedAt": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "version",
+                    "kind",
+                    "source",
+                    "status",
+                    "name",
+                    "email",
+                    "phone",
+                    "note",
+                    "works",
+                    "fileIds",
+                    "clientId",
+                    "threadId",
+                    "expiresAt",
+                    "createdAt",
+                    "updatedAt"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not allowed for your role",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (or in another studio)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The record changed since you loaded it",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/leads/{id}/close": {
+      "post": {
+        "tags": [
+          "leads"
+        ],
+        "summary": "Mark a lead done",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Record version the change was based on"
+            },
+            "required": false,
+            "description": "Record version the change was based on",
+            "name": "if-match",
+            "in": "header"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "description": "ULID"
+                    },
+                    "version": {
+                      "type": "integer"
+                    },
+                    "kind": {
+                      "type": "string",
+                      "enum": [
+                        "inquiry",
+                        "hold"
+                      ]
+                    },
+                    "source": {
+                      "type": "string",
+                      "enum": [
+                        "chat",
+                        "form",
+                        "inquiry_list"
+                      ]
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "new",
+                        "held",
+                        "declined",
+                        "closed"
+                      ]
+                    },
+                    "name": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "email": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "phone": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "note": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "works": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "description": "ULID"
+                          },
+                          "slug": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "title": {
+                            "type": "string"
+                          },
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "available",
+                              "reserved",
+                              "sold",
+                              "not_for_sale",
+                              "archived"
+                            ]
+                          },
+                          "priceCents": {
+                            "type": [
+                              "integer",
+                              "null"
+                            ]
+                          },
+                          "currency": {
+                            "type": [
+                              "string",
+                              "null"
+                            ],
+                            "pattern": "^[A-Z]{3}$"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "slug",
+                          "title",
+                          "status",
+                          "priceCents",
+                          "currency"
+                        ]
+                      }
+                    },
+                    "fileIds": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "description": "ULID"
+                      }
+                    },
+                    "clientId": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "description": "ULID"
+                    },
+                    "threadId": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "expiresAt": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "createdAt": {
+                      "type": "string"
+                    },
+                    "updatedAt": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "version",
+                    "kind",
+                    "source",
+                    "status",
+                    "name",
+                    "email",
+                    "phone",
+                    "note",
+                    "works",
+                    "fileIds",
+                    "clientId",
+                    "threadId",
+                    "expiresAt",
+                    "createdAt",
+                    "updatedAt"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not allowed for your role",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (or in another studio)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The record changed since you loaded it",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/site/assistant-usage": {
+      "get": {
+        "tags": [
+          "leads"
+        ],
+        "summary": "What the site's assistant has spent this month, against its budget",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "month": {
+                      "type": "string"
+                    },
+                    "turns": {
+                      "type": "integer"
+                    },
+                    "spentCents": {
+                      "type": "number"
+                    },
+                    "budgetCents": {
+                      "type": "integer"
+                    },
+                    "capped": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "month",
+                    "turns",
+                    "spentCents",
+                    "budgetCents",
+                    "capped"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not allowed for your role",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "webhooks": {}

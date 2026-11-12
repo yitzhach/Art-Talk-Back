@@ -7,6 +7,7 @@ import {
   check,
   index,
   integer,
+  primaryKey,
   real,
   sqliteTable,
   text,
@@ -538,6 +539,117 @@ export const shareAttempts = sqliteTable(
   (t) => [index("share_attempts_share_ip").on(t.shareId, t.ipHash, t.at)],
 );
 
+// Site 3.0 stage 3 (D-125…D-141): the visitor assistant, made pages and leads (migration 0012).
+export const visitors = sqliteTable(
+  "visitors",
+  {
+    id: text("id").primaryKey(),
+    studioId: text("studio_id").notNull().references(() => studios.id),
+    keyHash: text("key_hash").notNull().unique(),
+    email: text("email"),
+    emailVerifiedAt: text("email_verified_at"),
+    ...recordColumns(),
+  },
+  (t) => [index("visitors_studio_email").on(t.studioId, t.email), actorCheck("visitors_actor"), metaCheck("visitors_meta")],
+);
+
+export const visitorMessages = sqliteTable(
+  "visitor_messages",
+  {
+    id: text("id").primaryKey(),
+    studioId: text("studio_id").notNull().references(() => studios.id),
+    visitorId: text("visitor_id").notNull().references(() => visitors.id),
+    threadId: text("thread_id").notNull(),
+    role: text("role", { enum: ["user", "assistant"] }).notNull(),
+    text: text("text").notNull(),
+    works: text("works", { mode: "json" }).$type<string[]>().notNull().default(sql`'[]'`),
+    ipHash: text("ip_hash"),
+    ...recordColumns(),
+  },
+  (t) => [
+    index("visitor_messages_thread").on(t.studioId, t.threadId, t.createdAt),
+    index("visitor_messages_visitor").on(t.visitorId, t.createdAt),
+    index("visitor_messages_ip").on(t.studioId, t.ipHash, t.createdAt),
+    index("visitor_messages_studio_day").on(t.studioId, t.createdAt),
+    check("visitor_messages_role", sql`role IN ('user','assistant')`),
+    check("visitor_messages_works", sql`json_valid(works)`),
+    actorCheck("visitor_messages_actor"),
+    metaCheck("visitor_messages_meta"),
+  ],
+);
+
+export const visitorPages = sqliteTable(
+  "visitor_pages",
+  {
+    id: text("id").primaryKey(),
+    studioId: text("studio_id").notNull().references(() => studios.id),
+    visitorId: text("visitor_id").references(() => visitors.id),
+    token: text("token").notNull().unique(),
+    title: text("title").notNull(),
+    question: text("question"),
+    artworkIds: text("artwork_ids", { mode: "json" }).$type<string[]>().notNull().default(sql`'[]'`),
+    ...recordColumns(),
+  },
+  (t) => [
+    index("visitor_pages_visitor").on(t.studioId, t.visitorId, t.createdAt),
+    check("visitor_pages_artworks", sql`json_valid(artwork_ids)`),
+    actorCheck("visitor_pages_actor"),
+    metaCheck("visitor_pages_meta"),
+  ],
+);
+
+export const leads = sqliteTable(
+  "leads",
+  {
+    id: text("id").primaryKey(),
+    studioId: text("studio_id").notNull().references(() => studios.id),
+    visitorId: text("visitor_id").references(() => visitors.id),
+    clientId: text("client_id").references(() => clients.id),
+    kind: text("kind", { enum: ["inquiry", "hold"] }).notNull(),
+    source: text("source", { enum: ["chat", "form", "inquiry_list"] }).notNull().default("form"),
+    status: text("status", { enum: ["new", "held", "declined", "closed"] }).notNull().default("new"),
+    name: text("name"),
+    email: text("email"),
+    phone: text("phone"),
+    note: text("note"),
+    artworkIds: text("artwork_ids", { mode: "json" }).$type<string[]>().notNull().default(sql`'[]'`),
+    fileIds: text("file_ids", { mode: "json" }).$type<string[]>().notNull().default(sql`'[]'`),
+    threadId: text("thread_id"),
+    expiresAt: text("expires_at"),
+    ipHash: text("ip_hash"),
+    ...recordColumns(),
+  },
+  (t) => [
+    index("leads_studio_status").on(t.studioId, t.status, t.createdAt),
+    index("leads_visitor").on(t.studioId, t.visitorId, t.createdAt),
+    index("leads_ip").on(t.studioId, t.ipHash, t.createdAt),
+    check("leads_kind", sql`kind IN ('inquiry','hold')`),
+    check("leads_source", sql`source IN ('chat','form','inquiry_list')`),
+    check("leads_status", sql`status IN ('new','held','declined','closed')`),
+    check("leads_artworks", sql`json_valid(artwork_ids)`),
+    check("leads_files", sql`json_valid(file_ids)`),
+    actorCheck("leads_actor"),
+    metaCheck("leads_meta"),
+  ],
+);
+
+export const assistantUsage = sqliteTable(
+  "assistant_usage",
+  {
+    studioId: text("studio_id").notNull().references(() => studios.id),
+    month: text("month").notNull(),
+    turns: integer("turns").notNull().default(0),
+    inputTokens: integer("input_tokens").notNull().default(0),
+    outputTokens: integer("output_tokens").notNull().default(0),
+    cacheReadTokens: integer("cache_read_tokens").notNull().default(0),
+    cacheWriteTokens: integer("cache_write_tokens").notNull().default(0),
+    costMillicents: integer("cost_millicents").notNull().default(0),
+    cappedAt: text("capped_at"),
+    updatedAt: text("updated_at").notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.studioId, t.month] })],
+);
+
 export type ArtworkRow = typeof artworks.$inferSelect;
 export type ClientRow = typeof clients.$inferSelect;
 export type FileRow = typeof files.$inferSelect;
@@ -550,3 +662,5 @@ export type BoardRow = typeof boards.$inferSelect;
 export type PinRow = typeof pins.$inferSelect;
 export type FeedbackRow = typeof boardFeedback.$inferSelect;
 export type ShareRow = typeof shares.$inferSelect;
+export type LeadRow = typeof leads.$inferSelect;
+export type VisitorRow = typeof visitors.$inferSelect;

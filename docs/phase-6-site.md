@@ -831,7 +831,8 @@ his "ship": platform first, then site.
 
 #### Questions for Isaac on the revision (each has a default)
 
-1. Does every tier 1 or 2 piece qualify for the large-work offer, or only one priced at $500 or more? Default: $500.
+1. ~~Does every tier 1 or 2 piece qualify, or only one priced at $500 or more?~~ **Answered 2026-11-12: a $500
+   minimum** (Isaac, 👍 on the question).
 2. The most Isaac covers per large piece. Default: $150.
 3. Size lines: up to 300 sq in free, up to 500 sq in $22, above that large. Do an 18×20 ($22) and a 20×26 (large)
    land where he expects?

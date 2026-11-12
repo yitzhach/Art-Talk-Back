@@ -264,7 +264,8 @@ async function release(ctx: ActionCtx, lead: Snapshot): Promise<Write[]> {
   const hold = (work?.meta as Row | undefined)?.hold as { leadId?: string } | undefined;
   if (!work || work.status !== "reserved" || hold?.leadId !== lead.id) return [];
   const { hold: _h, ...meta } = work.meta as Row;
-  return [updateWrite(ctx, artworkEntity, work, { status: "available", meta }), bumpCatalogue(ctx)];
+  // The visitor may be paying for it right now (an order, D-144): it stays set aside for the order.
+  return [updateWrite(ctx, artworkEntity, work, { status: meta.order ? "reserved" : "available", meta }), bumpCatalogue(ctx)];
 }
 
 export const leadDecline = defineAction({

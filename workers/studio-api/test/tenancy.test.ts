@@ -17,7 +17,7 @@ async function snapshotB() {
   const out: Record<string, unknown> = {};
   for (const t of ["artworks", "clients", "shows", "sales", "placements", "files", "studio_settings", "activity_log", "memberships",
     "assistant_policy", "pending_actions", "assistant_messages", "boards", "pins", "board_feedback", "shares",
-    "visitors", "visitor_messages", "visitor_pages", "leads", "assistant_usage"]) {
+    "visitors", "visitor_messages", "visitor_pages", "leads", "assistant_usage", "orders", "payment_events"]) {
     out[t] = (await env.DB.prepare(`SELECT * FROM ${t} WHERE studio_id = ? ORDER BY 1`).bind(B.studioId).all()).results;
   }
   return out;
@@ -61,7 +61,10 @@ beforeAll(async () => {
   b.banner = await makeWork(B, { title: "B's banner", kind: "site_photo" }, { publish: true });
   const bs = (await call("/v1/settings", { cookie: B.cookie })).data;
   await call("/v1/settings", { method: "PATCH", cookie: B.cookie, headers: { "If-Match": String(bs.version) },
-    json: { meta: { ...bs.meta, site: { name: "B's site", phone: "5551234567", photos: { "home.hero": [b.banner.work.id, b.public.work.id] } } } } });
+    json: { meta: { ...bs.meta, site: { name: "B's site", phone: "5551234567", photos: { "home.hero": [b.banner.work.id, b.public.work.id] },
+      checkout: { enabled: true, venmo: "@B-Artist", shippingCents: 1000 } } } } });
+  // B's buyable piece (Site 3.0 stage 4).
+  b.forSale = await makeWork(B, { title: "B's small heron", priceCents: 20_000, width: 10, height: 10 }, { publish: true });
   b.opKey = newId();
   await call("/v1/artworks", { method: "POST", cookie: B.cookie, headers: { "Idempotency-Key": b.opKey }, json: { title: "B keyed" } });
   // B's site visitor (Site 3.0 stage 3): a chat, a made page, a hold request.
@@ -76,6 +79,9 @@ beforeAll(async () => {
   b.page = (await call(`/v1/public/studios/${bSlug}/visitor/pages`, { method: "POST", headers: bv, json: { title: "B's page", works: [b.public.work.slug] } })).data;
   b.lead = (await call(`/v1/public/studios/${bSlug}/visitor/leads`, { method: "POST", headers: bv,
     json: { kind: "hold", works: [b.public.work.slug], email: "b-visitor@example.test", name: "B's visitor", threadId: start.threadId } })).data;
+  b.order = (await call(`/v1/public/studios/${bSlug}/visitor/orders`, { method: "POST", headers: bv,
+    json: { work: b.forSale.work.slug, method: "venmo", name: "B's buyer", email: "b-buyer@example.test", address: { line1: "1 B St", city: "B", state: "NY", postalCode: "10001" } } })).data;
+  if (!b.order?.id) throw new Error(`B order: ${JSON.stringify(b.order)}`);
   if (!b.lead?.id) throw new Error(`B lead: ${JSON.stringify(b.lead)} page: ${JSON.stringify(b.page)}`);
   vi.restoreAllMocks();
 });
@@ -92,6 +98,11 @@ attempt("get", "/leads/{id}", () => call(`/v1/leads/${b.lead.id}`, { cookie: A.c
 attempt("post", "/leads/{id}/approve-hold", () => call(`/v1/leads/${b.lead.id}/approve-hold`, { method: "POST", cookie: A.cookie, headers: { "If-Match": "1" } }));
 attempt("post", "/leads/{id}/decline", () => call(`/v1/leads/${b.lead.id}/decline`, { method: "POST", cookie: A.cookie, headers: { "If-Match": "1" } }));
 attempt("post", "/leads/{id}/close", () => call(`/v1/leads/${b.lead.id}/close`, { method: "POST", cookie: A.cookie, headers: { "If-Match": "1" } }));
+attempt("get", "/orders/{id}", () => call(`/v1/orders/${b.order.id}`, { cookie: A.cookie }));
+for (const what of ["mark-paid", "ship", "cancel", "extend"]) {
+  attempt("post", `/orders/{id}/${what}`, () => call(`/v1/orders/${b.order.id}/${what}`, { method: "POST", cookie: A.cookie, headers: { "If-Match": "1" },
+    json: what === "ship" ? { carrier: "X", tracking: "1" } : {} }));
+}
 attempt("get", "/artworks/{id}", () => call(`/v1/artworks/${b.artwork.id}`, { cookie: A.cookie }));
 attempt("patch", "/artworks/{id}", () => call(`/v1/artworks/${b.artwork.id}`, { method: "PATCH", cookie: A.cookie, headers: { "If-Match": "1" }, json: { title: "pwned" } }));
 attempt("delete", "/artworks/{id}", () => call(`/v1/artworks/${b.artwork.id}`, { method: "DELETE", cookie: A.cookie, headers: { "If-Match": "1" } }));
@@ -364,6 +375,23 @@ describe("studio A can't reach studio B", () => {
         threadId: b.visitorThread, user: "x", reply: "y", works: [], askArtist: false, fixed: 0, model: "claude-haiku-5-5",
         usage: { inputTokens: 1, outputTokens: 1, cacheReadTokens: 0, cacheWriteTokens: 0 } } });
       expect(r.status).toBe(200);
+    }],
+    ["get", "/orders", async () => expect((await call("/v1/orders?status=all", { cookie: A.cookie })).data.items).toEqual([])],
+    ["get", "/public/studios/{slug}/checkout", async () => {
+      expect((await call(`/v1/public/studios/${await studioSlug(A.studioId)}/checkout`)).data).toMatchObject({ enabled: false, methods: [] });
+    }],
+    ["post", "/public/studios/{slug}/visitor/orders", async () => {
+      // B's piece on A's site: not found, and nothing is set aside in B.
+      expect((await call(`/v1/public/studios/${await studioSlug(A.studioId)}/visitor/orders`, { method: "POST", headers: { "x-visitor-key": BVISITOR },
+        json: { work: b.forSale.work.slug, method: "card" } })).status).toBe(400);
+    }],
+    ["get", "/public/studios/{slug}/visitor/orders/{id}", async () => {
+      expect((await call(`/v1/public/studios/${await studioSlug(A.studioId)}/visitor/orders/${b.order.id}`, { headers: { "x-visitor-key": BVISITOR } })).status).toBe(404);
+    }],
+    ["post", "/square/webhook", async () => {
+      // Unsigned: refused before anything is read.
+      const body = JSON.stringify({ type: "payment.updated", event_id: "e", data: { object: { payment: { status: "COMPLETED", order_id: "x" } } } });
+      expect((await call("/v1/square/webhook", { method: "POST", body, headers: { "content-type": "application/json" } })).status).toBe(401);
     }],
     ["get", "/leads", async () => expect((await call("/v1/leads?status=all", { cookie: A.cookie })).data.items).toEqual([])],
     ["get", "/site/assistant-usage", async () => {

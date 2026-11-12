@@ -595,7 +595,12 @@ its HttpOnly cookie `sv` (D-134).
   options (D-144). Stripe is out.
 - [ ] His answers below ("Needs Isaac"), one at a time.
 - [ ] Square **sandbox** credentials added by Isaac as GitHub secrets (never in a chat).
-- [ ] Cards A–E, then the gate. Nothing moves real money until the production credentials go in, after the gate.
+- [x] Card A (2026-11-12): migration 0013, the order actions (`order.start`, `.mark_paid`, `.paid`, `.cancel`,
+  `.extend`, `.ship`, `.expire`, `.refunded`), public checkout and order routes, Square's signed webhook, the owner's
+  Orders routes, order emails, hourly expiry, 9 order tests and the tenancy sweep (D-145).
+- [x] Card B (2026-11-12): staging deploy sets the Square sandbox secrets once all three exist; `SQUARE_ENV` and
+  `SQUARE_STUDIO_SLUG` vars per environment. Production Square secrets come only after the gate.
+- [ ] Cards C–E, then the gate. Nothing moves real money until the production credentials go in, after the gate.
 
 **Goal.** A piece with a listed price that is available gets a **Buy** button with two ways to pay: **card** on Square's
 own checkout page (Apple Pay and Google Pay where Square offers them), or **Venmo / Zelle** to Isaac by hand. A card

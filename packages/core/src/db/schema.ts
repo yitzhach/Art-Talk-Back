@@ -650,6 +650,65 @@ export const assistantUsage = sqliteTable(
   (t) => [primaryKey({ columns: [t.studioId, t.month] })],
 );
 
+// 0013 — buying from the site (D-144): an order per piece, and each Square webhook event once.
+export const orders = sqliteTable(
+  "orders",
+  {
+    id: text("id").primaryKey(),
+    studioId: text("studio_id").notNull().references(() => studios.id),
+    kind: text("kind", { enum: ["piece", "deposit"] }).notNull().default("piece"),
+    method: text("method", { enum: ["card", "venmo", "zelle"] }).notNull(),
+    status: text("status", { enum: ["pending", "awaiting_payment", "paid", "expired", "cancelled", "refunded"] }).notNull().default("pending"),
+    code: text("code").notNull(),
+    artworkId: text("artwork_id").references(() => artworks.id),
+    leadId: text("lead_id").references(() => leads.id),
+    clientId: text("client_id").references(() => clients.id),
+    visitorId: text("visitor_id").references(() => visitors.id),
+    amountCents: integer("amount_cents").notNull(),
+    shippingCents: integer("shipping_cents").notNull().default(0),
+    taxCents: integer("tax_cents").notNull().default(0),
+    paidCents: integer("paid_cents"),
+    currency: text("currency").notNull().default("USD"),
+    squareLinkId: text("square_link_id"),
+    squareOrderId: text("square_order_id").unique(),
+    squarePaymentId: text("square_payment_id"),
+    checkoutUrl: text("checkout_url"),
+    buyerName: text("buyer_name"),
+    buyerEmail: text("buyer_email"),
+    buyerPhone: text("buyer_phone"),
+    shippingAddress: text("shipping_address", { mode: "json" }).$type<Record<string, unknown> | null>(),
+    expiresAt: text("expires_at"),
+    paidAt: text("paid_at"),
+    shippedAt: text("shipped_at"),
+    carrier: text("carrier"),
+    tracking: text("tracking"),
+    ...recordColumns(),
+  },
+  (t) => [
+    index("orders_studio_status").on(t.studioId, t.status, t.createdAt),
+    index("orders_studio_artwork").on(t.studioId, t.artworkId),
+    index("orders_visitor").on(t.studioId, t.visitorId, t.createdAt),
+    index("orders_expires").on(t.status, t.expiresAt),
+    check("orders_kind", sql`kind IN ('piece','deposit')`),
+    check("orders_method", sql`method IN ('card','venmo','zelle')`),
+    check("orders_status", sql`status IN ('pending','awaiting_payment','paid','expired','cancelled','refunded')`),
+    actorCheck("orders_actor"),
+    metaCheck("orders_meta"),
+  ],
+);
+
+export const paymentEvents = sqliteTable(
+  "payment_events",
+  {
+    id: text("id").primaryKey(),
+    studioId: text("studio_id").references(() => studios.id),
+    orderId: text("order_id").references(() => orders.id),
+    type: text("type").notNull(),
+    receivedAt: text("received_at").notNull(),
+  },
+  (t) => [index("payment_events_received").on(t.receivedAt)],
+);
+
 export type ArtworkRow = typeof artworks.$inferSelect;
 export type ClientRow = typeof clients.$inferSelect;
 export type FileRow = typeof files.$inferSelect;
@@ -664,3 +723,4 @@ export type FeedbackRow = typeof boardFeedback.$inferSelect;
 export type ShareRow = typeof shares.$inferSelect;
 export type LeadRow = typeof leads.$inferSelect;
 export type VisitorRow = typeof visitors.$inferSelect;
+export type OrderRow = typeof orders.$inferSelect;

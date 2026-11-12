@@ -1,0 +1,321 @@
+// Buying from the site (Site 3.0 stage 4, D-144).
+//
+// Public, under /public/studios/{slug}: the checkout's settings; a visitor's own orders (x-visitor-key, as leads).
+// Square: its signed webhook, the only way a card order is paid. No session; the signature is the proof.
+// Owner: the orders, and Mark paid (Venmo, Zelle), Ship, Cancel, More time.
+import { OrderInput, OrderStatus, Order, PublicCheckout, PublicOrder, MarkPaidInput, ShipInput, db as schema } from "@studio/core";
+import { createRoute } from "@hono/zod-openapi";
+import type { Context } from "hono";
+import { and, desc, eq, inArray, isNull, lte } from "drizzle-orm";
+import { drizzle } from "drizzle-orm/d1";
+import { z } from "zod";
+import { artworkEntity, findRecord } from "../actions/records";
+import { getAction, runAction, type Snapshot } from "../actions/runner";
+import { orderEntity, checkoutSettings, methodsOf } from "../actions/orders";
+import { visitorActor, visitorFor } from "../actions/visitors";
+import { requirePermission } from "../auth/permissions";
+import { requireActor } from "../auth/session";
+import type { Actor, AppEnv, Env } from "../env";
+import { HttpError, notFound } from "../lib/errors";
+import { sendOrderMail } from "../lib/order-mail";
+import { siteFor } from "../lib/site-mail";
+import { createPaymentLink, deletePaymentLink, squareReady, squareSignatureOk } from "../lib/square";
+import { nowIso } from "../lib/time";
+import { studioOf } from "./public";
+import { IfMatchHeader, PathId, body, errors, ifMatch, json, newApp, run, send } from "./common";
+
+export const orderRoutes = newApp();
+
+type Row = Record<string, unknown>;
+const P = "/public/studios/{slug}";
+const SlugParam = z.object({ slug: z.string().meta({ param: { name: "slug", in: "path" } }) });
+const KeyHeader = z.object({ "x-visitor-key": z.string().optional().meta({ description: "The site's per-browser key (D-134)" }) });
+const noStore = (data: unknown, status = 200) =>
+  new Response(JSON.stringify(data), { status, headers: { "content-type": "application/json", "cache-control": "no-store" } }) as never;
+
+export const systemActor = (studioId: string): Actor => ({
+  userId: "system", email: "", name: null, sessionId: null, studioId, role: "owner", clientId: null,
+});
+const asSystem = <R>(env: Env, studioId: string, name: string, input: unknown) =>
+  runAction<R>(getAction(name) as never, input, { env, actor: systemActor(studioId), origin: "https://studio-api", source: "system" });
+
+const totalOf = (o: Row) => Number(o.amountCents) + Number(o.shippingCents ?? 0) + Number(o.taxCents ?? 0);
+
+async function titleOf(env: Env, o: Row): Promise<{ title: string; slug: string | null }> {
+  const w = o.artworkId ? await findRecord(drizzle(env.DB), artworkEntity, o.studioId as string, o.artworkId as string, { withDeleted: true }) : null;
+  return { title: (w?.title as string | undefined) ?? "A piece", slug: (w?.slug as string | null | undefined) ?? null };
+}
+
+async function publicOrder(env: Env, o: Row): Promise<z.infer<typeof PublicOrder>> {
+  const { site } = await siteFor(env, o.studioId as string);
+  const c = checkoutSettings(site);
+  const { title, slug } = await titleOf(env, o);
+  const waiting = o.status === "awaiting_payment";
+  return {
+    id: o.id as string, code: o.code as string, kind: o.kind as "piece", method: o.method as "card", status: o.status as "paid", title, slug,
+    amountCents: o.amountCents as number, shippingCents: o.shippingCents as number, taxCents: o.taxCents as number, totalCents: totalOf(o),
+    currency: o.currency as string, checkoutUrl: o.status === "pending" ? ((o.checkoutUrl as string | null) ?? null) : null,
+    payTo: waiting ? { venmo: o.method === "venmo" ? c.venmo : null, zelle: o.method === "zelle" ? c.zelle : null } : null,
+    expiresAt: (o.expiresAt as string | null) ?? null, paidAt: (o.paidAt as string | null) ?? null, shippedAt: (o.shippedAt as string | null) ?? null,
+    returns: c.returns,
+  };
+}
+
+async function ownerOrder(env: Env, o: Row): Promise<z.infer<typeof Order>> {
+  const { payTo: _p, returns: _r, ...pub } = await publicOrder(env, o);
+  return {
+    ...pub, checkoutUrl: (o.checkoutUrl as string | null) ?? null, version: o.version as number,
+    artworkId: (o.artworkId as string | null) ?? null, leadId: (o.leadId as string | null) ?? null, clientId: (o.clientId as string | null) ?? null,
+    paidCents: (o.paidCents as number | null) ?? null, buyerName: (o.buyerName as string | null) ?? null, buyerEmail: (o.buyerEmail as string | null) ?? null,
+    buyerPhone: (o.buyerPhone as string | null) ?? null, shippingAddress: (o.shippingAddress as Row | null) ?? null,
+    carrier: (o.carrier as string | null) ?? null, tracking: (o.tracking as string | null) ?? null, squarePaymentId: (o.squarePaymentId as string | null) ?? null,
+    conflict: (o.meta as Row | null)?.conflict === true, createdAt: o.createdAt as string, updatedAt: o.updatedAt as string,
+  };
+}
+
+const orderById = (env: Env, studioId: string, id: string) => findRecord(drizzle(env.DB), orderEntity, studioId, id);
+const originOf = (o: Row, fallback: string) => ((o.meta as Row | null)?.origin as string | undefined) ?? fallback;
+
+/** Sends an order's emails after the response, never failing the request. */
+function mailLater(c: Context<AppEnv>, p: Promise<unknown>) {
+  const safe = p.catch((e) => console.error("order mail failed", e));
+  try { c.executionCtx.waitUntil(safe); } catch { return safe; }
+  return undefined;
+}
+
+/** Ends this studio's unpaid orders whose time is up (the hourly job does the rest). Returns how many ended. */
+export async function expireOrders(env: Env, now = nowIso(), studioId?: string, artworkId?: string): Promise<number> {
+  const o = schema.orders;
+  const where = [inArray(o.status, ["pending", "awaiting_payment"]), lte(o.expiresAt, now), isNull(o.deletedAt)];
+  if (studioId) where.push(eq(o.studioId, studioId));
+  if (artworkId) where.push(eq(o.artworkId, artworkId));
+  const rows = await drizzle(env.DB).select({ id: o.id, studioId: o.studioId, link: o.squareLinkId }).from(o).where(and(...where)).limit(200);
+  let n = 0;
+  for (const r of rows) {
+    try {
+      const res = await asSystem(env, r.studioId, "order.expire", { id: r.id });
+      if (res.activityIds.length) n++;
+      if (r.link) await deletePaymentLink(env, r.link);
+    } catch (e) {
+      console.error("order expiry failed", r.id, e);
+    }
+  }
+  return n;
+}
+
+// ------------------------------------------------------------------ public
+
+orderRoutes.openapi(
+  createRoute({
+    method: "get", path: `${P}/checkout`, tags: ["orders"], security: [],
+    summary: "What the site's checkout offers: ways to pay, flat shipping for small works, tax, returns (D-144)",
+    request: { params: SlugParam },
+    responses: { 200: json(PublicCheckout), 404: errors[404] },
+  }),
+  async (c) => {
+    const { slug } = c.req.valid("param");
+    const studio = await studioOf(c, slug);
+    const { site } = await siteFor(c.env, studio.id);
+    const s = checkoutSettings(site);
+    const methods = methodsOf(s, squareReady(c.env, slug));
+    return noStore({
+      enabled: methods.length > 0, methods, shippingCents: s.shippingCents, smallMaxInches: s.smallMaxInches, taxBps: s.taxBps,
+      returns: s.returns, manualHoldHours: s.manualHoldHours,
+    } satisfies z.infer<typeof PublicCheckout>);
+  },
+);
+
+orderRoutes.openapi(
+  createRoute({
+    method: "post", path: `${P}/visitor/orders`, tags: ["orders"], security: [],
+    summary: "Buy one piece: it is set aside while the visitor pays. Card → Square's checkout page; Venmo or Zelle → instructions by email",
+    request: { params: SlugParam, headers: KeyHeader, body: body(OrderInput) },
+    responses: { 201: json(PublicOrder), 400: errors[400], 404: errors[404], 409: errors[409], 429: { ...errors[400], description: "Over today's limit" } },
+  }),
+  async (c) => {
+    const { slug } = c.req.valid("param");
+    const input = c.req.valid("json");
+    const studio = await studioOf(c, slug);
+    // The hidden trap (D-133): a person never fills it.
+    if (input.website) throw new HttpError("bad_request", "Reload the page and try again.");
+    const v = await visitorFor(c.env, studio.id, c.req.header("x-visitor-key") ?? "", true);
+    if (!v) throw new HttpError("bad_request", "Reload the page and try again.");
+    const origin = new URL(c.req.url).origin;
+    const cardReady = squareReady(c.env, slug);
+
+    // An order that ran out still holds its piece until the hourly job: end this piece's now.
+    const work = await c.env.DB.prepare("SELECT id FROM artworks WHERE studio_id = ? AND slug = ? AND deleted_at IS NULL").bind(studio.id, input.work).first<{ id: string }>();
+    if (work) await expireOrders(c.env, nowIso(), studio.id, work.id);
+
+    const actor = visitorActor(studio.id, v.id);
+    const { result } = await runAction<Snapshot>(getAction("order.start") as never, {
+      visitorId: v.id, work: input.work, method: input.method, name: input.name ?? null, email: input.email ?? null,
+      phone: input.phone ?? null, address: input.address ?? null, cardReady, origin,
+    }, { env: c.env, actor, origin, source: "app" });
+    let order = result;
+
+    if (input.method === "card") {
+      try {
+        const { title } = await titleOf(c.env, order);
+        const link = await createPaymentLink(c.env, {
+          orderId: order.id as string, code: order.code as string, title, amountCents: order.amountCents as number,
+          shippingCents: order.shippingCents as number, taxBps: checkoutSettings((await siteFor(c.env, studio.id)).site).taxBps,
+          currency: order.currency as string, redirectUrl: `${origin}/thanks/${order.id}`, email: (order.buyerEmail as string | null) ?? null,
+        });
+        order = (await runAction<Snapshot>(getAction("order.attach_link") as never,
+          { id: order.id, linkId: link.linkId, squareOrderId: link.squareOrderId, url: link.url }, { env: c.env, actor, origin, source: "app" })).result;
+      } catch (e) {
+        await runAction(getAction("order.abandon") as never, { id: order.id }, { env: c.env, actor, origin, source: "app" }).catch(() => {});
+        throw e;
+      }
+    } else {
+      const { title } = await titleOf(c.env, order);
+      await mailLater(c, sendOrderMail(c.env, "placed", order, title, origin));
+    }
+    return noStore(await publicOrder(c.env, order), 201);
+  },
+);
+
+orderRoutes.openapi(
+  createRoute({
+    method: "get", path: `${P}/visitor/orders/{id}`, tags: ["orders"], security: [],
+    summary: "The visitor's own order (the thanks page reads it until Square's webhook marks it paid)",
+    request: { params: SlugParam.extend(PathId.shape), headers: KeyHeader },
+    responses: { 200: json(PublicOrder), 404: errors[404] },
+  }),
+  async (c) => {
+    const { slug, id } = c.req.valid("param");
+    const studio = await studioOf(c, slug);
+    const v = await visitorFor(c.env, studio.id, c.req.header("x-visitor-key") ?? "", false);
+    const o = v ? await orderById(c.env, studio.id, id) : null;
+    if (!o || o.visitorId !== v!.id) throw notFound("Order");
+    return noStore(await publicOrder(c.env, o));
+  },
+);
+
+// ------------------------------------------------------------------ Square's webhook
+
+type SquareAddress = { address_line_1?: string; address_line_2?: string; locality?: string; administrative_district_level_1?: string; postal_code?: string; country?: string; first_name?: string; last_name?: string };
+interface SquareEvent {
+  type?: string;
+  event_id?: string;
+  data?: { object?: {
+    payment?: { id?: string; status?: string; order_id?: string; total_money?: { amount?: number }; buyer_email_address?: string; shipping_address?: SquareAddress };
+    refund?: { id?: string; status?: string; order_id?: string; payment_id?: string };
+  } };
+}
+
+orderRoutes.openapi(
+  createRoute({
+    method: "post", path: "/square/webhook", tags: ["orders"], security: [],
+    summary: "Square's signed payment and refund events (D-144): a completed payment sells the order's piece",
+    responses: { 200: json(z.object({ ok: z.boolean() })), 401: errors[401] },
+  }),
+  async (c) => {
+    const raw = await c.req.text();
+    const url = c.env.SQUARE_WEBHOOK_URL || c.req.url;
+    if (!(await squareSignatureOk(c.env.SQUARE_WEBHOOK_SIGNATURE_KEY ?? "", url, raw, c.req.header("x-square-hmacsha256-signature")))) {
+      throw new HttpError("unauthenticated", "Bad signature");
+    }
+    const ok = () => send(c, { ok: true });
+    let ev: SquareEvent;
+    try { ev = JSON.parse(raw) as SquareEvent; } catch { return ok(); }
+    const payment = ev.data?.object?.payment;
+    const refund = ev.data?.object?.refund;
+    const squareOrderId = payment?.order_id ?? refund?.order_id;
+    if (!ev.event_id || !squareOrderId) return ok();
+    const done = (payment && payment.status === "COMPLETED") || (refund && refund.status === "COMPLETED");
+    if (!done) return ok();
+
+    const [row] = await drizzle(c.env.DB).select({ id: schema.orders.id, studioId: schema.orders.studioId }).from(schema.orders)
+      .where(eq(schema.orders.squareOrderId, squareOrderId)).limit(1);
+    if (!row) return ok(); // Not one of ours (a sale at the booth, another app): Square only needs a 200.
+
+    if (payment) {
+      const a = payment.shipping_address;
+      const name = [a?.first_name, a?.last_name].filter(Boolean).join(" ") || null;
+      const r = await asSystem<Snapshot | null>(c.env, row.studioId, "order.paid", {
+        id: row.id, eventId: ev.event_id, paymentId: payment.id ?? "", paidCents: payment.total_money?.amount ?? 0,
+        buyerName: name, buyerEmail: payment.buyer_email_address ?? null, buyerPhone: null,
+        address: a ? { line1: a.address_line_1 ?? "", line2: a.address_line_2, city: a.locality ?? "", state: a.administrative_district_level_1 ?? "", postalCode: a.postal_code ?? "", country: a.country ?? "US" } : null,
+      });
+      if (r.activityIds.length) {
+        const o = (await orderById(c.env, row.studioId, row.id))!;
+        const { title } = await titleOf(c.env, o);
+        await mailLater(c, sendOrderMail(c.env, (o.meta as Row | null)?.conflict ? "conflict" : "paid", o, title, originOf(o, new URL(c.req.url).origin)));
+      }
+    } else {
+      await asSystem(c.env, row.studioId, "order.refunded", { id: row.id, eventId: ev.event_id });
+    }
+    return ok();
+  },
+);
+
+// ------------------------------------------------------------------ the owner
+
+orderRoutes.openapi(
+  createRoute({
+    method: "get", path: "/orders", tags: ["orders"], summary: "Orders from the site, newest first: open ones (unpaid, paid but not shipped, or to check) by default",
+    request: { query: z.object({ status: z.union([OrderStatus, z.enum(["open", "all"])]).default("open") }) },
+    responses: { 200: json(z.object({ items: z.array(Order) })), 401: errors[401], 403: errors[403] },
+  }),
+  async (c) => {
+    const actor = requireActor(c);
+    requirePermission(actor.role, "sales:read");
+    const { status } = c.req.valid("query");
+    const o = schema.orders;
+    const rows = (await drizzle(c.env.DB).select().from(o).where(and(
+      eq(o.studioId, actor.studioId), isNull(o.deletedAt), ...(status === "all" || status === "open" ? [] : [eq(o.status, status)]),
+    )).orderBy(desc(o.createdAt)).limit(200)) as Row[];
+    const keep = status !== "open" ? rows : rows.filter((r) =>
+      r.status === "pending" || r.status === "awaiting_payment" || (r.status === "paid" && (!r.shippedAt || (r.meta as Row | null)?.conflict)));
+    return send(c, { items: await Promise.all(keep.map((r) => ownerOrder(c.env, r))) });
+  },
+);
+
+orderRoutes.openapi(
+  createRoute({
+    method: "get", path: "/orders/{id}", tags: ["orders"], summary: "One order",
+    request: { params: PathId },
+    responses: { 200: json(Order), 401: errors[401], 403: errors[403], 404: errors[404] },
+  }),
+  async (c) => {
+    const actor = requireActor(c);
+    requirePermission(actor.role, "sales:read");
+    const o = await orderById(c.env, actor.studioId, c.req.valid("param").id);
+    if (!o) throw notFound("Order");
+    return send(c, await ownerOrder(c.env, o));
+  },
+);
+
+const ownerAction = (path: string, action: string, summary: string, input?: z.ZodType) =>
+  orderRoutes.openapi(
+    createRoute({
+      method: "post", path: `/orders/{id}/${path}`, tags: ["orders"], summary,
+      request: { params: PathId, headers: IfMatchHeader, ...(input ? { body: body(input) } : {}) },
+      responses: { 200: json(Order), 400: errors[400], 401: errors[401], 403: errors[403], 404: errors[404], 409: errors[409] },
+    }),
+    async (c) => {
+      const actor = requireActor(c);
+      const extra = input ? ((await c.req.json().catch(() => ({}))) as Row) : {};
+      const before = await orderById(c.env, actor.studioId, c.req.valid("param").id);
+      const { result } = await run<Snapshot>(c, action, { ...extra, id: c.req.valid("param").id, version: ifMatch(c) });
+      const o = (await orderById(c.env, actor.studioId, result.id as string))!;
+      const origin = originOf(o, new URL(c.req.url).origin);
+      if (action === "order.mark_paid") {
+        const { title } = await titleOf(c.env, o);
+        await mailLater(c, sendOrderMail(c.env, (o.meta as Row | null)?.conflict ? "conflict" : "paid", o, title, origin));
+      } else if (action === "order.ship") {
+        const { title } = await titleOf(c.env, o);
+        await mailLater(c, sendOrderMail(c.env, "shipped", o, title, origin));
+      } else if (action === "order.cancel" && before?.squareLinkId) {
+        await deletePaymentLink(c.env, before.squareLinkId as string);
+      }
+      return send(c, await ownerOrder(c.env, o));
+    },
+  );
+
+ownerAction("mark-paid", "order.mark_paid", "The Venmo or Zelle payment arrived: the piece is sold, with a sale and the client recorded", MarkPaidInput);
+ownerAction("ship", "order.ship", "Mark a paid order shipped: the buyer gets the tracking number by email", ShipInput);
+ownerAction("cancel", "order.cancel", "Cancel an unpaid order: the piece goes back on sale (or back on its hold)");
+ownerAction("extend", "order.extend", "Give a Venmo or Zelle order more time");

@@ -15760,6 +15760,2372 @@
           }
         }
       }
+    },
+    "/public/studios/{slug}/checkout": {
+      "get": {
+        "tags": [
+          "orders"
+        ],
+        "security": [],
+        "summary": "What the site's checkout offers: ways to pay, flat shipping for small works, tax, returns (D-144)",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "slug",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "enabled": {
+                      "type": "boolean"
+                    },
+                    "methods": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "enum": [
+                          "card",
+                          "venmo",
+                          "zelle"
+                        ]
+                      }
+                    },
+                    "shippingCents": {
+                      "type": "integer"
+                    },
+                    "smallMaxInches": {
+                      "type": "number"
+                    },
+                    "taxBps": {
+                      "type": "integer"
+                    },
+                    "returns": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "manualHoldHours": {
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "enabled",
+                    "methods",
+                    "shippingCents",
+                    "smallMaxInches",
+                    "taxBps",
+                    "returns",
+                    "manualHoldHours"
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (or in another studio)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/public/studios/{slug}/visitor/orders": {
+      "post": {
+        "tags": [
+          "orders"
+        ],
+        "security": [],
+        "summary": "Buy one piece: it is set aside while the visitor pays. Card → Square's checkout page; Venmo or Zelle → instructions by email",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "slug",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "The site's per-browser key (D-134)"
+            },
+            "required": false,
+            "description": "The site's per-browser key (D-134)",
+            "name": "x-visitor-key",
+            "in": "header"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "work": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 80,
+                    "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+                  },
+                  "method": {
+                    "type": "string",
+                    "enum": [
+                      "card",
+                      "venmo",
+                      "zelle"
+                    ]
+                  },
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 120
+                  },
+                  "email": {
+                    "type": "string",
+                    "maxLength": 200,
+                    "format": "email"
+                  },
+                  "phone": {
+                    "type": "string",
+                    "pattern": "^\\+?[0-9 ().-]{7,24}$"
+                  },
+                  "address": {
+                    "type": "object",
+                    "properties": {
+                      "line1": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 200
+                      },
+                      "line2": {
+                        "type": "string",
+                        "maxLength": 200
+                      },
+                      "city": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 100
+                      },
+                      "state": {
+                        "type": "string",
+                        "minLength": 2,
+                        "maxLength": 50
+                      },
+                      "postalCode": {
+                        "type": "string",
+                        "pattern": "^\\d{5}(-\\d{4})?$"
+                      },
+                      "country": {
+                        "type": "string",
+                        "enum": [
+                          "US"
+                        ],
+                        "default": "US"
+                      }
+                    },
+                    "required": [
+                      "line1",
+                      "city",
+                      "state",
+                      "postalCode"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "website": {
+                    "type": "string",
+                    "maxLength": 200
+                  }
+                },
+                "required": [
+                  "work",
+                  "method"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "description": "ULID"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "kind": {
+                      "type": "string",
+                      "enum": [
+                        "piece",
+                        "deposit"
+                      ]
+                    },
+                    "method": {
+                      "type": "string",
+                      "enum": [
+                        "card",
+                        "venmo",
+                        "zelle"
+                      ]
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "pending",
+                        "awaiting_payment",
+                        "paid",
+                        "expired",
+                        "cancelled",
+                        "refunded"
+                      ]
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "slug": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "amountCents": {
+                      "type": "integer"
+                    },
+                    "shippingCents": {
+                      "type": "integer"
+                    },
+                    "taxCents": {
+                      "type": "integer"
+                    },
+                    "totalCents": {
+                      "type": "integer"
+                    },
+                    "currency": {
+                      "type": "string",
+                      "pattern": "^[A-Z]{3}$"
+                    },
+                    "checkoutUrl": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "payTo": {
+                      "type": [
+                        "object",
+                        "null"
+                      ],
+                      "properties": {
+                        "venmo": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "zelle": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "venmo",
+                        "zelle"
+                      ]
+                    },
+                    "expiresAt": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "paidAt": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "shippedAt": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "returns": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "code",
+                    "kind",
+                    "method",
+                    "status",
+                    "title",
+                    "slug",
+                    "amountCents",
+                    "shippingCents",
+                    "taxCents",
+                    "totalCents",
+                    "currency",
+                    "checkoutUrl",
+                    "payTo",
+                    "expiresAt",
+                    "paidAt",
+                    "shippedAt",
+                    "returns"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (or in another studio)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The record changed since you loaded it",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Over today's limit",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/public/studios/{slug}/visitor/orders/{id}": {
+      "get": {
+        "tags": [
+          "orders"
+        ],
+        "security": [],
+        "summary": "The visitor's own order (the thanks page reads it until Square's webhook marks it paid)",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "slug",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "The site's per-browser key (D-134)"
+            },
+            "required": false,
+            "description": "The site's per-browser key (D-134)",
+            "name": "x-visitor-key",
+            "in": "header"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "description": "ULID"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "kind": {
+                      "type": "string",
+                      "enum": [
+                        "piece",
+                        "deposit"
+                      ]
+                    },
+                    "method": {
+                      "type": "string",
+                      "enum": [
+                        "card",
+                        "venmo",
+                        "zelle"
+                      ]
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "pending",
+                        "awaiting_payment",
+                        "paid",
+                        "expired",
+                        "cancelled",
+                        "refunded"
+                      ]
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "slug": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "amountCents": {
+                      "type": "integer"
+                    },
+                    "shippingCents": {
+                      "type": "integer"
+                    },
+                    "taxCents": {
+                      "type": "integer"
+                    },
+                    "totalCents": {
+                      "type": "integer"
+                    },
+                    "currency": {
+                      "type": "string",
+                      "pattern": "^[A-Z]{3}$"
+                    },
+                    "checkoutUrl": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "payTo": {
+                      "type": [
+                        "object",
+                        "null"
+                      ],
+                      "properties": {
+                        "venmo": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "zelle": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "venmo",
+                        "zelle"
+                      ]
+                    },
+                    "expiresAt": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "paidAt": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "shippedAt": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "returns": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "code",
+                    "kind",
+                    "method",
+                    "status",
+                    "title",
+                    "slug",
+                    "amountCents",
+                    "shippingCents",
+                    "taxCents",
+                    "totalCents",
+                    "currency",
+                    "checkoutUrl",
+                    "payTo",
+                    "expiresAt",
+                    "paidAt",
+                    "shippedAt",
+                    "returns"
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (or in another studio)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/square/webhook": {
+      "post": {
+        "tags": [
+          "orders"
+        ],
+        "security": [],
+        "summary": "Square's signed payment and refund events (D-144): a completed payment sells the order's piece",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "ok"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/orders": {
+      "get": {
+        "tags": [
+          "orders"
+        ],
+        "summary": "Orders from the site, newest first: open ones (unpaid, paid but not shipped, or to check) by default",
+        "parameters": [
+          {
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "enum": [
+                    "pending",
+                    "awaiting_payment",
+                    "paid",
+                    "expired",
+                    "cancelled",
+                    "refunded"
+                  ]
+                },
+                {
+                  "type": "string",
+                  "enum": [
+                    "open",
+                    "all"
+                  ]
+                }
+              ],
+              "default": "open"
+            },
+            "required": false,
+            "name": "status",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "description": "ULID"
+                          },
+                          "code": {
+                            "type": "string"
+                          },
+                          "kind": {
+                            "type": "string",
+                            "enum": [
+                              "piece",
+                              "deposit"
+                            ]
+                          },
+                          "method": {
+                            "type": "string",
+                            "enum": [
+                              "card",
+                              "venmo",
+                              "zelle"
+                            ]
+                          },
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "pending",
+                              "awaiting_payment",
+                              "paid",
+                              "expired",
+                              "cancelled",
+                              "refunded"
+                            ]
+                          },
+                          "title": {
+                            "type": "string"
+                          },
+                          "slug": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "amountCents": {
+                            "type": "integer"
+                          },
+                          "shippingCents": {
+                            "type": "integer"
+                          },
+                          "taxCents": {
+                            "type": "integer"
+                          },
+                          "totalCents": {
+                            "type": "integer"
+                          },
+                          "currency": {
+                            "type": "string",
+                            "pattern": "^[A-Z]{3}$"
+                          },
+                          "checkoutUrl": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "expiresAt": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "paidAt": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "shippedAt": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "version": {
+                            "type": "integer"
+                          },
+                          "artworkId": {
+                            "type": [
+                              "string",
+                              "null"
+                            ],
+                            "description": "ULID"
+                          },
+                          "leadId": {
+                            "type": [
+                              "string",
+                              "null"
+                            ],
+                            "description": "ULID"
+                          },
+                          "clientId": {
+                            "type": [
+                              "string",
+                              "null"
+                            ],
+                            "description": "ULID"
+                          },
+                          "paidCents": {
+                            "type": [
+                              "integer",
+                              "null"
+                            ]
+                          },
+                          "buyerName": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "buyerEmail": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "buyerPhone": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "shippingAddress": {
+                            "type": [
+                              "object",
+                              "null"
+                            ],
+                            "additionalProperties": {}
+                          },
+                          "carrier": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "tracking": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "squarePaymentId": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "conflict": {
+                            "type": "boolean"
+                          },
+                          "createdAt": {
+                            "type": "string"
+                          },
+                          "updatedAt": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "code",
+                          "kind",
+                          "method",
+                          "status",
+                          "title",
+                          "slug",
+                          "amountCents",
+                          "shippingCents",
+                          "taxCents",
+                          "totalCents",
+                          "currency",
+                          "checkoutUrl",
+                          "expiresAt",
+                          "paidAt",
+                          "shippedAt",
+                          "version",
+                          "artworkId",
+                          "leadId",
+                          "clientId",
+                          "paidCents",
+                          "buyerName",
+                          "buyerEmail",
+                          "buyerPhone",
+                          "shippingAddress",
+                          "carrier",
+                          "tracking",
+                          "squarePaymentId",
+                          "conflict",
+                          "createdAt",
+                          "updatedAt"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "items"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not allowed for your role",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/orders/{id}": {
+      "get": {
+        "tags": [
+          "orders"
+        ],
+        "summary": "One order",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "description": "ULID"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "kind": {
+                      "type": "string",
+                      "enum": [
+                        "piece",
+                        "deposit"
+                      ]
+                    },
+                    "method": {
+                      "type": "string",
+                      "enum": [
+                        "card",
+                        "venmo",
+                        "zelle"
+                      ]
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "pending",
+                        "awaiting_payment",
+                        "paid",
+                        "expired",
+                        "cancelled",
+                        "refunded"
+                      ]
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "slug": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "amountCents": {
+                      "type": "integer"
+                    },
+                    "shippingCents": {
+                      "type": "integer"
+                    },
+                    "taxCents": {
+                      "type": "integer"
+                    },
+                    "totalCents": {
+                      "type": "integer"
+                    },
+                    "currency": {
+                      "type": "string",
+                      "pattern": "^[A-Z]{3}$"
+                    },
+                    "checkoutUrl": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "expiresAt": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "paidAt": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "shippedAt": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "version": {
+                      "type": "integer"
+                    },
+                    "artworkId": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "description": "ULID"
+                    },
+                    "leadId": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "description": "ULID"
+                    },
+                    "clientId": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "description": "ULID"
+                    },
+                    "paidCents": {
+                      "type": [
+                        "integer",
+                        "null"
+                      ]
+                    },
+                    "buyerName": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "buyerEmail": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "buyerPhone": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "shippingAddress": {
+                      "type": [
+                        "object",
+                        "null"
+                      ],
+                      "additionalProperties": {}
+                    },
+                    "carrier": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "tracking": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "squarePaymentId": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "conflict": {
+                      "type": "boolean"
+                    },
+                    "createdAt": {
+                      "type": "string"
+                    },
+                    "updatedAt": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "code",
+                    "kind",
+                    "method",
+                    "status",
+                    "title",
+                    "slug",
+                    "amountCents",
+                    "shippingCents",
+                    "taxCents",
+                    "totalCents",
+                    "currency",
+                    "checkoutUrl",
+                    "expiresAt",
+                    "paidAt",
+                    "shippedAt",
+                    "version",
+                    "artworkId",
+                    "leadId",
+                    "clientId",
+                    "paidCents",
+                    "buyerName",
+                    "buyerEmail",
+                    "buyerPhone",
+                    "shippingAddress",
+                    "carrier",
+                    "tracking",
+                    "squarePaymentId",
+                    "conflict",
+                    "createdAt",
+                    "updatedAt"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not allowed for your role",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (or in another studio)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/orders/{id}/mark-paid": {
+      "post": {
+        "tags": [
+          "orders"
+        ],
+        "summary": "The Venmo or Zelle payment arrived: the piece is sold, with a sale and the client recorded",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Record version the change was based on"
+            },
+            "required": false,
+            "description": "Record version the change was based on",
+            "name": "if-match",
+            "in": "header"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "paidCents": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 100000000
+                  },
+                  "note": {
+                    "type": "string",
+                    "maxLength": 500
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "description": "ULID"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "kind": {
+                      "type": "string",
+                      "enum": [
+                        "piece",
+                        "deposit"
+                      ]
+                    },
+                    "method": {
+                      "type": "string",
+                      "enum": [
+                        "card",
+                        "venmo",
+                        "zelle"
+                      ]
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "pending",
+                        "awaiting_payment",
+                        "paid",
+                        "expired",
+                        "cancelled",
+                        "refunded"
+                      ]
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "slug": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "amountCents": {
+                      "type": "integer"
+                    },
+                    "shippingCents": {
+                      "type": "integer"
+                    },
+                    "taxCents": {
+                      "type": "integer"
+                    },
+                    "totalCents": {
+                      "type": "integer"
+                    },
+                    "currency": {
+                      "type": "string",
+                      "pattern": "^[A-Z]{3}$"
+                    },
+                    "checkoutUrl": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "expiresAt": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "paidAt": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "shippedAt": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "version": {
+                      "type": "integer"
+                    },
+                    "artworkId": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "description": "ULID"
+                    },
+                    "leadId": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "description": "ULID"
+                    },
+                    "clientId": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "description": "ULID"
+                    },
+                    "paidCents": {
+                      "type": [
+                        "integer",
+                        "null"
+                      ]
+                    },
+                    "buyerName": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "buyerEmail": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "buyerPhone": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "shippingAddress": {
+                      "type": [
+                        "object",
+                        "null"
+                      ],
+                      "additionalProperties": {}
+                    },
+                    "carrier": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "tracking": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "squarePaymentId": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "conflict": {
+                      "type": "boolean"
+                    },
+                    "createdAt": {
+                      "type": "string"
+                    },
+                    "updatedAt": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "code",
+                    "kind",
+                    "method",
+                    "status",
+                    "title",
+                    "slug",
+                    "amountCents",
+                    "shippingCents",
+                    "taxCents",
+                    "totalCents",
+                    "currency",
+                    "checkoutUrl",
+                    "expiresAt",
+                    "paidAt",
+                    "shippedAt",
+                    "version",
+                    "artworkId",
+                    "leadId",
+                    "clientId",
+                    "paidCents",
+                    "buyerName",
+                    "buyerEmail",
+                    "buyerPhone",
+                    "shippingAddress",
+                    "carrier",
+                    "tracking",
+                    "squarePaymentId",
+                    "conflict",
+                    "createdAt",
+                    "updatedAt"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not allowed for your role",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (or in another studio)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The record changed since you loaded it",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/orders/{id}/ship": {
+      "post": {
+        "tags": [
+          "orders"
+        ],
+        "summary": "Mark a paid order shipped: the buyer gets the tracking number by email",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Record version the change was based on"
+            },
+            "required": false,
+            "description": "Record version the change was based on",
+            "name": "if-match",
+            "in": "header"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "carrier": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 60
+                  },
+                  "tracking": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 100
+                  }
+                },
+                "required": [
+                  "carrier",
+                  "tracking"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "description": "ULID"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "kind": {
+                      "type": "string",
+                      "enum": [
+                        "piece",
+                        "deposit"
+                      ]
+                    },
+                    "method": {
+                      "type": "string",
+                      "enum": [
+                        "card",
+                        "venmo",
+                        "zelle"
+                      ]
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "pending",
+                        "awaiting_payment",
+                        "paid",
+                        "expired",
+                        "cancelled",
+                        "refunded"
+                      ]
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "slug": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "amountCents": {
+                      "type": "integer"
+                    },
+                    "shippingCents": {
+                      "type": "integer"
+                    },
+                    "taxCents": {
+                      "type": "integer"
+                    },
+                    "totalCents": {
+                      "type": "integer"
+                    },
+                    "currency": {
+                      "type": "string",
+                      "pattern": "^[A-Z]{3}$"
+                    },
+                    "checkoutUrl": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "expiresAt": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "paidAt": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "shippedAt": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "version": {
+                      "type": "integer"
+                    },
+                    "artworkId": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "description": "ULID"
+                    },
+                    "leadId": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "description": "ULID"
+                    },
+                    "clientId": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "description": "ULID"
+                    },
+                    "paidCents": {
+                      "type": [
+                        "integer",
+                        "null"
+                      ]
+                    },
+                    "buyerName": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "buyerEmail": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "buyerPhone": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "shippingAddress": {
+                      "type": [
+                        "object",
+                        "null"
+                      ],
+                      "additionalProperties": {}
+                    },
+                    "carrier": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "tracking": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "squarePaymentId": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "conflict": {
+                      "type": "boolean"
+                    },
+                    "createdAt": {
+                      "type": "string"
+                    },
+                    "updatedAt": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "code",
+                    "kind",
+                    "method",
+                    "status",
+                    "title",
+                    "slug",
+                    "amountCents",
+                    "shippingCents",
+                    "taxCents",
+                    "totalCents",
+                    "currency",
+                    "checkoutUrl",
+                    "expiresAt",
+                    "paidAt",
+                    "shippedAt",
+                    "version",
+                    "artworkId",
+                    "leadId",
+                    "clientId",
+                    "paidCents",
+                    "buyerName",
+                    "buyerEmail",
+                    "buyerPhone",
+                    "shippingAddress",
+                    "carrier",
+                    "tracking",
+                    "squarePaymentId",
+                    "conflict",
+                    "createdAt",
+                    "updatedAt"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not allowed for your role",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (or in another studio)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The record changed since you loaded it",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/orders/{id}/cancel": {
+      "post": {
+        "tags": [
+          "orders"
+        ],
+        "summary": "Cancel an unpaid order: the piece goes back on sale (or back on its hold)",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Record version the change was based on"
+            },
+            "required": false,
+            "description": "Record version the change was based on",
+            "name": "if-match",
+            "in": "header"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "description": "ULID"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "kind": {
+                      "type": "string",
+                      "enum": [
+                        "piece",
+                        "deposit"
+                      ]
+                    },
+                    "method": {
+                      "type": "string",
+                      "enum": [
+                        "card",
+                        "venmo",
+                        "zelle"
+                      ]
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "pending",
+                        "awaiting_payment",
+                        "paid",
+                        "expired",
+                        "cancelled",
+                        "refunded"
+                      ]
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "slug": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "amountCents": {
+                      "type": "integer"
+                    },
+                    "shippingCents": {
+                      "type": "integer"
+                    },
+                    "taxCents": {
+                      "type": "integer"
+                    },
+                    "totalCents": {
+                      "type": "integer"
+                    },
+                    "currency": {
+                      "type": "string",
+                      "pattern": "^[A-Z]{3}$"
+                    },
+                    "checkoutUrl": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "expiresAt": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "paidAt": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "shippedAt": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "version": {
+                      "type": "integer"
+                    },
+                    "artworkId": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "description": "ULID"
+                    },
+                    "leadId": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "description": "ULID"
+                    },
+                    "clientId": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "description": "ULID"
+                    },
+                    "paidCents": {
+                      "type": [
+                        "integer",
+                        "null"
+                      ]
+                    },
+                    "buyerName": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "buyerEmail": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "buyerPhone": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "shippingAddress": {
+                      "type": [
+                        "object",
+                        "null"
+                      ],
+                      "additionalProperties": {}
+                    },
+                    "carrier": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "tracking": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "squarePaymentId": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "conflict": {
+                      "type": "boolean"
+                    },
+                    "createdAt": {
+                      "type": "string"
+                    },
+                    "updatedAt": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "code",
+                    "kind",
+                    "method",
+                    "status",
+                    "title",
+                    "slug",
+                    "amountCents",
+                    "shippingCents",
+                    "taxCents",
+                    "totalCents",
+                    "currency",
+                    "checkoutUrl",
+                    "expiresAt",
+                    "paidAt",
+                    "shippedAt",
+                    "version",
+                    "artworkId",
+                    "leadId",
+                    "clientId",
+                    "paidCents",
+                    "buyerName",
+                    "buyerEmail",
+                    "buyerPhone",
+                    "shippingAddress",
+                    "carrier",
+                    "tracking",
+                    "squarePaymentId",
+                    "conflict",
+                    "createdAt",
+                    "updatedAt"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not allowed for your role",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (or in another studio)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The record changed since you loaded it",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/orders/{id}/extend": {
+      "post": {
+        "tags": [
+          "orders"
+        ],
+        "summary": "Give a Venmo or Zelle order more time",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Record version the change was based on"
+            },
+            "required": false,
+            "description": "Record version the change was based on",
+            "name": "if-match",
+            "in": "header"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "description": "ULID"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "kind": {
+                      "type": "string",
+                      "enum": [
+                        "piece",
+                        "deposit"
+                      ]
+                    },
+                    "method": {
+                      "type": "string",
+                      "enum": [
+                        "card",
+                        "venmo",
+                        "zelle"
+                      ]
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "pending",
+                        "awaiting_payment",
+                        "paid",
+                        "expired",
+                        "cancelled",
+                        "refunded"
+                      ]
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "slug": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "amountCents": {
+                      "type": "integer"
+                    },
+                    "shippingCents": {
+                      "type": "integer"
+                    },
+                    "taxCents": {
+                      "type": "integer"
+                    },
+                    "totalCents": {
+                      "type": "integer"
+                    },
+                    "currency": {
+                      "type": "string",
+                      "pattern": "^[A-Z]{3}$"
+                    },
+                    "checkoutUrl": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "expiresAt": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "paidAt": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "shippedAt": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "version": {
+                      "type": "integer"
+                    },
+                    "artworkId": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "description": "ULID"
+                    },
+                    "leadId": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "description": "ULID"
+                    },
+                    "clientId": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "description": "ULID"
+                    },
+                    "paidCents": {
+                      "type": [
+                        "integer",
+                        "null"
+                      ]
+                    },
+                    "buyerName": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "buyerEmail": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "buyerPhone": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "shippingAddress": {
+                      "type": [
+                        "object",
+                        "null"
+                      ],
+                      "additionalProperties": {}
+                    },
+                    "carrier": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "tracking": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "squarePaymentId": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "conflict": {
+                      "type": "boolean"
+                    },
+                    "createdAt": {
+                      "type": "string"
+                    },
+                    "updatedAt": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "code",
+                    "kind",
+                    "method",
+                    "status",
+                    "title",
+                    "slug",
+                    "amountCents",
+                    "shippingCents",
+                    "taxCents",
+                    "totalCents",
+                    "currency",
+                    "checkoutUrl",
+                    "expiresAt",
+                    "paidAt",
+                    "shippedAt",
+                    "version",
+                    "artworkId",
+                    "leadId",
+                    "clientId",
+                    "paidCents",
+                    "buyerName",
+                    "buyerEmail",
+                    "buyerPhone",
+                    "shippingAddress",
+                    "carrier",
+                    "tracking",
+                    "squarePaymentId",
+                    "conflict",
+                    "createdAt",
+                    "updatedAt"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not allowed for your role",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (or in another studio)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The record changed since you loaded it",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "webhooks": {}

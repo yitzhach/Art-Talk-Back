@@ -538,3 +538,18 @@ piece), replacing the Stripe plan. Venmo and Zelle are shown as manual options: 
 only when Isaac taps Mark paid, since neither can be confirmed automatically. Built and tested in Square's sandbox
 first; production credentials only after the gate (`docs/phase-6-site.md` → Stage 4).
 
+### D-145 · How an order sells · 2026-11-12 · Claude (spec default)
+- One order is one piece. It sets the piece aside (`reserved`, `meta.order`): 30 minutes for a card (Square's page),
+  48 hours by default for Venmo or Zelle. An order that ran out ends hourly, or at once when someone else tries that piece.
+- Only two things sell: Square's signed webhook (a completed payment for the order's Square order) and the owner's
+  Mark paid on a Venmo or Zelle order (`always_confirm`, never the assistant). Both take one path: the order paid, the
+  piece sold with `meta.sale.orderId`, a sales row (card → source `square`, method `card`; by hand → source `manual`,
+  method `other` with "Website order CODE (Venmo)"), the client matched by email or made, a held piece's lead closed.
+- Nothing sells twice. A payment for a piece that sold another way (or is held for someone else) marks the order paid
+  with a conflict, emails the studio to refund, and changes nothing else. A late payment for an expired order still
+  sells if the piece is free.
+- A visitor whose hold was approved can buy their own held piece; cancelling that order keeps the hold.
+- Card checkout runs only for the studio named in `SQUARE_STUDIO_SLUG`, with all three Square secrets set; other
+  studios see Venmo and Zelle only. A Square refund marks the order refunded; the piece stays sold for the owner.
+- Online checkout is for priced pieces up to the small size (36 in longest side by default); larger or unsized pieces
+  keep the inquiry and a shipping quote.

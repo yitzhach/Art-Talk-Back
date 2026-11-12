@@ -30,6 +30,10 @@ on:
         type: choice
         default: claude-sonnet-5-5
         options: [claude-sonnet-5-5, claude-haiku-4-5]
+      smoke:
+        description: "After deploying, run the site's smoke test (a phone-sized browser asks the real assistant two questions: a fraction of a cent; sends no leads)"
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -180,3 +184,18 @@ jobs:
         run: |
           npm ci && npm run build && npx wrangler deploy --env staging
           echo "Studio Site staging: https://studio-site-staging.bobdylan2000.workers.dev/studio" | tee -a "$GITHUB_STEP_SUMMARY"
+      - name: Smoke test studio-site-staging (a real browser, the real assistant)
+        if: env.ANTHROPIC_API_KEY != '' && inputs.smoke
+        working-directory: .studio-site
+        run: |
+          [ -f tests/staging-smoke.mjs ] || { echo "This site branch has no smoke test"; exit 0; }
+          npm install --no-save playwright@1.56.1
+          npx playwright@1.56.1 install --with-deps chromium || npx playwright@1.56.1 install chromium
+          set -o pipefail
+          node tests/staging-smoke.mjs https://studio-site-staging.bobdylan2000.workers.dev 2>&1 | tee -a "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always() && inputs.smoke
+        with:
+          name: staging-smoke
+          path: .studio-site/smoke-shots
+          if-no-files-found: ignore

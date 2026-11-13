@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Final pass, card S shipped; final report
+- Card S ticked: "Deploy staging" with `smoke`, then live (studio-api applied 0018; studio-site `d112c7ba`); smoke
+  17/17. `docs/HANDOFF.md`: the final report (every card but A done; A waits on Isaac's notes; the Needs Isaac list).
+
 ### Final pass, card S: security review of stages 3–6 (D-179)
 - Migration 0018: `code_sends`. The follow and keep-this-chat email codes now stop at 6 an hour per sender and 60 an
   hour per studio, besides 5 an hour per address. The stored internet-address hash is keyed with `SIGNING_KEY`.

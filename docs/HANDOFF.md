@@ -28,16 +28,29 @@ Read this first (the next sessions' prompts are at the end), then `CLAUDE.md`, t
     daily job emails yesterday's to the studio's inbox at most once. Restore points: studio-api bookmark before 0017
     `00000100-00000048-00005122-5e92d73851079f1c6bdc6faf7108d7c6`; studio-assistant before `9a5abe65`; studio-site
     before `4aabf4b5`. Smoke 17/17.
-  - **Phase 3, S:** reviewed by hand; one finding fixed (D-179: per-sender and per-studio limits on the public email
-    codes; the stored address hash keyed). See card S for what was checked.
-  - **Next:** Phase 4's final report. A's high items: none without his notes.
+  - **Phase 3, S shipped:** reviewed by hand; one finding fixed (D-179, Art-Talk-Back#65, migration 0018
+    `code_sends`: per-sender and per-studio limits on the public email codes; the stored address hash keyed).
+    "Deploy staging" with `smoke` passed first. Restore points: studio-api bookmark before 0018
+    `00000100-00000054-00005122-e0d69dbcc2fc3bc6873897cbf67dcf36`, Worker before it `fa834bad`; studio-site before
+    `61f82a46` (now `d112c7ba`). Smoke 17/17. See card S for what was checked.
+  - **Phase 4, final report (2026-11-13):** every card but A is ticked; A waits on Isaac's notes and has no code fault
+    from Claude's own live pass. Live footer: `Version 2026-11-13 12:59 PST · d112c7ba`. **Ready for the domain move
+    on the code side**; what is left before pointing the domain is Isaac's (below). The standing agent's run is over:
+    the next session starts from his test notes (card A), with "Session 1" under "Prompts for the next sessions" below (card A only; B–H and S are done).
+    - Not done by Claude, by rule: no real email to a collector, no secret added, no money spent, no live assistant
+      eval (assistant evals ran in replay only), nothing deleted (old unkeyed `ip_hash` rows stay), no domain move,
+      no stage 7, v2.1 list or Square card test, no test skipped.
+    - Models: neither the agent nor the coordinator could choose a model; all work ran on the session's own model,
+      and the live assistant stayed on `claude-sonnet-5-5`.
   - **A** waits on Isaac's notes. Claude's own live pass found no code fault; the data items it saw are listed under
     card A.
   - **Needs Isaac** (defaults taken, work goes on): his test notes for card A; save the "For designers and architects"
     draft in Studio → Site → Pages to put `/trade` live; read, change and save the Privacy and Terms drafts there
     (a starting point, not legal advice); add his links in Site → Contact → Links; decide on the test photo-works and
-    odd titles listed under card A; still his and never done by Claude: a test purchase, Venmo/Zelle setup, collector invites, follower
-    sign-ups, any real email.
+    odd titles listed under card A (and the "NEW WORKS" line in "Seen in / installed for"); his 22 visitor questions
+    (D-132); on the domain move, Cloudflare's "Block AI bots" off, AI Crawl Control allowing the named crawlers, and
+    the sitemap submitted to Google and Bing. Still his and never done by Claude: a test purchase, Venmo/Zelle setup,
+    collector invites, follower sign-ups, any real email.
 
 - **What's next (2026-11-13, D-171…D-174).** Isaac is testing stages 1–6 on the live test address
   (`docs/TESTING.md`); his notes start the final pass. A brainstorm with him on 2026-11-13 fixed what goes in before

@@ -1247,7 +1247,10 @@ hold (D-170, D-162). Run on Opus 5.5; the Effort column is the setting to pick f
       `00000100-00000048-00005122-5e92d73851079f1c6bdc6faf7108d7c6`, Worker `3cbdff44`); "Deploy production assistant"
       on the same model, `claude-sonnet-5-5` (Worker `7441e55a`, before it `9a5abe65`; its evals ran in replay, no
       live model call); "Deploy production site" (Worker `61f82a46`, before it `4aabf4b5`); smoke 17/17.
-- [ ] S — Security review of stages 3–6, fixes, staging smoke, live. Review done by hand (the review tool needs a
+- [x] S — Security review of stages 3–6, fixes, staging smoke, live. Art-Talk-Back#65 (`a3810ac`; migration 0018
+      `code_sends`); "Deploy staging" with `smoke` passed first; "Deploy production API" applied 0018 (bookmark before
+      it `00000100-00000054-00005122-e0d69dbcc2fc3bc6873897cbf67dcf36`, Worker before it `fa834bad`); "Deploy
+      production site" (Worker `d112c7ba`, before it `61f82a46`); smoke 17/17. Review done by hand (the review tool needs a
       repository as the working folder, which this run's sessions can't keep). One real finding, fixed (D-179): the
       follow and keep-this-chat forms limited codes per email address but not per sender, so a script could have the
       site email strangers in bulk; now 6 an hour per sender and 60 an hour per studio. Also the stored address

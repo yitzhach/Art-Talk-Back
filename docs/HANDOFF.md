@@ -11,7 +11,11 @@ Read this first (the next sessions' prompts are at the end), then `CLAUDE.md`, t
   pass"**; three sessions on **Opus 5.5** (medium, medium, high: D-174), prompts at the end of this file.
   - **Shipped 2026-11-13 (site only, [IA-ART-SITE-REPO#8](https://github.com/yitzhach/IA-ART-SITE-REPO/pull/8)):** a
     **Listen** button on every assistant answer (the browser's own voice, on a tap; D-171) and a **version line** in
-    the footer of every public page, `Version 2026-11-13 06:32 PST · 8ad56c05` (D-172). Not live yet: #8 is waiting on CI, then merge, "Deploy production site" and the smoke.
+    the footer of every public page, `Version 2026-11-13 06:32 PST · 8ad56c05` (D-172).
+    Live: #8 merged (`ce03782`); "Deploy production site" 7 (Worker version `c3c7307c`, before it `63d6fa5a`); the
+    live footer reads `Version 2026-11-13 04:51 PST · c3c7307c` and `/site/ask.js` carries Listen (read from the
+    live site); "Smoke production site" 4 was still running when this was written. Undo: Cloudflare → Workers & Pages → `studio-site` → Deployments →
+    Rollback, then revert #8.
   - **Before the domain move:** cards A–H and S in the plan: his test notes, a questions page, a trade page with spec
     sheets, colours in words, AI crawlers welcomed and `llms.txt`, privacy and terms, visitor numbers, error alerts,
     the security review of stages 3–6. Found on 2026-11-13 by reading the code (not the live site): no privacy or
@@ -285,6 +289,8 @@ Isaac's first use of the Show Tracker chat in production (merged 2026-10-06, art
   this session's safety check may still refuse a production change: then give Isaac the clicks.
 - The Cloudflare connector can't deploy and can't read static-asset Workers. This sandbox's proxy
   refuses `*.workers.dev`, so a deployed Worker is checked through the connector and the job log.
+  (2026-11-13: `curl` from the sandbox did reach the live site's public pages, so try it first; it is the quickest
+  way to read the footer's version line.)
 - Booth Studio's `src/vendor/studio-sdk.js` is generated here too, as an ES module
   (`pnpm --filter @studio/sdk bundle:esm --out …`, D-066). Both apps' copies are checked in CI and in
   "Deploy staging". Never change the classic bundle's output by accident: the tracker's copy must match.

@@ -1239,8 +1239,24 @@ hold (D-170, D-162). Run on Opus 5.5; the Effort column is the setting to pick f
       wall tool and Add to inquiry send `POST /count` (no cookie, visitor key or address passed on); Studio → Site
       shows a **Visitors** card (last 30 days, the five pieces seen most; checked at 390 px); the privacy draft now
       says what is really kept. "Deploy production site" (Worker `4aabf4b5`, before it `28eb0fab`); smoke 17/17.
-- [ ] H — Error alerts. Platform built (migration 0017, D-178); release in progress.
-- [ ] S — Security review of stages 3–6, fixes, staging smoke, live.
+- [x] H — Error alerts. Art-Talk-Back#64 (migration 0017 `error_counts`, `error_alerts`; D-178): studio-api counts its
+      500s per studio and day (Square webhook failures apart) and the assistant reports a visitor answer that didn't
+      come through (`POST /public/studios/{slug}/visitor/turn-failed`, assistant key only); the daily job emails
+      yesterday's to the studio's inbox at most once, TEST outside production. Workers Logs on in studio-api,
+      studio-assistant and (IA-ART-SITE-REPO#15) studio-site. "Deploy production API" applied 0017 (bookmark before it
+      `00000100-00000048-00005122-5e92d73851079f1c6bdc6faf7108d7c6`, Worker `3cbdff44`); "Deploy production assistant"
+      on the same model, `claude-sonnet-5-5` (Worker `7441e55a`, before it `9a5abe65`; its evals ran in replay, no
+      live model call); "Deploy production site" (Worker `61f82a46`, before it `4aabf4b5`); smoke 17/17.
+- [ ] S — Security review of stages 3–6, fixes, staging smoke, live. Review done by hand (the review tool needs a
+      repository as the working folder, which this run's sessions can't keep). One real finding, fixed (D-179): the
+      follow and keep-this-chat forms limited codes per email address but not per sender, so a script could have the
+      site email strangers in bulk; now 6 an hour per sender and 60 an hour per studio. Also the stored address
+      hash is now keyed with the server's secret, so it can't be matched back by trying every address. Checked and
+      sound: the Square webhook (signed; no key means refused; amounts from the server; events once), the email
+      codes (6 tries, 15 minutes, 5 an hour per address), tokens (32 random bytes), cookies (HttpOnly, Secure,
+      SameSite=Lax), the site's escaping (no `innerHTML`; JSON-LD escapes `<`), the Worker passing no visitor
+      headers to the owner's assistant routes, G's and H's new routes (tenancy test covers every route). Known and
+      accepted: a direct caller can add to a piece's view count up to the day's cap (D-177).
 
 ### Task cards
 

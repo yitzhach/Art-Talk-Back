@@ -47,7 +47,9 @@ export const HOLD_HOURS = 48;
 /** The key's hash is per studio, so one browser on two studios' sites is two visitors. */
 export const keyHash = (studioId: string, key: string) => sha256(`visitor\n${studioId}\n${key}`);
 /** An address, hashed: kept only to limit how much one address can send. */
-export const ipHash = (ip: string | null | undefined) => (ip ? sha256(`ip\n${ip}`) : Promise.resolve(null));
+/** A keyed hash of a visitor's internet address (D-179): without the server's key it can't be matched back. */
+export const ipHash = (env: Pick<Env, "SIGNING_KEY">, ip: string | null | undefined) =>
+  ip ? sha256(`ip\n${env.SIGNING_KEY ?? ""}\n${ip}`) : Promise.resolve(null);
 
 export interface Visitor { id: string; studioId: string; email: string | null; emailVerifiedAt: string | null }
 

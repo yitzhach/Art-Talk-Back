@@ -731,3 +731,12 @@ the assistant reports with its key. Once a day the daily job emails yesterday's 
 same address as its other studio emails), at most once (`error_alerts`), and marked TEST outside production (D-167).
 A failure that can't be tied to a studio goes to the platform's `OWNER_EMAILS`. No content of the failure is kept or
 sent: the details stay in the logs.
+
+### D-179 · The public email codes are limited per sender and per studio; address hashes are keyed · 2026-11-13 · Claude (card S)
+The follow and keep-this-chat forms already allowed 5 codes an hour per email address (D-049), but nothing limited
+how many addresses one sender could try, so a script could make the site email strangers in bulk from the studio's
+domain. Now one sender (a keyed hash of their internet address, in `code_sends`, migration 0018) gets 6 codes an hour
+across both forms, and a studio's site 60 an hour in all; past either, a plain "try again in an hour". The address
+hash kept with questions, leads and code sends is now keyed with the server's `SIGNING_KEY`, so it can't be matched
+back to an address by trying them all. Rows written before this keep the old unkeyed hash; the limits that read it
+start fresh once.

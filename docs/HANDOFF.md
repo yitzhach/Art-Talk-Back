@@ -23,11 +23,14 @@ Read this first (the next sessions' prompts are at the end), then `CLAUDE.md`, t
     (`e3fe215`): piece views counted by the Worker, Ask, wall and inquiry by `POST /count`, a Visitors card in Studio
     → Site, the privacy draft made exact. "Deploy production site" (Worker `4aabf4b5`, before it `28eb0fab`); smoke
     17/17 with a new `/count` check that uses a robot's agent so it never adds to his numbers.
-  - **Phase 3, H in progress:** error alerts (D-178): Workers Logs on in the three Workers; studio-api counts its 500s
-    (the Square webhook's apart) and the assistant's failed visitor answers; the daily job emails yesterday's to the
-    studio's inbox, once.
-  - **Next:** finish H, then S (security review of stages 3–6, including G's and H's new routes), then Phase 4's
-    final report. A's high items: none without his notes.
+  - **Phase 3, H shipped:** error alerts (D-178), Art-Talk-Back#64 and IA-ART-SITE-REPO#15: Workers Logs on in all
+    three Workers; studio-api counts its 500s (Square webhook apart) and the assistant's failed visitor answers; the
+    daily job emails yesterday's to the studio's inbox at most once. Restore points: studio-api bookmark before 0017
+    `00000100-00000048-00005122-5e92d73851079f1c6bdc6faf7108d7c6`; studio-assistant before `9a5abe65`; studio-site
+    before `4aabf4b5`. Smoke 17/17.
+  - **Phase 3, S:** reviewed by hand; one finding fixed (D-179: per-sender and per-studio limits on the public email
+    codes; the stored address hash keyed). See card S for what was checked.
+  - **Next:** Phase 4's final report. A's high items: none without his notes.
   - **A** waits on Isaac's notes. Claude's own live pass found no code fault; the data items it saw are listed under
     card A.
   - **Needs Isaac** (defaults taken, work goes on): his test notes for card A; save the "For designers and architects"
@@ -301,7 +304,7 @@ Isaac's first use of the Show Tracker chat in production (merged 2026-10-06, art
 - Booth Studio's (from its repo): `npm test`, `npm run build`, then
   `STUDIO_PLATFORM=../Art-Talk-Back BOOTH_TEST_CHROMIUM=/opt/pw-browsers/chromium node tests/two-devices.mjs`
   (`BOOTH_COMPAT_DATE=2026-08-15` for the platform's date; `E2E_LOG=<file>` keeps wrangler's log on a failure).
-- Next decision is D-179. **Fetch the default branch before taking a number**: two sessions worked
+- Next decision is D-180. **Fetch the default branch before taking a number**: two sessions worked
   here on 2026-10-05 and both took D-059/D-060; this branch's were renumbered. One `CHANGELOG.md`
   line per item.
 

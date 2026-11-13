@@ -24,6 +24,7 @@ import {
 } from "../lib/collectors";
 import { safeEqual, sha256, sixDigitCode } from "../lib/crypto";
 import { HttpError, notFound } from "../lib/errors";
+import { claimCodeSend } from "../lib/code-limits";
 import { siteFor } from "../lib/site-mail";
 import { inSeconds, nowIso } from "../lib/time";
 import { IfMatchHeader, PathId, body, errors, ifMatch, json, newApp, run, send } from "./common";
@@ -498,6 +499,7 @@ collectorRoutes.openapi(
     const prev = await c.env.DB.prepare("SELECT sends, created_at FROM login_codes WHERE email = ?").bind(key).first<Row>();
     const hourOpen = !!prev && Date.parse(prev.created_at as string) > Date.now() - 3_600_000;
     if (prev && hourOpen && Number(prev.sends) >= CODES_PER_HOUR) throw new HttpError("rate_limited", "That's 5 codes this hour. Use the newest one.");
+    await claimCodeSend(c.env, studio.id, c.req.header("cf-connecting-ip"));
     const code = sixDigitCode();
     await c.env.DB.prepare(
       `INSERT INTO login_codes (email, code_hash, attempts, expires_at, created_at, sends) VALUES (?, ?, 0, ?, ?, 1)

@@ -27,6 +27,7 @@ import { live } from "../lib/collectors";
 import { safeEqual, sha256, sixDigitCode } from "../lib/crypto";
 import { HttpError, notFound } from "../lib/errors";
 import { noteError } from "../lib/error-alerts";
+import { claimCodeSend } from "../lib/code-limits";
 import { assistantSettings, sendCapMail, sendLeadMail, siteFor } from "../lib/site-mail";
 import { sniffImage, stripMetadata } from "../lib/strip";
 import { inSeconds, nowIso } from "../lib/time";
@@ -239,6 +240,7 @@ visitorRoutes.openapi(
     const now = Date.now();
     const hourOpen = !!prev && Date.parse(prev.created_at as string) > now - 3_600_000;
     if (prev && hourOpen && Number(prev.sends) >= CODES_PER_HOUR) throw new HttpError("rate_limited", "That's 5 codes this hour. Use the newest one.");
+    await claimCodeSend(c.env, studio.id, ipOf(c));
     const code = sixDigitCode();
     await c.env.DB.prepare(
       `INSERT INTO login_codes (email, code_hash, attempts, expires_at, created_at, sends) VALUES (?, ?, 0, ?, ?, 1)
@@ -349,7 +351,7 @@ visitorRoutes.openapi(
     try {
       result = (await asVisitor<Snapshot>(c, v, "lead.create", {
         visitorId: v.id, kind: lead.kind, source: lead.source, works: lead.works, name: lead.name ?? null, email: lead.email ?? null,
-        phone: lead.phone ?? null, note: lead.note ?? null, threadId: lead.threadId ?? null, ipHash: await ipHash(ipOf(c)), origin,
+        phone: lead.phone ?? null, note: lead.note ?? null, threadId: lead.threadId ?? null, ipHash: await ipHash(c.env, ipOf(c)), origin,
         pictures: pics.map((p) => p.meta),
       })).result;
     } catch (e) {
@@ -402,7 +404,7 @@ visitorRoutes.openapi(
       `SELECT count(*) AS n FROM visitor_messages WHERE studio_id = ? AND role = 'user' AND created_at > ? AND visitor_id IN (${ids.map(() => "?").join(",")})`,
     ).bind(studio.id, day, ...ids).first<number>("n");
     if (Number(mine ?? 0) >= VISITOR_LIMITS.perVisitorPerDay) return noStore({ allowed: false, reason: "daily" });
-    const ih = await ipHash(ip);
+    const ih = await ipHash(c.env, ip);
     if (ih) {
       const r = await c.env.DB.prepare(
         `SELECT sum(created_at > ?) AS minute, count(*) AS day FROM visitor_messages WHERE studio_id = ? AND ip_hash = ? AND role = 'user' AND created_at > ?`,
@@ -454,7 +456,7 @@ visitorRoutes.openapi(
       .bind(studio.id, t.threadId).first<string>("visitor_id");
     if (owner && !(await linkedVisitorIds(c.env, v)).includes(owner)) throw new HttpError("forbidden", "Not this visitor's conversation");
     const now = nowIso(), later = new Date(Date.parse(now) + 1).toISOString();
-    const ih = await ipHash(t.ip);
+    const ih = await ipHash(c.env, t.ip);
     const cost = costMillicents(t.model, t.usage);
     const actor = `guest:${v.id}`;
     const ins = (role: string, text: string, works: string[], at: string, meta: Row) => c.env.DB.prepare(

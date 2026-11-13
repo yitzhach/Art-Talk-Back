@@ -14,13 +14,17 @@ Read this first (the next sessions' prompts are at the end), then `CLAUDE.md`, t
     the footer of every public page, `Version 2026-11-13 06:32 PST · 8ad56c05` (D-172).
     Live: #8 merged (`ce03782`); "Deploy production site" 7 (Worker version `c3c7307c`, before it `63d6fa5a`); the
     live footer reads `Version 2026-11-13 04:51 PST · c3c7307c` and `/site/ask.js` carries Listen (read from the
-    live site); "Smoke production site" 4 was still running when this was written. Undo: Cloudflare → Workers & Pages → `studio-site` → Deployments →
+    live site); "Smoke production site" 4: 15/15. Undo: Cloudflare → Workers & Pages → `studio-site` → Deployments →
     Rollback, then revert #8.
   - **Before the domain move:** cards A–H and S in the plan: his test notes, a questions page, a trade page with spec
     sheets, colours in words, AI crawlers welcomed and `llms.txt`, privacy and terms, visitor numbers, error alerts,
     the security review of stages 3–6. Found on 2026-11-13 by reading the code (not the live site): no privacy or
     terms page, no visitor counts, no error reporting configured, no `llms.txt`; old-address redirects, sitemap,
     link previews and `VisualArtwork` data are already there.
+  - **Seen in that smoke run, for card A or Isaac:** production's assistant has **0 saved answers** and its artist
+    name is "the artist" (Site → Assistant), so it can't answer hanging, shipping or trade questions yet and cards B
+    and C would show nothing until he saves answers; an answer about blue pieces showed "Process photo: hero 3" as a
+    card beside real works (the test photo-works still published on production, his call since stage 3).
   - **Isaac's:** the words for the trade, privacy and terms pages (drafts stay hidden until he saves them); his 22
     visitor questions (D-132); his links for the About page; on the domain move, Cloudflare's "Block AI bots" off and
     the sitemap submitted to Google and Bing. A paid natural voice would need his account, key and spending OK.

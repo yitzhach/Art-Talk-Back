@@ -26,6 +26,7 @@ import type { AppEnv } from "../env";
 import { live } from "../lib/collectors";
 import { safeEqual, sha256, sixDigitCode } from "../lib/crypto";
 import { HttpError, notFound } from "../lib/errors";
+import { noteError } from "../lib/error-alerts";
 import { assistantSettings, sendCapMail, sendLeadMail, siteFor } from "../lib/site-mail";
 import { sniffImage, stripMetadata } from "../lib/strip";
 import { inSeconds, nowIso } from "../lib/time";
@@ -586,5 +587,20 @@ visitorRoutes.openapi(
     const budgetCents = assistantSettings(site).budgetCents;
     const spentCents = Math.round(Number(used?.cost_millicents ?? 0) / 10) / 100;
     return send(c, { month: month(now), turns: Number(used?.turns ?? 0), spentCents, budgetCents, capped: spentCents >= budgetCents } satisfies z.infer<typeof AssistantUsageOut>);
+  },
+);
+
+visitorRoutes.openapi(
+  createRoute({
+    method: "post", path: `${P}/visitor/turn-failed`, tags: ["visitor"],
+    summary: "The assistant says a visitor's answer didn't come through, for the studio's daily error email (D-178)",
+    request: { params: SlugParam },
+    responses: { 204: { description: "Counted" }, 403: errors[403], 404: errors[404] },
+  }),
+  async (c) => {
+    fromAssistant(c);
+    const studio = await studioOf(c, c.req.valid("param").slug);
+    await noteError(c.env.DB, "assistant", studio.id);
+    return c.body(null, 204);
   },
 );

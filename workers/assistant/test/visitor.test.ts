@@ -156,6 +156,20 @@ describe("limits come from studio-api (D-130, D-136)", () => {
   });
 });
 
+describe("a failed answer (D-178)", () => {
+  it("tells the visitor to try again and counts it for the studio's daily error email", async () => {
+    const before = Number((await rows("SELECT COALESCE(SUM(n), 0) AS n FROM error_counts WHERE studio_id = ? AND kind = 'assistant'", fx.studioId))[0]!.n);
+    const m = scripted([() => { throw new Error("model down"); }]);
+    const res = await makeHandler(() => m.model).fetch(visitorRequest(fx.slug, { message: "anything blue?" }, "f".repeat(32), "198.51.100.7"),
+      assistantEnv(server), { waitUntil: () => {} } as unknown as ExecutionContext);
+    const data = (await res.json()) as any;
+    expect(res.status, JSON.stringify(data)).toBe(502);
+    expect(data.error.code).toBe("unavailable");
+    const after = Number((await rows("SELECT COALESCE(SUM(n), 0) AS n FROM error_counts WHERE studio_id = ? AND kind = 'assistant'", fx.studioId))[0]!.n);
+    expect(after).toBe(before + 1);
+  });
+});
+
 describe("the digest line", () => {
   it("names colours in words and never shows a price that isn't listed", () => {
     expect(colourName("#2f5fb3")).toBe("blue");

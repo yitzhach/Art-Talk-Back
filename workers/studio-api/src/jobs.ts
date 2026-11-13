@@ -7,6 +7,7 @@ import type { Actor, Env } from "./env";
 import { sendMail } from "./auth/mail";
 import { assistantSettings, money, siteFor, studioInbox } from "./lib/site-mail";
 import { nowIso } from "./lib/time";
+import { alertErrors } from "./lib/error-alerts";
 import { expireOrders } from "./routes/orders";
 
 /** wrangler.jsonc → triggers.crons. */
@@ -108,5 +109,8 @@ export async function scheduled(event: { cron: string; scheduledTime?: number },
   await expireHolds(env);
   await expireOrders(env);
   await endFirstLooks(env);
-  if (event.cron === DAILY) await dailySummaries(env);
+  if (event.cron === DAILY) {
+    await dailySummaries(env);
+    await alertErrors(env);
+  }
 }

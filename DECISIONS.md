@@ -722,3 +722,12 @@ takes a kind and a piece's slug, counts only public pieces and always answers 20
 IP. Its limit is a cap of 2,000 per row per day: a script can't run a number past it, and as only public pieces get
 rows it can't fill the table. The site Worker leaves bots out by user agent. The studio reads its numbers at
 `GET /site/counts?days=N` (1 to 90; owner and staff).
+
+### D-178 · Errors reach the studio once a day, as counts · 2026-11-13 · Claude (card H; the plan's default)
+Workers Logs are on in studio-api, studio-assistant and studio-site (every request kept by Cloudflare for a few days,
+within the plan's included allowance at this traffic). studio-api counts failures in `error_counts` (studio, UTC day,
+kind): its own 500s, a failed Square webhook apart from them, and a visitor answer the assistant couldn't give, which
+the assistant reports with its key. Once a day the daily job emails yesterday's counts to the studio's inbox (the
+same address as its other studio emails), at most once (`error_alerts`), and marked TEST outside production (D-167).
+A failure that can't be tied to a studio goes to the platform's `OWNER_EMAILS`. No content of the failure is kept or
+sent: the details stay in the logs.

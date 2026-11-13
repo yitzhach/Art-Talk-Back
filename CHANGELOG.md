@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+### Final pass, card H: error alerts (D-178)
+- Migration 0017: `error_counts` and `error_alerts`. studio-api counts its 500s per studio and day (Square webhook
+  failures apart), and the assistant reports a visitor answer that didn't come through
+  (`POST /v1/public/studios/{slug}/visitor/turn-failed`, assistant key only). The daily job emails yesterday's to the
+  studio's inbox at most once, marked TEST outside production (D-167). Workers Logs on in studio-api and
+  studio-assistant. Tests: a 500 is counted for its studio and a 4xx isn't; only the assistant can report; one bad
+  day sends one email to the owner, once, and nobody else; TEST outside production; a studio-less failure goes to
+  the platform's owners only; the assistant counts a failed answer.
+
+### Final pass, card G shipped (D-177)
+- Site IA-ART-SITE-REPO#14: piece views, Ask, the wall and Add to inquiry counted; a Visitors card in Studio → Site.
+  Deployed and smoke-tested live (17/17). `docs/phase-6-site.md`: G ticked; handoff updated.
+
 ### Final pass, card G: visitor numbers (D-177)
 - Migration 0016: `site_counts`. `POST /v1/public/studios/{slug}/counts` adds one (view, ask, wall, inquiry; public
   pieces only; capped per day; no cookie or IP); `GET /v1/site/counts` gives the studio its totals, with questions,

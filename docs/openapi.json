@@ -16875,6 +16875,49 @@
         }
       }
     },
+    "/public/studios/{slug}/visitor/turn-failed": {
+      "post": {
+        "tags": [
+          "visitor"
+        ],
+        "summary": "The assistant says a visitor's answer didn't come through, for the studio's daily error email (D-178)",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "slug",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Counted"
+          },
+          "403": {
+            "description": "Not allowed for your role",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (or in another studio)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/public/studios/{slug}/checkout": {
       "get": {
         "tags": [

@@ -17,8 +17,17 @@ Read this first (the next sessions' prompts are at the end), then `CLAUDE.md`, t
   - **Restore points:** `studio-site` before F `9ee2d010`, before E `267e4570`, before D `b69e6266`, before C
     `614801db`, before B `c3c7307c`; `studio-api` deploy 289 (previous Worker `20f2ea2a`, bookmark
     `00000100-0000001c-00005122-c08c0f1d583154786c33aa557519db4c`), then the deploy for `85c4f89` (links; no migration).
-  - **Next:** Phase 3 (high care): A's high items (none without his notes), G (visitor numbers), H (error alerts),
-    S (security review of stages 3–6), then Phase 4's final report.
+  - **Phase 3, G shipped:** visitor numbers (D-177). Platform Art-Talk-Back#63 (migration 0016 `site_counts`, the
+    public count route, `GET /site/counts`; "Deploy production API" applied 0016, bookmark before it
+    `00000100-0000003c-00005122-15eda58a026b731df2bd10c3b6d8dcbc`, Worker `506fae5a`). Site IA-ART-SITE-REPO#14
+    (`e3fe215`): piece views counted by the Worker, Ask, wall and inquiry by `POST /count`, a Visitors card in Studio
+    → Site, the privacy draft made exact. "Deploy production site" (Worker `4aabf4b5`, before it `28eb0fab`); smoke
+    17/17 with a new `/count` check that uses a robot's agent so it never adds to his numbers.
+  - **Phase 3, H in progress:** error alerts (D-178): Workers Logs on in the three Workers; studio-api counts its 500s
+    (the Square webhook's apart) and the assistant's failed visitor answers; the daily job emails yesterday's to the
+    studio's inbox, once.
+  - **Next:** finish H, then S (security review of stages 3–6, including G's and H's new routes), then Phase 4's
+    final report. A's high items: none without his notes.
   - **A** waits on Isaac's notes. Claude's own live pass found no code fault; the data items it saw are listed under
     card A.
   - **Needs Isaac** (defaults taken, work goes on): his test notes for card A; save the "For designers and architects"
@@ -292,7 +301,7 @@ Isaac's first use of the Show Tracker chat in production (merged 2026-10-06, art
 - Booth Studio's (from its repo): `npm test`, `npm run build`, then
   `STUDIO_PLATFORM=../Art-Talk-Back BOOTH_TEST_CHROMIUM=/opt/pw-browsers/chromium node tests/two-devices.mjs`
   (`BOOTH_COMPAT_DATE=2026-08-15` for the platform's date; `E2E_LOG=<file>` keeps wrangler's log on a failure).
-- Next decision is D-177. **Fetch the default branch before taking a number**: two sessions worked
+- Next decision is D-179. **Fetch the default branch before taking a number**: two sessions worked
   here on 2026-10-05 and both took D-059/D-060; this branch's were renumbered. One `CHANGELOG.md`
   line per item.
 

@@ -790,6 +790,17 @@ export const errorAlerts = sqliteTable(
   (t) => [primaryKey({ columns: [t.studioId, t.day] })],
 );
 
+/** The public email codes' limits (card S, D-179): one row per code sent. */
+export const codeSends = sqliteTable(
+  "code_sends",
+  {
+    studioId: text("studio_id").notNull().references(() => studios.id),
+    ipHash: text("ip_hash").notNull(),
+    sentAt: text("sent_at").notNull(),
+  },
+  (t) => [index("code_sends_ip").on(t.studioId, t.ipHash, t.sentAt), index("code_sends_studio").on(t.studioId, t.sentAt)],
+);
+
 export const COMMISSION_STAGES = ["surface", "layering", "color", "erosion", "finished"] as const;
 export const commissions = sqliteTable(
   "commissions",

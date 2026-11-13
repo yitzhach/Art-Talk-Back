@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### Final pass, card S: security review of stages 3–6 (D-179)
+- Migration 0018: `code_sends`. The follow and keep-this-chat email codes now stop at 6 an hour per sender and 60 an
+  hour per studio, besides 5 an hour per address. The stored internet-address hash is keyed with `SIGNING_KEY`.
+  Tests: one sender's limit across both forms and addresses, another sender unaffected, the studio's cap, the hour
+  window, and the keyed hash. `docs/phase-6-site.md`: H ticked; S's review written up.
+
 ### Final pass, card H: error alerts (D-178)
 - Migration 0017: `error_counts` and `error_alerts`. studio-api counts its 500s per studio and day (Square webhook
   failures apart), and the assistant reports a visitor answer that didn't come through

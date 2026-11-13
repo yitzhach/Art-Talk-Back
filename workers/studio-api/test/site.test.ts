@@ -161,6 +161,27 @@ describe("the public profile (D-119)", () => {
     expect(after.meta.site).toEqual(before.meta.site);
   });
 
+  it("takes the trade, privacy and terms pages and shows them publicly once saved (D-175)", async () => {
+    const cur = await settings(A);
+    const pages = {
+      ...cur.meta.site.pages,
+      trade: { title: "For designers and architects", lede: "Trade terms", sections: [{ heading: "Pricing", body: "Ask." }] },
+      privacy: { title: "Privacy", sections: [{ body: "What we keep." }] },
+      terms: { title: "Terms" },
+    };
+    const v0 = await version(slugA);
+    const r = await putSite(A, { ...cur.meta.site, pages });
+    expect(r.status, r.raw).toBe(200);
+    expect(await version(slugA)).toBeGreaterThan(v0);
+    const pub = (await call(P(slugA))).data;
+    expect(pub.pages.trade).toEqual(pages.trade);
+    expect(pub.pages.privacy).toEqual(pages.privacy);
+    expect(pub.pages.terms).toEqual(pages.terms);
+    // Put the profile back for the tests after this one.
+    expect((await putSite(A, cur.meta.site)).status).toBe(200);
+    expect((await call(P(slugA))).data.pages.trade).toBeUndefined();
+  });
+
   it("changing the profile moves the catalogue version; other settings don't", async () => {
     const v0 = await version(slugA);
     const cur = await settings(A);

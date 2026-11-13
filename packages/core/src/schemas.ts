@@ -154,7 +154,11 @@ export const SitePage = z.object({
   lede: z.string().trim().max(1000).optional(),
   sections: z.array(SiteSection).max(30).optional(),
 }).strict();
-export const SitePageKey = z.enum(["home", "commissions", "process", "about"]);
+/**
+ * The site's pages. `trade` (designers and architects), `privacy` and `terms` are the final pass's (D-175): each is
+ * public only once the artist saves its words, so an unsaved one stays off the site, its nav and its sitemap.
+ */
+export const SitePageKey = z.enum(["home", "commissions", "process", "about", "trade", "privacy", "terms"]);
 /**
  * What the visitor assistant may say beyond a piece's record (D-126, D-128), in the studio's own words. Each is
  * plain text; a topic left out is handed to the artist. A piece's record wins over a general fact.

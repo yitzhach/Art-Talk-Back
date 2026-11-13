@@ -1222,6 +1222,23 @@ hold (D-170, D-162). Run on Opus 5.5; the Effort column is the setting to pick f
 | H | Errors he would otherwise never hear of. `observability` logs on in the three production Workers' configs; the hourly cron in studio-api emails the studio owner at most once a day when the last day had failed orders webhooks, assistant errors or 5xx counts above zero (count from what the platform already logs; add nothing heavy). Default if that needs more than a small change: logs on, and give Isaac the clicks for a Cloudflare notification | both | **high** (touches the cron and email) | a test that one bad day sends one email to the owner and none to anyone else; outside production it goes to the studio's inbox marked TEST (D-167) | nothing; a Cloudflare notification is his clicks |
 | S | `/security-review` on stages 3–6 in both repos (tokens, codes, public routes, tenancy, the new routes from G), fix what is real, then "Deploy staging" with `smoke`, then live, platform first when the site needs new routes (D-169) | both | **high** | review has no open finding; staging smoke and "Smoke production site" green | nothing |
 
+### Run plan (2026-11-13, the standing agent's run; D-175)
+
+- **A:** no test notes came with this run, so A waits on Isaac's notes (Needs Isaac). Nothing to fix yet.
+- **Platform first (this card set's one contract change):** `SitePageKey` gains `trade`, `privacy` and `terms`
+  (packages/core). No migration: the words live in `settings.meta.site.pages`, checked by `settings.update`, and a
+  save moves the catalogue version, so the site's cache moves on. Ships before the site's C and F.
+- **B, `/questions`:** a page from `PublicAssistant.answers`, topics in the Site screen's order, each as a question
+  heading and the saved words; unknown topics and empty answers never show. No saved answer: 404, and no link in
+  the footer or sitemap. `FAQPage` JSON-LD. Footer link "Questions" only while there is one.
+- **C, `/trade`:** shown only once `pages.trade` is saved; its words, then the `trade`, `commissionTimeline`,
+  `hanging` and `shipping` answers under plain headings. Site → Pages gets a "For designers and architects" page,
+  prefilled with a draft from those answers, saved only on his tap. **Spec sheet:** `/works/{slug}/spec`, one
+  printable page (picture, title, size in both units, medium, year, price or "Price on request", contact), linked
+  from each piece, `noindex`.
+- **D, colours in words:** a fixed table of named colours, nearest by distance in CIE Lab, top three by share,
+  names said once; on the piece page's facts and as `color` in `VisualArtwork`. No model call.
+
 ### Order and sessions
 
 1. **Session 1, medium:** A (the medium items), then B, C, D. Ship.

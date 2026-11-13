@@ -701,3 +701,8 @@ of what visitors asked for and didn't find; a "where to see my work" page from t
 Medium effort: pages, wording, small fixes and their tests. High effort: the security review, anything that touches
 checkout, orders or holds, tokens and codes, tenancy, a migration, a new public route that writes, or a contract
 between the two repos. The handoff groups the work into sessions by that rule.
+
+### D-175 · Three more site pages, each public only once saved · 2026-11-13 · Claude (cards C and F; the plan's default)
+The site's page keys gain `trade`, `privacy` and `terms`. Like the care notes, each starts as a draft in Site → Pages
+and reaches the public site, its footer and its sitemap only when Isaac saves it. One platform change for both cards,
+so card F needs no second contract change.

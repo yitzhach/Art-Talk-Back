@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Final pass: three more site pages (D-175)
+- `SitePageKey` takes `trade`, `privacy` and `terms` (no migration; the words live in `settings.meta.site`). Test:
+  a saved trade, privacy or terms page shows in the public profile and moves the catalogue version.
+
 ### Final pass, first step: Listen, the version line and the plan (D-171…D-174)
 - Site (IA-ART-SITE-REPO#8): a Listen button on each assistant answer (the browser's voice, on a tap) and a version
   line in every public page's footer. No platform change.

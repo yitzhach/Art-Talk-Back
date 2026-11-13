@@ -13445,6 +13445,144 @@
                             }
                           },
                           "additionalProperties": false
+                        },
+                        "trade": {
+                          "type": "object",
+                          "properties": {
+                            "title": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 200
+                            },
+                            "lede": {
+                              "type": "string",
+                              "maxLength": 1000
+                            },
+                            "sections": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "key": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 60,
+                                    "pattern": "^[a-z0-9]+(?:[.-][a-z0-9]+)*$"
+                                  },
+                                  "heading": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 200
+                                  },
+                                  "body": {
+                                    "type": "string",
+                                    "maxLength": 5000
+                                  },
+                                  "place": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 60,
+                                    "pattern": "^[a-z0-9]+(?:[.-][a-z0-9]+)*$"
+                                  }
+                                },
+                                "additionalProperties": false
+                              },
+                              "maxItems": 30
+                            }
+                          },
+                          "additionalProperties": false
+                        },
+                        "privacy": {
+                          "type": "object",
+                          "properties": {
+                            "title": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 200
+                            },
+                            "lede": {
+                              "type": "string",
+                              "maxLength": 1000
+                            },
+                            "sections": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "key": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 60,
+                                    "pattern": "^[a-z0-9]+(?:[.-][a-z0-9]+)*$"
+                                  },
+                                  "heading": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 200
+                                  },
+                                  "body": {
+                                    "type": "string",
+                                    "maxLength": 5000
+                                  },
+                                  "place": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 60,
+                                    "pattern": "^[a-z0-9]+(?:[.-][a-z0-9]+)*$"
+                                  }
+                                },
+                                "additionalProperties": false
+                              },
+                              "maxItems": 30
+                            }
+                          },
+                          "additionalProperties": false
+                        },
+                        "terms": {
+                          "type": "object",
+                          "properties": {
+                            "title": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 200
+                            },
+                            "lede": {
+                              "type": "string",
+                              "maxLength": 1000
+                            },
+                            "sections": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "key": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 60,
+                                    "pattern": "^[a-z0-9]+(?:[.-][a-z0-9]+)*$"
+                                  },
+                                  "heading": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 200
+                                  },
+                                  "body": {
+                                    "type": "string",
+                                    "maxLength": 5000
+                                  },
+                                  "place": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 60,
+                                    "pattern": "^[a-z0-9]+(?:[.-][a-z0-9]+)*$"
+                                  }
+                                },
+                                "additionalProperties": false
+                              },
+                              "maxItems": 30
+                            }
+                          },
+                          "additionalProperties": false
                         }
                       }
                     },

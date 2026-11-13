@@ -673,3 +673,31 @@ spending money, deleting data or Workers, a new Worker's first deploy, and the d
 "No need to build that out just yet. Let's put in the notes to hold on that. I will fully test this first." Stage 7
 is not started until he says so. He tests stages 1–6 on the live test address (`docs/TESTING.md`), then a final pass
 in Claude Code works from what he found. The Square card test stays deferred (D-162).
+
+### D-171 · The assistant's voice is the browser's own, on a tap; no mic button · 2026-11-13 · Isaac ("voice is in"; asked for Claude's pick)
+Each assistant answer in the Ask sheet has a **Listen** button that reads it with the browser's speech synthesis: no
+cost, no account, no key, nothing new sent anywhere. Only on a tap (never by itself), one answer at a time. No mic
+button: every phone keyboard already dictates, and browser speech recognition is unreliable on iPhone. Later, if he
+wants them (v2.1): a paid natural voice (an account, a key and a spending OK are his) and short recordings of Isaac
+himself on a piece page.
+
+### D-172 · Every public page's footer names the deploy · 2026-11-13 · Isaac
+"So I know which update I'm looking at." `Version 2026-11-13 06:32 PST · 8ad56c05`: the Worker version's upload time
+in the studio's time zone and the first eight characters of its id (what Cloudflare's Deployments list shows), from the
+`version_metadata` binding `studio-site` already had. The line can be hidden when his own domain is attached, if he
+wants. Studio (`/studio`) doesn't show it: any public page's footer does.
+
+### D-173 · What goes in before the domain move, and what waits for v2.1 · 2026-11-13 · Isaac (brainstorm)
+**Before the move** (plan: `docs/phase-6-site.md` → "Final pass"): fixes from his test; a page for designers and
+architects; a public questions page from the assistant's answers; each piece's colours in words; visitor numbers;
+AI crawlers welcomed (robots.txt, `llms.txt`, the Cloudflare setting on his domain); privacy and terms pages; error
+alerts; then the security review of stages 3–6. Voice (D-171) is done. His: the 22 visitor questions (D-132).
+**v2.1, not now:** other artists (stage 7, D-170), style as a short list of dials (template, accent, font pairing,
+home layout) that the Studio assistant may also turn, always as a preview he publishes, never as code; importing any
+artist's old site; an artist record page (CV, press, links); "match my room"; shortlists for designers; a weekly note
+of what visitors asked for and didn't find; a "where to see my work" page from the Show Tracker.
+
+### D-174 · The final pass runs on Opus 5.5: medium by default, high where a mistake costs · 2026-11-13 · Isaac
+Medium effort: pages, wording, small fixes and their tests. High effort: the security review, anything that touches
+checkout, orders or holds, tokens and codes, tenancy, a migration, a new public route that writes, or a contract
+between the two repos. The handoff groups the work into sessions by that rule.

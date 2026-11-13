@@ -1188,6 +1188,48 @@ A first (the contract); C–E against it.
 2. Care notes for collectors (default: a short paragraph Claude drafts from the Process page for him to edit).
 3. Before going live: the list of past buyers to add (he can add them himself in Studio).
 
+## Final pass — before the domain move (plan, 2026-11-13; D-171…D-174)
+
+Isaac tests stages 1–6 on the live test address (`docs/TESTING.md`); the brainstorm of 2026-11-13 added a short list
+of things to put in before his own domain points at `studio-site` (D-173). Stage 7 and the Square card test stay on
+hold (D-170, D-162). Run on Opus 5.5; the Effort column is the setting to pick for the session (D-174).
+
+### Where it stands (2026-11-13)
+
+- [x] V — Listen on each assistant answer (the browser's voice, on a tap; D-171) and the version line in the footer
+      (D-172). IA-ART-SITE-REPO#8. Site only.
+- [ ] A — Isaac's test notes: each thing fixed, smallest first, a test for each.
+- [ ] B — Questions page.
+- [ ] C — Trade page.
+- [ ] D — Colours in words.
+- [ ] E — Found by AI: robots.txt, `llms.txt`, the artist as a Person.
+- [ ] F — Privacy and terms pages.
+- [ ] G — Visitor numbers.
+- [ ] H — Error alerts.
+- [ ] S — Security review of stages 3–6, fixes, staging smoke, live.
+
+### Task cards
+
+| Card | What | Where | Effort | Done when | Needs Isaac |
+|---|---|---|---|---|---|
+| A | Fix what his test found. One commit and one test per item. A fix that touches checkout, orders, holds, a token, a code or tenancy is a **high** item: leave it for session 3 | either repo | medium | each note has a fix or a written reason it stays; CI green | his notes |
+| B | `/questions`: the answers he has saved under Site → Assistant → Answers (the public assistant profile's `answers`, 12 topics), one heading each, only topics with an answer; `FAQPage` structured data; in the sitemap and the footer nav. Readable with scripts off | site | medium | page test (only saved answers show, none invented); site checks at 390 px in both themes | nothing; empty topics simply don't show |
+| C | `/trade`, "For designers and architects": trade pricing, commissions to size, lead time, installation, shipping, from the `trade`, `commissionTimeline`, `shipping` and `hanging` answers plus a new `trade` page in Site → Pages (title, lede, sections). **Spec sheet** link on each piece: a one-page print layout (picture, title, size both units, medium, year, price or "on request", contact), like the certificate's | site (a new page key is `settings.meta.site`, no migration) | medium | page and print tests; hidden from nav and sitemap until he saves the page's words | his trade terms: the page stays unpublished until he saves it (the care-notes pattern) |
+| D | Each piece says its colours in words ("deep blue, rust, cream") from the stored `palette` (hex + share), by code: nearest named colour, the top three by share, no model call. On the piece page's facts and in `VisualArtwork` (`color`). "Rooms it suits" waits: it needs a field he fills | site | medium | unit test on the naming (a table of hexes); piece page test | nothing |
+| E | `robots.txt` names the AI crawlers as allowed (GPTBot, OAI-SearchBot, ChatGPT-User, ClaudeBot, Claude-SearchBot, PerplexityBot, Google-Extended, Applebot-Extended, Bingbot) beside `*`; `/llms.txt`: who the artist is, what is for sale, the main pages, how to ask, built from the studio profile; About carries `Person` structured data with `sameAs` links (a new "Links" list in Site → Contact: Instagram, galleries, press). Look up the current crawler names before writing them | site | medium | extras tests; nothing private in `llms.txt` (no phone, no email unless already public) | his links; **on the domain move**: Cloudflare → his domain → Security → Bots → "Block AI bots" off, AI Crawl Control allowing them |
+| F | `/privacy` and `/terms` in plain words: what the site keeps (the visitor cookie `sv`, saved chats, emails from leads, followers and collectors, orders), for how long, how to ask for deletion; returns and shipping from his saved answers. Footer links. Drafts prefilled, **not public until he saves them** | site (words in `settings.meta.site`) | medium | page tests; footer links only when saved; no claim the code doesn't keep (check retention against the platform before writing a number) | he reads and saves the words. Not legal advice: say so to him once |
+| G | Visitor numbers in Studio: per day and per piece, counts of piece views, Ask opened, questions asked, wall opened, added to inquiry, lead sent, order started. No cookie, no IP, nothing about a person: a count only. Plan the smallest design first (default: one `site_counts` table in studio-api, `studio_id, day, kind, artwork_id, n`, written by a public route the site Worker calls with `waitUntil`; rate-limited; bots left out by user agent). Use `backend-builder` | both (a migration and a public write route) | **high** | tenancy test (a studio sees only its own), a count can't be inflated past the rate limit, Studio screen at 390 px; platform first | nothing |
+| H | Errors he would otherwise never hear of. `observability` logs on in the three production Workers' configs; the hourly cron in studio-api emails the studio owner at most once a day when the last day had failed orders webhooks, assistant errors or 5xx counts above zero (count from what the platform already logs; add nothing heavy). Default if that needs more than a small change: logs on, and give Isaac the clicks for a Cloudflare notification | both | **high** (touches the cron and email) | a test that one bad day sends one email to the owner and none to anyone else; outside production it goes to the studio's inbox marked TEST (D-167) | nothing; a Cloudflare notification is his clicks |
+| S | `/security-review` on stages 3–6 in both repos (tokens, codes, public routes, tenancy, the new routes from G), fix what is real, then "Deploy staging" with `smoke`, then live, platform first when the site needs new routes (D-169) | both | **high** | review has no open finding; staging smoke and "Smoke production site" green | nothing |
+
+### Order and sessions
+
+1. **Session 1, medium:** A (the medium items), then B, C, D. Ship.
+2. **Session 2, medium:** E, F. Ship.
+3. **Session 3, high:** A's high items, G, H, then S. Ship.
+4. Isaac: saves the trade, privacy and terms words; his 22 visitor questions (D-132); then the domain move, with the
+   Cloudflare bot setting from card E, and Google Search Console and Bing Webmaster Tools (submit `/sitemap.xml`).
+
 ## Open questions — answered 2026-11-10 (D-102, D-103)
 
 Isaac: "default on all, except number 10."

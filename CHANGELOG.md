@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+### Final pass, first step: Listen, the version line and the plan (D-171…D-174)
+- Site (IA-ART-SITE-REPO#8): a Listen button on each assistant answer (the browser's voice, on a tap) and a version
+  line in every public page's footer. No platform change.
+- `docs/phase-6-site.md` → "Final pass": task cards A–H and S for what goes in before the domain move, with the
+  effort setting for each. `docs/TESTING.md`: where the version line is; Listen. `docs/HANDOFF.md`: where things
+  stand and three session prompts for Opus 5.5.
+
 ### Testing guide and holds (D-170)
 - `docs/TESTING.md`: Isaac's click-through test of stages 1–6 on the live test address. Stage 7 on hold; handoff has
   the final-pass prompt.

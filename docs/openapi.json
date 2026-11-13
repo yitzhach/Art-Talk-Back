@@ -13586,6 +13586,29 @@
                         }
                       }
                     },
+                    "links": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "label": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 60
+                          },
+                          "url": {
+                            "type": "string",
+                            "maxLength": 500,
+                            "pattern": "^https:\\/\\/[^\\s/?#]+\\.[^\\s/?#]+[^\\s]*$/i"
+                          }
+                        },
+                        "required": [
+                          "label",
+                          "url"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
                     "catalogueVersion": {
                       "type": "integer"
                     }
@@ -13600,6 +13623,7 @@
                     "hours",
                     "timezone",
                     "pages",
+                    "links",
                     "catalogueVersion"
                   ]
                 }

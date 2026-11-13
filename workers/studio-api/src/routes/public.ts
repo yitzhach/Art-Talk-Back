@@ -319,6 +319,7 @@ publicRoutes.openapi(
       hours: site.hours ? { from: site.hours.from, to: site.hours.to } : null,
       timezone,
       pages: site.pages ?? {},
+      links: (site.links ?? []).map((l) => ({ label: l.label, url: l.url })),
     } satisfies Omit<z.infer<typeof PublicStudio>, "catalogueVersion">, studio.version);
   },
 );

@@ -211,6 +211,14 @@ export const SiteCollectors = z.object({
   /** How many days first look runs before a work reaches the public site. Default 7. */
   firstLookDays: z.number().int().min(1).max(60).optional(),
 }).strict();
+/**
+ * One of the artist's links elsewhere (Instagram, a gallery, press), for About's `sameAs` and `llms.txt` (card E,
+ * D-176). https only: a link that names a person on another site is the artist's own choice to publish.
+ */
+export const SiteLink = z.object({
+  label: siteText(60),
+  url: z.string().trim().max(500).regex(/^https:\/\/[^\s/?#]+\.[^\s/?#]+[^\s]*$/i, "A complete https link"),
+}).strict();
 /** Calls taken between these times, studio time (`settings.timezone`); 24-hour HH:MM. */
 const Hhmm = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, "HH:MM, 24-hour");
 /**
@@ -237,6 +245,8 @@ export const SiteProfile = z.object({
   shipping: ShippingSettings.optional(),
   /** Collectors' pages and first look (D-163…D-168). */
   collectors: SiteCollectors.optional(),
+  /** The artist's links elsewhere, in order (D-176). */
+  links: z.array(SiteLink).max(12).optional(),
 }).strict();
 
 // ------------------------------------------------------------------- files
@@ -357,6 +367,8 @@ export const PublicStudio = z.object({
   hours: z.object({ from: z.string(), to: z.string() }).nullable(),
   timezone: z.string(),
   pages: z.partialRecord(SitePageKey, SitePage),
+  /** The artist's links elsewhere, in order (D-176); empty when none are saved. */
+  links: z.array(SiteLink),
   catalogueVersion: z.number().int(),
 });
 

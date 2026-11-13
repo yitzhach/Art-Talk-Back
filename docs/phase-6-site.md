@@ -1198,10 +1198,24 @@ hold (D-170, D-162). Run on Opus 5.5; the Effort column is the setting to pick f
 
 - [x] V — Listen on each assistant answer (the browser's voice, on a tap; D-171) and the version line in the footer
       (D-172). IA-ART-SITE-REPO#8. Site only.
-- [ ] A — Isaac's test notes: each thing fixed, smallest first, a test for each.
-- [ ] B — Questions page.
-- [ ] C — Trade page.
-- [ ] D — Colours in words.
+- [ ] A — Isaac's test notes: each thing fixed, smallest first, a test for each. **Waiting on his notes.** Claude's own
+      pass on the live site (2026-11-13): every page at 390 px in light and dark, Ask (real pieces only, the Text/Email/
+      Call fallback), the inquiry list and download and wall sizing (all in "Smoke production site" 15/15): no code fault
+      found. Seen, his to decide (data, not code): several pieces have no size, medium or year (Abstract No. 3), so they
+      show less and have no wall button; test photo-works still published (`/works/process-photo-02-formwork`, "Hero
+      image: macro 5"); odd titles from the old site ("No. 009 — 48\" x 48\" - Inspired a horizontal COMMISSION"); the
+      home "Seen in / installed for" list starts "NEW WORKS"; some stored palettes hold colours the eye doesn't see
+      (Lifted Up: "sky blue", card D names what is stored).
+- [x] B — Questions page. IA-ART-SITE-REPO#9 (`e047039`), "Deploy production site" 8, smoke 15/15. Live: production has
+      6 saved answers, so `/questions` and its footer link show.
+- [x] C — Trade page and spec sheets. Platform first: Art-Talk-Back#59 (`SitePageKey` + `trade`, `privacy`, `terms`;
+      "Deploy production API" 289). Site: IA-ART-SITE-REPO#11 (`18991f8`), "Deploy production site" (Worker `b69e6266`,
+      before it `614801db`), smoke 15/15. `/trade` stays 404 and out of the footer until Isaac saves the draft in Site →
+      Pages; `/works/{slug}/spec` is live on every piece (`noindex`).
+- [x] D — Colours in words. IA-ART-SITE-REPO#10 (`97d3df2`), "Deploy production site" (Worker `267e4570`, before it
+      `b69e6266`), smoke 15/15. CI's piece-page paint first read 2104 ms (budget 2000): the price's Bodoni 500 face was
+      found only after the CSS; piece pages now preload it (1953 ms). Live footer: `Version 2026-11-13 11:19 PST ·
+      267e4570`.
 - [ ] E — Found by AI: robots.txt, `llms.txt`, the artist as a Person.
 - [ ] F — Privacy and terms pages.
 - [ ] G — Visitor numbers.

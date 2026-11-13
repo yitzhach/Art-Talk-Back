@@ -768,6 +768,28 @@ export const siteCounts = sqliteTable(
   ],
 );
 
+/** Error alerts (card H, D-178): failures per studio and UTC day, and the one alert a day. */
+export const ERROR_KINDS = ["server", "webhook", "assistant"] as const;
+export const errorCounts = sqliteTable(
+  "error_counts",
+  {
+    studioId: text("studio_id").notNull().default(""),
+    day: text("day").notNull(),
+    kind: text("kind", { enum: ERROR_KINDS }).notNull(),
+    n: integer("n").notNull().default(0),
+  },
+  (t) => [primaryKey({ columns: [t.studioId, t.day, t.kind] }), check("error_counts_kind", sql`kind IN ('server','webhook','assistant')`)],
+);
+export const errorAlerts = sqliteTable(
+  "error_alerts",
+  {
+    studioId: text("studio_id").notNull().default(""),
+    day: text("day").notNull(),
+    sentAt: text("sent_at").notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.studioId, t.day] })],
+);
+
 export const COMMISSION_STAGES = ["surface", "layering", "color", "erosion", "finished"] as const;
 export const commissions = sqliteTable(
   "commissions",

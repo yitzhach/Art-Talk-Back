@@ -30,6 +30,7 @@ import { visitorRoutes } from "./routes/visitors";
 import { orderRoutes } from "./routes/orders";
 import { collectorRoutes } from "./routes/collectors";
 import { scheduled } from "./jobs";
+import { noteError } from "./lib/error-alerts";
 
 const v1 = new OpenAPIHono<AppEnv>();
 
@@ -87,8 +88,25 @@ app.notFound((c) => c.json(apiError("not_found", "No such route"), 404));
 app.onError((err, c) => {
   if (err instanceof HttpError) return err.toResponse();
   console.error(err);
+  // Counted for the studio's daily error email (D-178); the details stay in the log above.
+  const noted = studioOfFailure(c.req.path, c.get("auth")?.studioId ?? null, c.env).then((studioId) =>
+    noteError(c.env.DB, c.req.path.startsWith("/v1/square/webhook") ? "webhook" : "server", studioId));
+  try { c.executionCtx.waitUntil(noted); } catch { void noted; }
   return c.json(apiError("internal", "Something went wrong"), 500);
 });
+
+/** The studio a failed request was for: the signed-in one, or the public site's by its slug; '' when neither. */
+async function studioOfFailure(path: string, signedIn: string | null, env: AppEnv["Bindings"]): Promise<string> {
+  if (signedIn) return signedIn;
+  const slug = /^\/v1\/public\/studios\/([A-Za-z0-9_-]{1,100})(?:\/|$)/.exec(path)?.[1]
+    ?? (path.startsWith("/v1/square/webhook") ? env.SQUARE_STUDIO_SLUG : undefined);
+  if (!slug) return "";
+  try {
+    return (await env.DB.prepare("SELECT id FROM studios WHERE slug = ? AND deleted_at IS NULL").bind(slug).first<string>("id")) ?? "";
+  } catch {
+    return "";
+  }
+}
 
 /** The Worker: the API, plus its scheduled work (jobs.ts: holds ending, the daily summary). */
 export default Object.assign(app, {

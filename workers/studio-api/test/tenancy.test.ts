@@ -18,7 +18,7 @@ async function snapshotB() {
   for (const t of ["artworks", "clients", "shows", "sales", "placements", "files", "studio_settings", "activity_log", "memberships",
     "assistant_policy", "pending_actions", "assistant_messages", "boards", "pins", "board_feedback", "shares",
     "visitors", "visitor_messages", "visitor_pages", "leads", "assistant_usage", "orders", "payment_events",
-    "collector_links", "followers", "commissions", "site_counts"]) {
+    "collector_links", "followers", "commissions", "site_counts", "error_counts", "error_alerts"]) {
     out[t] = (await env.DB.prepare(`SELECT * FROM ${t} WHERE studio_id = ? ORDER BY 1`).bind(B.studioId).all()).results;
   }
   return out;
@@ -412,6 +412,9 @@ describe("studio A can't reach studio B", () => {
     }],
     ["post", "/public/studios/{slug}/visitor/leads", async () => {
       expect((await call(`/v1/public/studios/${await studioSlug(A.studioId)}/visitor/leads`, { method: "POST", headers: { "x-visitor-key": BVISITOR }, json: { kind: "inquiry", works: [b.public.work.slug], email: "x@example.test" } })).status).toBe(404);
+    }],
+    ["post", "/public/studios/{slug}/visitor/turn-failed", async () => {
+      expect((await call(`/v1/public/studios/${await studioSlug(A.studioId)}/visitor/turn-failed`, { method: "POST", headers: ASSISTANT })).status).toBe(204);
     }],
     ["post", "/public/studios/{slug}/visitor/turn-start", async () => {
       const got = (await call(`/v1/public/studios/${await studioSlug(A.studioId)}/visitor/turn-start`, { method: "POST", headers: { ...ASSISTANT, "x-visitor-key": BVISITOR }, json: {} })).data;

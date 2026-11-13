@@ -51,6 +51,8 @@ export interface VisitorApi {
   work(slug: string): Promise<Record<string, unknown> | null>;
   start(fresh: boolean): Promise<{ allowed: true; threadId: string; history: { role: "user" | "assistant"; text: string; works: string[] }[] } | { allowed: false; reason: VisitorReply["limited"] & string }>;
   record(turn: Record<string, unknown>): Promise<{ capped: boolean }>;
+  /** Tell the studio an answer didn't come through (its daily error email, D-178). */
+  failed?(): Promise<void>;
 }
 
 export function visitorApi(env: Env, slug: string, visitorKey: string, ip: string | null): VisitorApi {
@@ -74,6 +76,10 @@ export function visitorApi(env: Env, slug: string, visitorKey: string, ip: strin
     },
     start: (fresh) => call("POST", "/visitor/turn-start", { fresh, ...(ip ? { ip } : {}) }),
     record: (turn) => call("POST", "/visitor/turn", { ...turn, ...(ip ? { ip } : {}) }),
+    failed: async () => {
+      const res = await env.STUDIO_API.fetch(base + "/visitor/turn-failed", { method: "POST", headers: { "x-studio-assistant": env.ASSISTANT_KEY ?? "" } });
+      await res.body?.cancel();
+    },
   };
 }
 
@@ -273,6 +279,7 @@ export async function handleVisitor(req: Request, env: Env, modelFor: (env: Env)
   } catch (e) {
     if (e instanceof VisitorApiError && e.status < 500) return json(e.status, e.code, e.message);
     console.error("visitor turn failed", e);
+    await api.failed?.().catch((err) => console.error("reporting the failure failed", err));
     return json(502, "unavailable", "The assistant couldn't answer just now. Please try again, or text, email or call the studio.");
   }
 }

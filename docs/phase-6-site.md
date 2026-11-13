@@ -1231,8 +1231,15 @@ hold (D-170, D-162). Run on Opus 5.5; the Effort column is the setting to pick f
       follows, orders, kept until someone asks: nothing deletes them on a timer, so no other number); terms takes the
       saved return terms, shipping and deposit answers and the Venmo/Zelle hold. "Deploy production site" (Worker
       `28eb0fab`, before it `9ee2d010`); smoke 16/16. Live footer: `Version 2026-11-13 11:52 PST · 28eb0fab`.
-- [ ] G — Visitor numbers. Platform part built (migration 0016, the public count route and the studio's read, D-177); the site part follows.
-- [ ] H — Error alerts.
+- [x] G — Visitor numbers. Platform first: Art-Talk-Back#63 (migration 0016 `site_counts`; `POST
+      /public/studios/{slug}/counts` for view, ask, wall, inquiry, public pieces only, 2,000 per row per day, no
+      cookie or IP; `GET /site/counts` for owner and staff, with questions, leads and orders read from their own
+      tables; D-177; "Deploy production API" applied 0016). Site: IA-ART-SITE-REPO#14 (`e3fe215`): the Worker counts a
+      person's view of a piece page (bots, previews, prefetches and scripted browsers left out by agent); Ask, the
+      wall tool and Add to inquiry send `POST /count` (no cookie, visitor key or address passed on); Studio → Site
+      shows a **Visitors** card (last 30 days, the five pieces seen most; checked at 390 px); the privacy draft now
+      says what is really kept. "Deploy production site" (Worker `4aabf4b5`, before it `28eb0fab`); smoke 17/17.
+- [ ] H — Error alerts. Platform built (migration 0017, D-178); release in progress.
 - [ ] S — Security review of stages 3–6, fixes, staging smoke, live.
 
 ### Task cards

@@ -7,6 +7,8 @@
   "main": "src/index.ts",
   "compatibility_date": "2026-08-15",
   "compatibility_flags": ["nodejs_compat"],
+  // Workers Logs for every environment (card H, D-178): what failed and why, kept by Cloudflare for a few days.
+  "observability": { "enabled": true, "head_sampling_rate": 1 },
   "vars": {
     "ENVIRONMENT": "dev",
     "OWNER_EMAILS": "owner@example.com",

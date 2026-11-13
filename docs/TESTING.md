@@ -1,4 +1,4 @@
-# Testing the site (Isaac's full test, 2026-11-12)
+# Testing the site (Isaac's full test, 2026-11-12; updated 2026-11-13)
 
 Everything below is live on the test address, https://studio-site.bobdylan2000.workers.dev/, which stays a test site
 until your own web address is attached (D-169). Studio (your side) is at `/studio`; sign in with your email code.
@@ -6,6 +6,11 @@ until your own web address is attached (D-169). Studio (your side) is at `/studi
 Use **your own email** for every test buyer, collector and follower. On this site emails are real, so a made-up or
 someone else's address would get them. Write down anything odd (page, what you tapped, what you expected); the final
 pass in Claude Code starts from that list.
+
+## Which update am I looking at?
+Scroll to the bottom of any public page (not Studio). The last line reads like
+`Version 2026-11-13 06:32 PST · 8ad56c05`: when that update went live, in your time zone, and its short id. Put that
+line at the top of your notes. If a page looks unchanged after an update, pull down to refresh and check the line.
 
 ## 1. The public site (stage 2)
 - Home, Works, a piece page, Commissions, Process, About, Contact. On a phone, and with the phone in dark mode.
@@ -15,6 +20,8 @@ pass in Claude Code starts from that list.
 ## 2. Ask and the inquiry list (stage 3)
 - Tap **Ask** and ask about a colour, a size or a price. Cards should show only real pieces.
 - Ask something it can't know (installation, a show date): it should offer Text, Email or Call, not guess.
+- Under each answer, tap **Listen**: your phone reads the answer aloud (turn the ringer switch and volume on). The
+  button says **Stop** while it speaks; tap it, or close the sheet, and it stops. It never speaks by itself.
 - **Add to inquiry** on two pieces, open `/inquiry`, download the sheet as a picture.
 - Studio → **Leads**: questions you sent from the site land here.
 

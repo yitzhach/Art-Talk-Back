@@ -1,11 +1,38 @@
-# Handoff — 2026-11-12
+# Handoff — 2026-11-13
 
-Read this first (a final-pass prompt is at the end), then `CLAUDE.md`, then `docs/phase-3.md` (assistant) or `docs/phase-5-booth.md`
+Read this first (the next sessions' prompts are at the end), then `CLAUDE.md`, then `docs/phase-3.md` (assistant) or `docs/phase-5-booth.md`
 (Booth Studio) or `docs/phase-5-studio-wall.md` (Studio Wall), whichever your task is.
 
 ## Where things stand
 
-- **What's next (2026-11-12, after D-170).** **Isaac is testing everything first** (D-170): stages 1–6 on the live
+- **What's next (2026-11-13, D-171…D-174).** Isaac is testing stages 1–6 on the live test address
+  (`docs/TESTING.md`); his notes start the final pass. A brainstorm with him on 2026-11-13 fixed what goes in before
+  the domain move and what waits for v2.1 (D-173). The plan and task cards are in `docs/phase-6-site.md` → **"Final
+  pass"**; three sessions on **Opus 5.5** (medium, medium, high: D-174), prompts at the end of this file.
+  - **Shipped 2026-11-13 (site only, [IA-ART-SITE-REPO#8](https://github.com/yitzhach/IA-ART-SITE-REPO/pull/8)):** a
+    **Listen** button on every assistant answer (the browser's own voice, on a tap; D-171) and a **version line** in
+    the footer of every public page, `Version 2026-11-13 06:32 PST · 8ad56c05` (D-172).
+    Live: #8 merged (`ce03782`); "Deploy production site" 7 (Worker version `c3c7307c`, before it `63d6fa5a`); the
+    live footer reads `Version 2026-11-13 04:51 PST · c3c7307c` and `/site/ask.js` carries Listen (read from the
+    live site); "Smoke production site" 4: 15/15. Undo: Cloudflare → Workers & Pages → `studio-site` → Deployments →
+    Rollback, then revert #8.
+  - **Before the domain move:** cards A–H and S in the plan: his test notes, a questions page, a trade page with spec
+    sheets, colours in words, AI crawlers welcomed and `llms.txt`, privacy and terms, visitor numbers, error alerts,
+    the security review of stages 3–6. Found on 2026-11-13 by reading the code (not the live site): no privacy or
+    terms page, no visitor counts, no error reporting configured, no `llms.txt`; old-address redirects, sitemap,
+    link previews and `VisualArtwork` data are already there.
+  - **Seen in that smoke run, for card A or Isaac:** production's assistant has **0 saved answers** and its artist
+    name is "the artist" (Site → Assistant), so it can't answer hanging, shipping or trade questions yet and cards B
+    and C would show nothing until he saves answers; an answer about blue pieces showed "Process photo: hero 3" as a
+    card beside real works (the test photo-works still published on production, his call since stage 3).
+  - **Isaac's:** the words for the trade, privacy and terms pages (drafts stay hidden until he saves them); his 22
+    visitor questions (D-132); his links for the About page; on the domain move, Cloudflare's "Block AI bots" off and
+    the sitemap submitted to Google and Bing. A paid natural voice would need his account, key and spending OK.
+  - **On hold, don't start:** stage 7 and everything in D-173's v2.1 list; the Square card test (D-162).
+  - Standing rule (D-169): until his domain points at `studio-site`, ship fixes live without asking; still his:
+    secrets, money, deleting, a new Worker's first deploy, the domain move, any real email to his collectors.
+
+- **Before that (2026-11-12, after D-170).** **Isaac is testing everything first** (D-170): stages 1–6 on the live
   test address, with `docs/TESTING.md` as his checklist. The next session is a **final pass** that starts from his
   list of what was wrong (prompt below). **On hold, don't start:** stage 7, the second studio (D-170); the Square card
   test and everything after it (D-162, checkout's card option stays off). **Stage 6, Collectors, is live**
@@ -243,7 +270,7 @@ Isaac's first use of the Show Tracker chat in production (merged 2026-10-06, art
 - Booth Studio's (from its repo): `npm test`, `npm run build`, then
   `STUDIO_PLATFORM=../Art-Talk-Back BOOTH_TEST_CHROMIUM=/opt/pw-browsers/chromium node tests/two-devices.mjs`
   (`BOOTH_COMPAT_DATE=2026-08-15` for the platform's date; `E2E_LOG=<file>` keeps wrangler's log on a failure).
-- Next decision is D-107. **Fetch the default branch before taking a number**: two sessions worked
+- Next decision is D-175. **Fetch the default branch before taking a number**: two sessions worked
   here on 2026-10-05 and both took D-059/D-060; this branch's were renumbered. One `CHANGELOG.md`
   line per item.
 
@@ -266,6 +293,8 @@ Isaac's first use of the Show Tracker chat in production (merged 2026-10-06, art
   this session's safety check may still refuse a production change: then give Isaac the clicks.
 - The Cloudflare connector can't deploy and can't read static-asset Workers. This sandbox's proxy
   refuses `*.workers.dev`, so a deployed Worker is checked through the connector and the job log.
+  (2026-11-13: `curl` from the sandbox did reach the live site's public pages, so try it first; it is the quickest
+  way to read the footer's version line.)
 - Booth Studio's `src/vendor/studio-sdk.js` is generated here too, as an ES module
   (`pnpm --filter @studio/sdk bundle:esm --out …`, D-066). Both apps' copies are checked in CI and in
   "Deploy staging". Never change the classic bundle's output by accident: the tracker's copy must match.
@@ -282,6 +311,11 @@ Isaac's first use of the Show Tracker chat in production (merged 2026-10-06, art
   platform first. In between, this repo's default-branch CI compares with booth-studio's old `main`
   and goes red, so "Deploy production API" is skipped: after the app's PR merges, re-run the failed
   CI job and the deploy follows. (Found on 2026-10-05 with #20.)
+- The site's `npm run test:site` in a session sandbox fails one check, Lighthouse LCP on `/works/work-1` (about
+  2.10 s against 2.0 s), on unchanged `main` too (2026-11-13: 2103 ms on `main`, 2102 ms with #8). GitHub's runner is
+  the judge; don't chase it locally. Run it with `export NODE_PATH=$(npm root -g)` after `npm run build`.
+- The site's footer version comes from the `version_metadata` binding: it is absent under tests and `wrangler dev`,
+  so the line only shows on a deployed Worker.
 - On a GitHub runner, several pages drawing WebGL on the CPU can starve each other: Booth Studio's
   two-device test closes finished devices and waits for frames before clicking.
 
@@ -316,15 +350,46 @@ Isaac's first use of the Show Tracker chat in production (merged 2026-10-06, art
   `ASSISTANT` binding (booth-studio#16). Optional: add `booth-studio` to this repo's `ci` ruleset
   (today it requires `check` and `show-tracker`).
 
-## Prompt for the final pass (Claude Code, Fable)
+## Prompts for the next sessions (Claude Code, Opus 5.5)
 
-> You're doing the final pass on Isaac Anderson Art's site 3.0 before he moves it to his own web address. Repos:
+Three sessions, in order. Isaac pastes one prompt per new session and sets the model to **Opus 5.5** with the effort
+named in its heading (D-174). Each session ships what it finishes and updates this file, so the next one starts from
+the truth. If Isaac's notes aren't in yet, session 1 skips card A and says so.
+
+### Session 1 — Opus 5.5, medium effort
+
+> You're continuing the final pass on Isaac Anderson Art's site 3.0 before he moves it to his own web address. Repos:
 > yitzhach/Art-Talk-Back (platform; default branch `claude/next-steps-y4vrwv`) and yitzhach/IA-ART-SITE-REPO (site,
-> `main`). Read Art-Talk-Back `CLAUDE.md`, `docs/HANDOFF.md`, `docs/TESTING.md` and `docs/phase-6-site.md`, and each
-> repo's `CLAUDE.md`. Isaac tested the live test address with TESTING.md; his notes are: [PASTE YOUR NOTES HERE].
-> 1. Fix each thing he found, smallest fix first, with a test for each. 2. Then run the security review on stages 3–6
-> (tokens, codes, public routes, tenancy) and fix what's real. 3. Deploy to staging, run the smoke, then ship live
-> (platform first when the site needs new routes; D-169 lets you ship without asking). 4. Stage 7 and the Square test
-> stay on hold (D-170, D-162). Never email a real collector, never add secrets, never delete data. Record decisions in
-> `DECISIONS.md`, update this handoff, and give Isaac a short list of what changed. He isn't technical: clicks, not
-> commands.
+> `main`). Read Art-Talk-Back `CLAUDE.md`, `docs/HANDOFF.md`, `docs/TESTING.md`, and in `docs/phase-6-site.md` the
+> section "Final pass"; then the site repo's `CLAUDE.md`. Isaac's notes from testing the live test address:
+> [PASTE YOUR NOTES HERE, with the Version line from the bottom of the page].
+> Do cards **A** (only the items that don't touch checkout, orders, holds, tokens, codes or tenancy: list the others
+> for session 3), then **B**, **C**, **D**, in that order, one pull request per card, a test for each change. Tick
+> the cards in the plan as you go. Ship each when CI is green: merge, run "Deploy production site" with `confirm`
+> `studio-site`, `studio_slug` `isaac-anderson-art-ddm6dy`, then "Smoke production site" (D-169 lets you ship without
+> asking). Stage 7, the v2.1 list (D-173) and the Square test stay on hold. Never email a real collector, never add
+> secrets, never delete data. Record decisions in `DECISIONS.md` (fetch the default branch before taking a number),
+> one `CHANGELOG.md` line per item, update this handoff, and end with a short list for Isaac of what changed and what
+> to look at, naming the Version line he should see. He isn't technical: clicks, not commands.
+
+### Session 2 — Opus 5.5, medium effort
+
+> Same project and reading list as the handoff's session 1 prompt (Art-Talk-Back `docs/HANDOFF.md` → "Prompts for the
+> next sessions"). Do cards **E** and **F** from `docs/phase-6-site.md` → "Final pass". For E, look up the AI
+> crawlers' current names in their own documentation before writing `robots.txt`; `llms.txt` must hold nothing that
+> isn't already public on the site. For F, check what the platform really keeps and for how long before writing any
+> number; the privacy and terms drafts stay hidden until Isaac saves them, and tell him once that they aren't legal
+> advice. Ship as in session 1. End with Isaac's list: the words he needs to read and save, and the Cloudflare
+> clicks for the day his domain is attached.
+
+### Session 3 — Opus 5.5, high effort
+
+> Same project and reading list as the handoff's session 1 prompt. This is the careful session: use the
+> `backend-builder` skill for every platform change. Do, in order: the items session 1 left from card **A**; card
+> **G** (write the smallest design into the plan first, then build: platform before site); card **H**; then card
+> **S**: run `/security-review` on stages 3–6 in both repos (tokens, codes, public routes, tenancy, and the routes G
+> added) and fix what is real, with a test for each fix. Then "Deploy staging" with `smoke` (pass the inputs its last
+> run used), and ship live, platform first where the site needs new routes. A migration is additive and numbered;
+> every production deploy's bookmark and previous Worker version go in this handoff. A live assistant eval spends
+> money: only with Isaac's OK. End with Isaac's list and say plainly whether the site is ready for the domain move
+> and what is still his.

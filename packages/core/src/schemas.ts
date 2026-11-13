@@ -372,6 +372,28 @@ export const PublicStudio = z.object({
   catalogueVersion: z.number().int(),
 });
 
+/** What the public site may count (card G, D-177): a piece page viewed, Ask opened, the wall tool opened,
+ *  a piece added to an inquiry. A count only, nothing about the person. */
+export const SiteCountKind = z.enum(["view", "ask", "wall", "inquiry"]);
+export const SiteCountBody = z.object({
+  kind: SiteCountKind,
+  /** The piece it was about, by its slug; counted only when the piece is public. */
+  work: Slug.optional(),
+});
+const CountTotals = z.object({
+  view: z.number().int(), ask: z.number().int(), wall: z.number().int(), inquiry: z.number().int(),
+  /** Read from the studio's own records: questions asked, inquiries and holds sent, orders started. */
+  question: z.number().int(), lead: z.number().int(), order: z.number().int(),
+});
+/** The studio's visitor numbers for the last N days (UTC), for the Studio's Site screen. */
+export const SiteCounts = z.object({
+  days: z.number().int(),
+  from: z.string(),
+  totals: CountTotals,
+  /** The pieces seen most, at most 5. */
+  topWorks: z.array(z.object({ id: z.string(), title: z.string(), slug: z.string().nullable(), view: z.number().int(), ask: z.number().int(), wall: z.number().int(), inquiry: z.number().int() })),
+});
+
 /** A photo a site page shows: a public site photo or work, in its place's order (D-118). */
 export const PublicSitePhoto = PublicImage.extend({
   title: z.string(),

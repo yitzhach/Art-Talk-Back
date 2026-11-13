@@ -18,7 +18,7 @@ async function snapshotB() {
   for (const t of ["artworks", "clients", "shows", "sales", "placements", "files", "studio_settings", "activity_log", "memberships",
     "assistant_policy", "pending_actions", "assistant_messages", "boards", "pins", "board_feedback", "shares",
     "visitors", "visitor_messages", "visitor_pages", "leads", "assistant_usage", "orders", "payment_events",
-    "collector_links", "followers", "commissions"]) {
+    "collector_links", "followers", "commissions", "site_counts"]) {
     out[t] = (await env.DB.prepare(`SELECT * FROM ${t} WHERE studio_id = ? ORDER BY 1`).bind(B.studioId).all()).results;
   }
   return out;
@@ -58,6 +58,8 @@ beforeAll(async () => {
   b.thread = thread;
   // B's public work, with a picture: A's studio slug must never return it.
   b.public = await makeWork(B, { title: "B's public heron", collection: "B's birds", tags: ["b-tag"] }, { publish: true });
+  await env.DB.prepare("INSERT INTO site_counts (studio_id, day, kind, artwork_id, n) VALUES (?, ?, 'view', ?, 7)")
+    .bind(B.studioId, new Date().toISOString().slice(0, 10), b.public.work.id).run();
   // B's site (Site 3.0 stage 2): a public site photo in a place, and a profile.
   b.banner = await makeWork(B, { title: "B's banner", kind: "site_photo" }, { publish: true });
   const bs = (await call("/v1/settings", { cookie: B.cookie })).data;
@@ -460,6 +462,16 @@ describe("studio A can't reach studio B", () => {
     ["get", "/activity", async () => {
       expect((await call("/v1/activity", { cookie: A.cookie })).data.items.every((e: any) => e.entityId !== b.artwork.id)).toBe(true);
       expect((await call(`/v1/activity?entityId=${b.artwork.id}`, { cookie: A.cookie })).data.items).toEqual([]);
+    }],
+    // Visitor numbers (card G): A's slug never counts B's piece, and A reads only A's numbers.
+    ["post", "/public/studios/{slug}/counts", async () => {
+      const r = await call(`/v1/public/studios/${await studioSlug(A.studioId)}/counts`, { method: "POST", json: { kind: "view", work: b.public.work.slug } });
+      expect(r.status).toBe(204);
+    }],
+    ["get", "/site/counts", async () => {
+      const got = (await call("/v1/site/counts", { cookie: A.cookie })).data;
+      expect(got.totals.view).toBe(0);
+      expect(got.topWorks).toEqual([]);
     }],
     ["get", "/settings", async () => expect((await call("/v1/settings", { cookie: A.cookie })).data.studioId).toBe(A.studioId)],
     ["patch", "/settings", async () => {

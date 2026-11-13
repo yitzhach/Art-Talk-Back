@@ -1231,7 +1231,7 @@ hold (D-170, D-162). Run on Opus 5.5; the Effort column is the setting to pick f
       follows, orders, kept until someone asks: nothing deletes them on a timer, so no other number); terms takes the
       saved return terms, shipping and deposit answers and the Venmo/Zelle hold. "Deploy production site" (Worker
       `28eb0fab`, before it `9ee2d010`); smoke 16/16. Live footer: `Version 2026-11-13 11:52 PST · 28eb0fab`.
-- [ ] G — Visitor numbers.
+- [ ] G — Visitor numbers. Platform part built (migration 0016, the public count route and the studio's read, D-177); the site part follows.
 - [ ] H — Error alerts.
 - [ ] S — Security review of stages 3–6, fixes, staging smoke, live.
 

@@ -5,6 +5,21 @@ Read this first (the next sessions' prompts are at the end), then `CLAUDE.md`, t
 
 ## Where things stand
 
+- **Final pass, standing agent's run (2026-11-13, D-175).** One session works the cards in `docs/phase-6-site.md` →
+  "Final pass" in phase order (Phase 1: A, B, C, D; Phase 2: E, F; Phase 3: A's high items, G, H, S; Phase 4: final
+  report). The ticked cards there are the only record of progress.
+  - **Phase 1 shipped:** B (`/questions`, live with his 6 saved answers), C (`/trade`, hidden until he saves its
+    words; a printable spec sheet on every piece), D (colours in words on each piece). Platform: Art-Talk-Back#59
+    (page keys `trade`, `privacy`, `terms`). Live footer: `Version 2026-11-13 11:19 PST · 267e4570`.
+  - **Restore points:** `studio-site` before D `b69e6266`, before C `614801db`, before B `c3c7307c`; `studio-api`
+    deploy 289 (previous Worker `20f2ea2a`, bookmark `00000100-0000001c-00005122-c08c0f1d583154786c33aa557519db4c`).
+  - **A** waits on Isaac's notes. Claude's own live pass found no code fault; the data items it saw are listed under
+    card A.
+  - **Needs Isaac** (defaults taken, work goes on): his test notes for card A; save the "For designers and architects"
+    draft in Studio → Site → Pages to put `/trade` live; decide on the test photo-works and odd titles listed under
+    card A; still his and never done by Claude: a test purchase, Venmo/Zelle setup, collector invites, follower
+    sign-ups, any real email.
+
 - **What's next (2026-11-13, D-171…D-174).** Isaac is testing stages 1–6 on the live test address
   (`docs/TESTING.md`); his notes start the final pass. A brainstorm with him on 2026-11-13 fixed what goes in before
   the domain move and what waits for v2.1 (D-173). The plan and task cards are in `docs/phase-6-site.md` → **"Final
@@ -270,7 +285,7 @@ Isaac's first use of the Show Tracker chat in production (merged 2026-10-06, art
 - Booth Studio's (from its repo): `npm test`, `npm run build`, then
   `STUDIO_PLATFORM=../Art-Talk-Back BOOTH_TEST_CHROMIUM=/opt/pw-browsers/chromium node tests/two-devices.mjs`
   (`BOOTH_COMPAT_DATE=2026-08-15` for the platform's date; `E2E_LOG=<file>` keeps wrangler's log on a failure).
-- Next decision is D-175. **Fetch the default branch before taking a number**: two sessions worked
+- Next decision is D-176. **Fetch the default branch before taking a number**: two sessions worked
   here on 2026-10-05 and both took D-059/D-060; this branch's were renumbered. One `CHANGELOG.md`
   line per item.
 

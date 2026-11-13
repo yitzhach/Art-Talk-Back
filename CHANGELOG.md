@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Final pass, Phase 1 shipped (D-175)
+- Site: `/questions` (IA-ART-SITE-REPO#9), `/trade` and spec sheets (#11), colours in words (#10), each deployed and
+  smoke-tested live. `docs/phase-6-site.md`: B, C, D ticked; A waits on Isaac's notes, with Claude's own test pass.
+
 ### Final pass: three more site pages (D-175)
 - `SitePageKey` takes `trade`, `privacy` and `terms` (no migration; the words live in `settings.meta.site`). Test:
   a saved trade, privacy or terms page shows in the public profile and moves the catalogue version.

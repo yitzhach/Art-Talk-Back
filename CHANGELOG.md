@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Final pass, Phase 2 shipped (D-175, D-176)
+- Site: AI search welcomed by name, `/llms.txt`, About's `Person` with the artist's links (IA-ART-SITE-REPO#12);
+  `/privacy` and `/terms`, hidden until saved (#13). `docs/phase-6-site.md`: E and F ticked; handoff updated.
+
 ### Final pass, card E: the artist's links (D-176)
 - The site profile takes `links` (label and https address, at most 12), shown in the public profile in order. Test:
   saved links show publicly, another studio's stay empty, http and other schemes are refused.

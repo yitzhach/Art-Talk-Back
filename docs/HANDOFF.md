@@ -10,14 +10,21 @@ Read this first (the next sessions' prompts are at the end), then `CLAUDE.md`, t
   report). The ticked cards there are the only record of progress.
   - **Phase 1 shipped:** B (`/questions`, live with his 6 saved answers), C (`/trade`, hidden until he saves its
     words; a printable spec sheet on every piece), D (colours in words on each piece). Platform: Art-Talk-Back#59
-    (page keys `trade`, `privacy`, `terms`). Live footer: `Version 2026-11-13 11:19 PST · 267e4570`.
-  - **Restore points:** `studio-site` before D `b69e6266`, before C `614801db`, before B `c3c7307c`; `studio-api`
-    deploy 289 (previous Worker `20f2ea2a`, bookmark `00000100-0000001c-00005122-c08c0f1d583154786c33aa557519db4c`).
+    (page keys `trade`, `privacy`, `terms`).
+  - **Phase 2 shipped:** E (AI crawlers named in `robots.txt`, `/llms.txt`, About's `Person` with his links; platform
+    Art-Talk-Back#61, D-176) and F (`/privacy` and `/terms` drafts, hidden until saved). Live footer:
+    `Version 2026-11-13 11:52 PST · 28eb0fab`; "Smoke production site" 16/16.
+  - **Restore points:** `studio-site` before F `9ee2d010`, before E `267e4570`, before D `b69e6266`, before C
+    `614801db`, before B `c3c7307c`; `studio-api` deploy 289 (previous Worker `20f2ea2a`, bookmark
+    `00000100-0000001c-00005122-c08c0f1d583154786c33aa557519db4c`), then the deploy for `85c4f89` (links; no migration).
+  - **Next:** Phase 3 (high care): A's high items (none without his notes), G (visitor numbers), H (error alerts),
+    S (security review of stages 3–6), then Phase 4's final report.
   - **A** waits on Isaac's notes. Claude's own live pass found no code fault; the data items it saw are listed under
     card A.
   - **Needs Isaac** (defaults taken, work goes on): his test notes for card A; save the "For designers and architects"
-    draft in Studio → Site → Pages to put `/trade` live; decide on the test photo-works and odd titles listed under
-    card A; still his and never done by Claude: a test purchase, Venmo/Zelle setup, collector invites, follower
+    draft in Studio → Site → Pages to put `/trade` live; read, change and save the Privacy and Terms drafts there
+    (a starting point, not legal advice); add his links in Site → Contact → Links; decide on the test photo-works and
+    odd titles listed under card A; still his and never done by Claude: a test purchase, Venmo/Zelle setup, collector invites, follower
     sign-ups, any real email.
 
 - **What's next (2026-11-13, D-171…D-174).** Isaac is testing stages 1–6 on the live test address

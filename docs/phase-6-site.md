@@ -1216,8 +1216,21 @@ hold (D-170, D-162). Run on Opus 5.5; the Effort column is the setting to pick f
       `b69e6266`), smoke 15/15. CI's piece-page paint first read 2104 ms (budget 2000): the price's Bodoni 500 face was
       found only after the CSS; piece pages now preload it (1953 ms). Live footer: `Version 2026-11-13 11:19 PST ·
       267e4570`.
-- [ ] E — Found by AI: robots.txt, `llms.txt`, the artist as a Person.
-- [ ] F — Privacy and terms pages.
+- [x] E — Found by AI. Platform first: Art-Talk-Back#61 (`SiteProfile.links`, public in order; D-176; "Deploy
+      production API" for `85c4f89`). Site: IA-ART-SITE-REPO#12 (`ae99cb1`): `robots.txt` names GPTBot, OAI-SearchBot,
+      ChatGPT-User, ClaudeBot, Claude-SearchBot, Claude-User, PerplexityBot, Perplexity-User, Google-Extended, Applebot,
+      Applebot-Extended and Bingbot (names from OpenAI's and Anthropic's own pages, read 2026-11-13) with everyone's
+      rules; `/llms.txt` from public things only (no phone); About's `Person` with `sameAs` from the new **Links** box
+      in Site → Contact. "Deploy production site" (Worker `9ee2d010`, before it `267e4570`); smoke 16/16 with a new
+      AI-search check. Also fixed on the way: a piece page asked whether checkout was open as its picture painted,
+      which read the largest paint one round trip late (2.10 s) about half the time; it now asks after load (1.95 s,
+      three runs alike).
+- [x] F — Privacy and terms pages. IA-ART-SITE-REPO#13 (`fb6651e`): `/privacy` and `/terms`, 404 and out of the
+      footer and sitemap until Isaac saves them; Site → Pages starts each as a draft and says once that it is not
+      legal advice. Privacy names only what the platform keeps (the `sv` cookie, one year; chats, inquiries, holds,
+      follows, orders, kept until someone asks: nothing deletes them on a timer, so no other number); terms takes the
+      saved return terms, shipping and deposit answers and the Venmo/Zelle hold. "Deploy production site" (Worker
+      `28eb0fab`, before it `9ee2d010`); smoke 16/16. Live footer: `Version 2026-11-13 11:52 PST · 28eb0fab`.
 - [ ] G — Visitor numbers.
 - [ ] H — Error alerts.
 - [ ] S — Security review of stages 3–6, fixes, staging smoke, live.

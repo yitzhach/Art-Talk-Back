@@ -123,7 +123,7 @@ describe("the public profile (D-119)", () => {
     expect(res.headers.get("cache-control")).toBe("public, max-age=60");
     const { catalogueVersion, ...rest } = res.data;
     expect(typeof catalogueVersion).toBe("number");
-    expect(rest).toEqual({ slug: slugA, ...SITE, timezone: "America/New_York" });
+    expect(rest).toEqual({ slug: slugA, ...SITE, timezone: "America/New_York", links: [] });
     for (const secret of ["PRIVATE-SIGNATURE", "PRIVATE-TONE", "4321", "photos", "home.hero", w.hero.work.id]) {
       expect(res.raw).not.toContain(secret);
     }
@@ -180,6 +180,29 @@ describe("the public profile (D-119)", () => {
     // Put the profile back for the tests after this one.
     expect((await putSite(A, cur.meta.site)).status).toBe(200);
     expect((await call(P(slugA))).data.pages.trade).toBeUndefined();
+  });
+
+  it("takes the artist's links, https only, and shows them publicly in order (D-176)", async () => {
+    const cur = await settings(A);
+    expect((await call(P(slugA))).data.links).toEqual([]);
+    const links = [
+      { label: "Instagram", url: "https://www.instagram.com/example" },
+      { label: "Gallery", url: "https://gallery.example/artists/a" },
+    ];
+    const v0 = await version(slugA);
+    const r = await putSite(A, { ...cur.meta.site, links });
+    expect(r.status, r.raw).toBe(200);
+    expect(await version(slugA)).toBeGreaterThan(v0);
+    expect((await call(P(slugA))).data.links).toEqual(links);
+    // Another studio's public profile never carries them.
+    expect((await call(P(slugB))).data.links).toEqual([]);
+    for (const url of ["http://insecure.example", "javascript:alert(1)", "https://", "instagram.com/x"]) {
+      const bad = await putSite(A, { ...cur.meta.site, links: [{ label: "X", url }] });
+      expect(bad.status, url).toBe(400);
+    }
+    expect((await putSite(A, { ...cur.meta.site, links: [{ label: "", url: links[0]!.url }] })).status).toBe(400);
+    expect((await putSite(A, cur.meta.site)).status).toBe(200);
+    expect((await call(P(slugA))).data.links).toEqual([]);
   });
 
   it("changing the profile moves the catalogue version; other settings don't", async () => {

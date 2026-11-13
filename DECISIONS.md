@@ -706,3 +706,10 @@ between the two repos. The handoff groups the work into sessions by that rule.
 The site's page keys gain `trade`, `privacy` and `terms`. Like the care notes, each starts as a draft in Site → Pages
 and reaches the public site, its footer and its sitemap only when Isaac saves it. One platform change for both cards,
 so card F needs no second contract change.
+
+### D-176 · The artist's links, and AI search welcomed by name · 2026-11-13 · Claude (card E; the plan's default)
+The site profile gains `links`, up to 12 labelled https links (Instagram, galleries, press), public in the studio's
+profile and used as About's `Person` `sameAs` and in `llms.txt`. Plain http and other schemes are refused. The
+site's `robots.txt` names the search and answer crawlers OpenAI, Anthropic, Perplexity, Google, Apple and Microsoft
+document (their own pages, read 2026-11-13) with the same rules as everyone else. `llms.txt` is built from the
+public profile only: no phone, the email only because the site already shows it.

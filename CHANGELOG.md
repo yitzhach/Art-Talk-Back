@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Final pass, card E: the artist's links (D-176)
+- The site profile takes `links` (label and https address, at most 12), shown in the public profile in order. Test:
+  saved links show publicly, another studio's stay empty, http and other schemes are refused.
+
 ### Final pass, Phase 1 shipped (D-175)
 - Site: `/questions` (IA-ART-SITE-REPO#9), `/trade` and spec sheets (#11), colours in words (#10), each deployed and
   smoke-tested live. `docs/phase-6-site.md`: B, C, D ticked; A waits on Isaac's notes, with Claude's own test pass.

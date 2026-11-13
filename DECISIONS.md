@@ -713,3 +713,12 @@ profile and used as About's `Person` `sameAs` and in `llms.txt`. Plain http and 
 site's `robots.txt` names the search and answer crawlers OpenAI, Anthropic, Perplexity, Google, Apple and Microsoft
 document (their own pages, read 2026-11-13) with the same rules as everyone else. `llms.txt` is built from the
 public profile only: no phone, the email only because the site already shows it.
+
+### D-177 · Visitor numbers are counts per day, nothing about a person · 2026-11-13 · Claude (card G; the plan's default)
+One new table, `site_counts` (studio, UTC day, kind, piece, n), holds what no other table records: a piece page
+viewed, Ask opened, the wall tool opened, a piece added to an inquiry. Questions asked, leads sent and orders started
+are counted from their own tables, so nothing is written twice. The public route `POST /public/studios/{slug}/counts`
+takes a kind and a piece's slug, counts only public pieces and always answers 204; it reads no cookie and keeps no
+IP. Its limit is a cap of 2,000 per row per day: a script can't run a number past it, and as only public pieces get
+rows it can't fill the table. The site Worker leaves bots out by user agent. The studio reads its numbers at
+`GET /site/counts?days=N` (1 to 90; owner and staff).

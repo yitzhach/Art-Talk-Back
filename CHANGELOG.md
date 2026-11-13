@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### Final pass, card G: visitor numbers (D-177)
+- Migration 0016: `site_counts`. `POST /v1/public/studios/{slug}/counts` adds one (view, ask, wall, inquiry; public
+  pieces only; capped per day; no cookie or IP); `GET /v1/site/counts` gives the studio its totals, with questions,
+  leads and orders read from their own tables, and its five most seen pieces. Tests: counts, the cap, unknown kinds,
+  pieces that aren't public, sign-in and role, and tenancy.
+
 ### Final pass, Phase 2 shipped (D-175, D-176)
 - Site: AI search welcomed by name, `/llms.txt`, About's `Person` with the artist's links (IA-ART-SITE-REPO#12);
   `/privacy` and `/terms`, hidden until saved (#13). `docs/phase-6-site.md`: E and F ticked; handoff updated.

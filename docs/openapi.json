@@ -13799,6 +13799,233 @@
         }
       }
     },
+    "/public/studios/{slug}/counts": {
+      "post": {
+        "tags": [
+          "public"
+        ],
+        "summary": "Add one to a visitor count (no sign-in, nothing about the visitor kept)",
+        "security": [],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "slug",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "enum": [
+                      "view",
+                      "ask",
+                      "wall",
+                      "inquiry"
+                    ]
+                  },
+                  "work": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 80,
+                    "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+                  }
+                },
+                "required": [
+                  "kind"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Counted, or quietly not (a piece that isn't public, or the day's cap)"
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (or in another studio)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/site/counts": {
+      "get": {
+        "tags": [
+          "settings"
+        ],
+        "summary": "The studio's visitor numbers for the last N days",
+        "parameters": [
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 90,
+              "default": 30
+            },
+            "required": false,
+            "name": "days",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "days": {
+                      "type": "integer"
+                    },
+                    "from": {
+                      "type": "string"
+                    },
+                    "totals": {
+                      "type": "object",
+                      "properties": {
+                        "view": {
+                          "type": "integer"
+                        },
+                        "ask": {
+                          "type": "integer"
+                        },
+                        "wall": {
+                          "type": "integer"
+                        },
+                        "inquiry": {
+                          "type": "integer"
+                        },
+                        "question": {
+                          "type": "integer"
+                        },
+                        "lead": {
+                          "type": "integer"
+                        },
+                        "order": {
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "view",
+                        "ask",
+                        "wall",
+                        "inquiry",
+                        "question",
+                        "lead",
+                        "order"
+                      ]
+                    },
+                    "topWorks": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "title": {
+                            "type": "string"
+                          },
+                          "slug": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "view": {
+                            "type": "integer"
+                          },
+                          "ask": {
+                            "type": "integer"
+                          },
+                          "wall": {
+                            "type": "integer"
+                          },
+                          "inquiry": {
+                            "type": "integer"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "title",
+                          "slug",
+                          "view",
+                          "ask",
+                          "wall",
+                          "inquiry"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "days",
+                    "from",
+                    "totals",
+                    "topWorks"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not allowed for your role",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/public/studios/{slug}/assistant": {
       "get": {
         "tags": [

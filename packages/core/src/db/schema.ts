@@ -751,6 +751,23 @@ export const followers = sqliteTable(
   (t) => [uniqueIndex("followers_studio_email").on(t.studioId, t.email), actorCheck("followers_actor"), metaCheck("followers_meta")],
 );
 
+/** Visitor numbers (card G, D-177): counts per UTC day, nothing about a person. */
+export const SITE_COUNT_KINDS = ["view", "ask", "wall", "inquiry"] as const;
+export const siteCounts = sqliteTable(
+  "site_counts",
+  {
+    studioId: text("studio_id").notNull().references(() => studios.id),
+    day: text("day").notNull(),
+    kind: text("kind", { enum: SITE_COUNT_KINDS }).notNull(),
+    artworkId: text("artwork_id").notNull().default(""),
+    n: integer("n").notNull().default(0),
+  },
+  (t) => [
+    primaryKey({ columns: [t.studioId, t.day, t.kind, t.artworkId] }),
+    check("site_counts_kind", sql`kind IN ('view','ask','wall','inquiry')`),
+  ],
+);
+
 export const COMMISSION_STAGES = ["surface", "layering", "color", "erosion", "finished"] as const;
 export const commissions = sqliteTable(
   "commissions",

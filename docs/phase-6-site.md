@@ -1300,6 +1300,83 @@ hold (D-170, D-162). Run on Opus 5.5; the Effort column is the setting to pick f
 4. Isaac: saves the trade, privacy and terms words; his 22 visitor questions (D-132); then the domain move, with the
    Cloudflare bot setting from card E, and Google Search Console and Bing Webmaster Tools (submit `/sitemap.xml`).
 
+## Templates — "Gallery" and "Charcoal" beside "Plaster" (plan, 2026-11-14; D-180; waiting for Isaac's yes)
+
+Isaac chose two looks from four rounds of mockups and wants them as templates beside the current one, to compare on
+his real site, pick one, and later let other artists pick. The design is fixed in
+[`docs/site-templates-design.md`](site-templates-design.md) (his decisions, colours, type, layout, the mockup's CSS);
+the two looks side by side are in [`docs/site-templates-reference.html`](site-templates-reference.html). This section
+is only the build plan. Nothing is built yet.
+
+**Rules for this work.** Plaster does not change: its pages come out byte for byte the same and its tests pass
+unedited. Every word, page, link, button and form stays. No italics in the new templates. Nothing goes live without
+Isaac's "ship" (this overrides D-169 for this work); nothing paid, sent or deleted.
+
+### What Isaac gets, in order
+
+1. **Pictures first.** "Gallery" home page at phone (375) and desktop (1440) width, from the local test site
+   (made-up data, as always in tests).
+2. **Three addresses on his real site**, after his "ship" of cards T1–T3. Visitors see no change; search engines are
+   told not to index the previews:
+   - `https://studio-site.bobdylan2000.workers.dev/` (Plaster, as now)
+   - `https://studio-site.bobdylan2000.workers.dev/?look=gallery`
+   - `https://studio-site.bobdylan2000.workers.dev/?look=charcoal` (from card T4)
+   Every link he taps inside a preview stays in that look, so he can walk the whole site in each.
+3. Then "Charcoal", then the other pages in both, then a **Template** choice in Studio → Site, then dark themes.
+
+### Shape
+
+- **Registry.** `worker/site/templates/{plaster,gallery,charcoal}.ts`, each `{id, label, css, preloadFonts,
+  options}`; `index.ts` lists them and `pick(id)` falls back to Plaster. `plaster.ts` moves there unchanged.
+  `PageCtx` gains `template`; `layout.ts` and the pages read it instead of importing Plaster.
+- **One set of pages.** Where the new looks need different markup, the page asks a named option of the template,
+  never its id: `heroFirst` (photo before the words, `<h1>` kept but visually hidden), `pane` (the bodies of work in
+  the charcoal band), `frames` (fixed-shape picture frames; works whole on a mat), `closelyRoles` (label / sentence /
+  hairline rows in "The work, closely"), `proofChips`, `barBand` (the bar in its own full-width band), `barSuffix`
+  (" Art" after the name in the bar only; the studio's name everywhere else is untouched), `themeSwitch: false`.
+  With every option off the output is Plaster's.
+- **Shared CSS, two thin files.** "Gallery" holds the whole system from the brief; "Charcoal" is Gallery's CSS plus
+  its dark opening and dark close, so the two cannot drift apart. Light only: no dark block, switch hidden.
+- **Fonts** (self-hosted, open licence, licence files already there): add `newsreader-400.woff2` (upright),
+  `plexmono-500.woff2`, `plexmono-600.woff2`, `archivo-500.woff2`. Each template preloads only what shows above the
+  fold. Plaster's list is untouched.
+- **Preview, `?look=<id>`.** Read once in `worker/site/index.ts`. A known id other than the studio's own renders
+  that template, adds `noindex` (meta and `x-robots-tag`), keeps the canonical link on the plain address, and adds
+  `look=` to every same-site page link and filter form in the finished page. An unknown value is ignored. The query
+  is already part of the edge-cache key (D-116), so a preview never answers a visitor's plain address and the other
+  way round. Not in the sitemap or `llms.txt`.
+- **Choosing (card T6, platform first).** `SiteProfile.template` (`settings.meta.site`, D-122): one of the known
+  ids, default `plaster`; no migration; returned by `GET /v1/public/studios/{slug}`; set by the owner in Studio →
+  Site → **Template** with a link to each preview. Saving moves the catalogue version, so the site changes at once.
+  The assistant cannot set it (as with publishing, D-110). The bar's " Art" becomes a field there too if Isaac wants
+  it for other artists.
+
+### Task cards
+
+| Card | What | Where | Done when | Needs Isaac |
+|---|---|---|---|---|
+| T1 | Registry; Plaster moved in unchanged; `PageCtx.template`; `?look=` preview with noindex, canonical, links carried | site | every existing test passes unedited; new tests: Plaster's home page identical with and without the registry, a preview is `noindex` and its links carry the look, an unknown look changes nothing, the plain address is never served a preview from the cache | nothing |
+| T2 | Fonts added; "Gallery" CSS (tokens, type, frames, mats, pane, chips, close, footer) | site | contrast test for every text/background pair in Gallery; no `font-style: italic` in its CSS | nothing |
+| T3 | "Gallery" home page: the options above in `home.ts`, `parts.ts`, `layout.ts` | site | home test under Gallery (same words, links and order as Plaster; `<h1>` present; every picture in a tile row the same height); pictures at 375 and 1440 | **looks at the pictures; "ship" puts the preview addresses on his real site** |
+| T4 | "Charcoal": dark bar band, dark opening into the pane, dark close | site | same tests as T3 plus contrast on the pane pairs; pictures | looks; "ship" |
+| T5 | The other pages in both looks (brief §6): Newsreader titles, mats wherever works are listed, level rows, the same close; the audit fixes listed there, in the new templates only | site | each page's test under both looks; site checks at 375 in both; pictures of Works, a piece, Commissions, Process, About | looks; "ship" |
+| T6 | The picker: `SiteProfile.template`, OpenAPI, validation, cross-studio test, assistant can't change it; then Studio → Site → Template | platform, then site | platform tests; Studio screen at 390; choosing a template changes the plain address | his choice of main look; "ship" (platform first) |
+| T7 | Dark theme for the new templates; theme switch back | site | contrast in dark; pictures | after he has chosen (default) |
+
+### Order, and who does the work
+
+T1 → T2 → T3 → **Isaac looks** → T4 → **Isaac looks** → T5 → T6 → T7. One pull request per card on
+`claude/gallery-charcoal-templates-uc9fi7`; the full checks (`format:check`, `typecheck`, `test`, `build`, the
+deploy dry run) before each. To keep usage down, each card is built by a helper on **Opus 5.5** from this plan and
+the brief; the main session only reviews the result, runs the checks and talks to Isaac.
+
+### Questions for Isaac (one at a time; the default is taken until he says otherwise)
+
+1. Names "Gallery" and "Charcoal"? (Default: yes.)
+2. "Isaac Anderson Art" only in the bar, or in page titles and emails too? (Default: only the bar.)
+3. Keep the version line in the footer? (Default: keep.)
+4. Dark theme now or after he has chosen? (Default: after.)
+
 ## Open questions — answered 2026-11-10 (D-102, D-103)
 
 Isaac: "default on all, except number 10."

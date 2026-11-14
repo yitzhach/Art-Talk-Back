@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Templates: plan and brief (D-180)
+- Docs only: `docs/site-templates-design.md` (the design brief), `docs/site-templates-reference.html` (the two looks),
+  and the build plan in `docs/phase-6-site.md` → "Templates". No code, no migration, nothing deployed.
+
 ### Final pass, card S shipped; final report
 - Card S ticked: "Deploy staging" with `smoke`, then live (studio-api applied 0018; studio-site `d112c7ba`); smoke
   17/17. `docs/HANDOFF.md`: the final report (every card but A done; A waits on Isaac's notes; the Needs Isaac list).

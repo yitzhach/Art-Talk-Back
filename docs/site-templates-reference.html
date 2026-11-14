@@ -1,0 +1,408 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Isaac Anderson Art: Gallery and Charcoal reference</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600&family=Bodoni+Moda:wght@700&family=IBM+Plex+Mono:wght@400;500;600&family=Newsreader:wght@400&display=swap">
+<style>
+/* Mockup only. Five looks for the home page; same words, sections and order as the live page. */
+
+*{box-sizing:border-box}
+html,body{overflow-x:hidden;overflow-x:clip}
+body{margin:0;background:#111}
+img{display:block;max-width:100%}
+p,ul,h1,h2,h3{margin:0}
+ul{padding:0;list-style:none}
+
+/* ---- version switcher (not part of the design) ---- */
+.vr{position:fixed;top:0;left:0;opacity:0;pointer-events:none}
+.switch{position:sticky;top:0;z-index:30;background:#111;color:#e9e9e6;font:600 13px/1 -apple-system,system-ui,'Segoe UI',sans-serif;display:flex;align-items:center;padding:8px 12px;overflow-x:auto;white-space:nowrap}
+.switch .t{color:#9a9a94;margin-right:10px;font-weight:400}
+.switch label{cursor:pointer;padding:10px 13px;margin-right:6px;border:1px solid #4a4a46;border-radius:999px}
+.switch label i{font-style:normal;font-weight:400;margin-left:6px;display:none}
+#v1:checked ~ .switch label[for=v1],#v2:checked ~ .switch label[for=v2],#v3:checked ~ .switch label[for=v3],#v4:checked ~ .switch label[for=v4],#v5:checked ~ .switch label[for=v5]{background:#e9e9e6;color:#111;border-color:#e9e9e6}
+.vnote{background:#22221f;color:#d8d8d2;font:400 13px/1.45 -apple-system,system-ui,'Segoe UI',sans-serif;padding:9px 14px}
+.vnote span{display:none}
+#v1:checked ~ .page .vnote .n1,#v2:checked ~ .page .vnote .n2,#v3:checked ~ .page .vnote .n3,#v4:checked ~ .page .vnote .n4,#v5:checked ~ .page .vnote .n5{display:block}
+@media(min-width:900px){.switch label i{display:inline}}
+
+/* ---- the page ---- */
+.page{
+  --bg:#EDEAE3;--card:#F5F3EE;--mat:#E3DED3;--line:#D6CFC2;--ink:#1B1917;--muted:#5C564C;--soft:#4A443C;--accent:#A34A24;--on-accent:#F5F3EE;
+  --pane:#1B1917;--pane-ink:#EDEAE3;--pane-muted:#A29B8E;--pane-line:#37332E;--pane-accent:#D2794A;
+  --name:'Bodoni Moda',Didot,Georgia,serif;--serif:'Newsreader',Georgia,serif;--body:'Archivo',system-ui,sans-serif;--mono:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+  --gut:20px;
+  background:var(--bg);color:var(--ink);font:16px/1.6 var(--body);-webkit-font-smoothing:antialiased;
+}
+.page a{color:inherit;text-decoration:none}
+.wrap{max-width:1240px;margin:0 auto;padding-left:var(--gut);padding-right:var(--gut)}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+.lbl{font:500 11px/1.4 var(--mono);text-transform:uppercase;letter-spacing:.12em;color:var(--muted)}
+
+/* fixed-shape picture frames: every picture in a row is the same height */
+.ph{position:relative;display:block;height:0;overflow:hidden;background:var(--card);padding-bottom:125%}
+.ph img{position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover}
+.r-hero{padding-bottom:86%}
+.r-43{padding-bottom:75%}
+.r-closely{padding-bottom:66%}
+
+.hdr{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;padding-top:8px;padding-bottom:8px;border-bottom:1px solid var(--line)}
+.name{font:700 20px/1 var(--name);text-transform:uppercase;letter-spacing:.015em;min-height:48px;display:inline-flex;align-items:center}
+.hdr nav{display:flex;order:3;width:100%}
+.hdr nav a{font:500 14px var(--body);min-height:44px;display:inline-flex;align-items:center;margin-right:24px}
+.tools{display:flex;align-items:center}
+.ask{font:600 11px var(--mono);text-transform:uppercase;letter-spacing:.08em;border:1px solid var(--ink);min-height:40px;padding:0 16px;display:inline-flex;align-items:center;margin-right:14px}
+.sw{width:20px;height:20px}
+
+.intro{padding-top:36px;padding-bottom:28px}
+h1{font:700 13.4vw/0.96 var(--name);text-transform:uppercase;letter-spacing:.005em}
+h1 .b{display:block}
+h1 .plus{display:none;font-size:.55em;vertical-align:.14em;margin:0 .16em;font-weight:400;color:var(--accent)}
+.tag{font:400 19px/1.4 var(--serif);margin:18px 0 10px}
+.desc{font-size:16.5px;line-height:1.55;color:var(--soft);max-width:30em}
+.note{font:500 12px/1.5 var(--mono);color:var(--soft);margin-top:16px}
+
+h2{font:400 30px/1.15 var(--serif);letter-spacing:-.015em}
+.num{display:none;font:600 11px var(--mono);color:var(--accent);letter-spacing:.12em;margin-right:16px;vertical-align:.5em}
+.prose{color:var(--soft);max-width:35em}
+.prose p+p{margin-top:.9em}
+.sec{margin-top:72px}
+.sec-head{margin-bottom:28px}
+.sec-head .prose{margin-top:12px}
+
+/* the pane: the three bodies of work */
+.pane{background:var(--pane);color:var(--pane-ink);margin-top:56px;padding:56px 0 60px}
+.pane .prose{color:var(--pane-muted)}
+.pane .num{color:var(--pane-accent)}
+.bodies{display:flex;overflow-x:auto;margin:0 calc(var(--gut) * -1);padding:0 var(--gut) 6px;scrollbar-width:none}
+.bodies li{flex:0 0 72%;margin-right:16px}
+.bodies a{display:block}
+.bodies .ph{background:var(--pane-line)}
+.bodies .ttl{display:block;font:400 26px/1.2 var(--serif);letter-spacing:-.01em;margin-top:14px}
+.bodies .cnt{display:block;font:400 11px/1.4 var(--mono);text-transform:uppercase;letter-spacing:.12em;color:var(--pane-muted);margin-top:4px}
+
+/* available works */
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));grid-gap:32px 16px}
+.card{display:block}
+.meta{display:block;padding-top:12px}
+.meta>span{display:block}
+.no{font:400 11px/1.4 var(--mono);text-transform:uppercase;letter-spacing:.12em;color:var(--muted)}
+.no b{font-weight:400;color:var(--accent)}
+.card .ttl{font:400 21px/1.25 var(--serif);letter-spacing:-.01em;margin-top:3px}
+.sz{font-size:13px;color:var(--muted)}
+.meta>.chip{display:inline-block;font:400 11px/1.4 var(--mono);text-transform:uppercase;letter-spacing:.08em;color:var(--muted);border:1px solid var(--muted);padding:3px 8px;margin-top:6px}
+.more{margin-top:32px}
+.btn{display:inline-flex;align-items:center;justify-content:center;min-height:48px;padding:0 24px;font:600 12px var(--mono);text-transform:uppercase;letter-spacing:.08em;background:var(--accent);color:var(--on-accent)!important;border:1px solid var(--accent);margin:0 10px 10px 0}
+.btn.alt{background:none;color:var(--ink)!important;border-color:var(--ink)}
+
+/* the work, closely */
+.split{display:block;padding:28px 0;border-top:1px solid var(--line)}
+.split .lab{font:500 11px/1.5 var(--mono);text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:18px 0 10px}
+.split.text .lab{margin-top:0}
+.split .lab b{font-weight:500;color:var(--accent)}
+.split .it{font:400 23px/1.28 var(--serif);letter-spacing:-.01em;margin-bottom:12px}
+.split .sm{font-size:14.5px;line-height:1.7;color:var(--soft)}
+.spec{margin-top:18px;border-top:1px solid var(--line);font:400 12px/1.5 var(--mono);color:var(--muted)}
+.spec li{padding:9px 0;border-bottom:1px solid var(--line)}
+
+/* images / collections / commissions */
+.rooms ul{display:flex;overflow-x:auto;margin:0 calc(var(--gut) * -1);padding:0 var(--gut) 6px;scrollbar-width:none}
+.rooms li{flex:0 0 78%;margin-right:16px}
+.room{display:block}
+.room .cap{display:flex;align-items:flex-end;justify-content:space-between;padding:14px 0 0}
+.room .ttl{display:block;font:400 22px/1.2 var(--serif)}
+.room .sub{display:block;font-size:13px;color:var(--muted);margin-top:3px}
+.room .arr{display:none;font:500 13px var(--mono);color:var(--accent)}
+
+/* seen in */
+.seen-l{border-top:1px solid var(--line);margin-top:20px}
+.seen-l li{padding:16px 0;border-bottom:1px solid var(--line);font:400 22px/1.2 var(--serif)}
+
+/* start a conversation */
+.convo{border-top:1px solid var(--ink);padding-top:32px}
+.convo h2{margin-bottom:14px}
+.convo .btns{margin-top:22px}
+
+.ftr{margin-top:80px;border-top:1px solid var(--line);padding-top:26px;padding-bottom:36px}
+.ftr .n{font:700 16px var(--name);text-transform:uppercase;letter-spacing:.015em}
+.ftr .contact a{font-weight:600;color:var(--accent);text-decoration:underline;text-underline-offset:3px;min-height:44px;display:inline-flex;align-items:center;margin-right:20px}
+.ftr .hours,.ftr .ver{font:400 12px/1.5 var(--mono);color:var(--muted)}
+.ftr nav a{font:600 13px var(--body);min-height:44px;display:inline-flex;align-items:center;margin-right:20px}
+.ftr .follow a{color:var(--accent);text-decoration:underline;text-underline-offset:3px}
+.ftr .ver{margin-top:12px}
+
+@media(min-width:760px){
+  .page{--gut:40px}
+  .hdr nav{order:0;width:auto;margin-left:auto}
+  .hdr nav a{margin-right:28px}
+  .tools{order:2}
+  .intro{padding-top:64px;padding-bottom:40px}
+  h1{font-size:8.5vw}
+  h1 .b{display:inline;margin-left:.22em}
+  .tag{font-size:21px;margin-top:26px}
+  .r-hero{padding-bottom:48%}
+  h2{font-size:36px}
+  .sec{margin-top:104px}
+  .sec-head{margin-bottom:40px}
+  .pane{margin-top:72px;padding:88px 0 96px}
+  .bodies{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));grid-gap:28px;overflow:visible;margin:0;padding:0}
+  .bodies li{margin:0}
+  .grid{grid-template-columns:repeat(3,minmax(0,1fr));grid-gap:52px 28px}
+  .split{display:grid;grid-template-columns:minmax(0,7fr) minmax(0,5fr);grid-gap:56px;align-items:start;padding:40px 0}
+  .split .lab{margin-top:0}
+  .split .it{font-size:27px}
+  .rooms ul{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));grid-gap:28px;overflow:visible;margin:0;padding:0}
+  .rooms li{margin:0}
+  .seen-l{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));grid-gap:0 28px;border-top:0}
+  .seen-l li{border-top:1px solid var(--line)}
+  .convo{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);grid-gap:56px;padding-top:44px}
+}
+@media(min-width:1460px){h1{font-size:124px}}
+
+/* ================= what differs between versions ================= */
+.name .art{margin-left:.32em}
+h1 .c{display:none}
+.name{font-size:18px}
+h2{font-size:34px}
+.work{background:var(--mat)}
+.work img{top:9%;left:9%;width:82%;height:82%;object-fit:contain;filter:drop-shadow(0 8px 12px rgba(20,18,15,.3))}
+.seen{border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding-top:22px;padding-bottom:14px}
+.seen-h{font:500 10px/1.4 var(--mono);text-transform:uppercase;letter-spacing:.14em;color:var(--muted);margin-bottom:12px}
+.seen-l{display:block;border:0;margin:0}
+.seen-l li{display:inline-block;border:1px solid var(--line);background:var(--card);padding:8px 18px;margin:0 8px 8px 0;font:400 15px/1.3 var(--serif);color:var(--soft)}
+.top{display:flex;flex-direction:column}
+.top .hero{order:1;width:100%;padding-top:20px}
+.top .intro{order:2;width:100%;padding-top:30px;padding-bottom:0}
+h1{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+.tag{font-size:32px;line-height:1.12;letter-spacing:-.02em;margin:0 0 14px}
+.ph .ov{display:none}
+.ph img{z-index:0}
+@media(min-width:760px){
+  .name{font-size:20px}
+  h2{font-size:46px}
+  .seen{display:flex;align-items:center;padding-top:26px;padding-bottom:18px}
+  .seen-h{margin:0 24px 8px 0}
+  .top .hero{padding-top:32px}
+  .r-hero{padding-bottom:42%}
+  .top .intro{display:grid;grid-template-columns:minmax(0,8fr) minmax(0,4fr);grid-gap:48px;align-items:end;padding-top:48px}
+  .tag{font-size:56px;margin:0}
+}
+
+
+#v1:checked ~ .page .top .hero{max-width:none;padding:0}
+#v1:checked ~ .page .top .hero .note{max-width:1240px;margin:14px auto 0;padding:0 var(--gut)}
+#v1:checked ~ .page .r-hero{padding-bottom:78%}
+@media(min-width:760px){
+  #v1:checked ~ .page .r-hero{padding-bottom:40%}
+}
+
+
+
+#v2:checked ~ .page .top .intro{order:1;padding-top:36px}
+#v2:checked ~ .page .top .hero{order:2;padding-top:26px}
+#v2:checked ~ .page .tag{font-size:44px;line-height:1.02}
+#v2:checked ~ .page .r-hero{padding-bottom:110%}
+#v2:checked ~ .page .bodies{display:block;overflow:visible;margin:0;padding:0;border-bottom:1px solid var(--pane-line)}
+#v2:checked ~ .page .bodies li{border-top:1px solid var(--pane-line);margin:0}
+#v2:checked ~ .page .bodies a{display:flex;align-items:center;padding:18px 0}
+#v2:checked ~ .page .bodies .ph{flex:none;width:64px;height:64px;padding-bottom:0;margin-right:20px}
+#v2:checked ~ .page .bodies .ttl{flex:1;margin:0;font-size:24px}
+#v2:checked ~ .page .bodies .cnt{margin:0}
+#v2:checked ~ .page .room{border:1px solid var(--line);background:var(--card)}
+#v2:checked ~ .page .room .ph{border-bottom:1px solid var(--line)}
+#v2:checked ~ .page .room .cap{padding:18px 20px 20px}
+#v2:checked ~ .page .room .arr{display:block}
+#v2:checked ~ .page .convo{border:1px solid var(--ink);background:var(--card);padding:28px 22px;box-shadow:0 32px 80px rgba(20,18,15,.12)}
+@media(min-width:760px){
+  #v2:checked ~ .page .top{flex-direction:row;align-items:stretch;max-width:1240px;margin:0 auto;padding:40px var(--gut) 0}
+  #v2:checked ~ .page .top .intro{display:flex;flex-direction:column;justify-content:flex-end;align-items:flex-start;flex:1;width:auto;max-width:none;margin:0;padding:0 56px 34px 0}
+  #v2:checked ~ .page .top .hero{flex:none;width:46%;max-width:none;margin:0;padding:0}
+  #v2:checked ~ .page .tag{font-size:84px;line-height:.98;letter-spacing:-.03em;margin:0 0 28px}
+  #v2:checked ~ .page .r-hero{padding-bottom:112%}
+  #v2:checked ~ .page .bodies a{padding:24px 0}
+  #v2:checked ~ .page .bodies .ph{width:96px;height:96px;margin-right:36px}
+  #v2:checked ~ .page .bodies .ttl{font-size:34px}
+  #v2:checked ~ .page .grid{grid-template-columns:repeat(4,minmax(0,1fr))}
+  #v2:checked ~ .page .grid li:nth-child(1){grid-column:span 2}
+  #v2:checked ~ .page .grid li:nth-child(2){grid-column:span 2}
+  #v2:checked ~ .page .grid li:nth-child(1) .work{padding-bottom:92%}
+  #v2:checked ~ .page .grid li:nth-child(2) .work{padding-bottom:92%}
+  #v2:checked ~ .page .convo{padding:56px}
+}
+
+
+
+#v3:checked ~ .page .hdr-band{background:var(--pane);color:var(--pane-ink)}
+#v3:checked ~ .page .hdr{border-bottom-color:var(--pane-line)}
+#v3:checked ~ .page .ask{border-color:var(--pane-ink)}
+#v3:checked ~ .page .top{background:var(--pane);color:var(--pane-ink);padding-bottom:52px}
+#v3:checked ~ .page .desc{color:var(--pane-muted)}
+#v3:checked ~ .page .note{color:var(--pane-muted)}
+#v3:checked ~ .page .pane{margin-top:0;border-top:1px solid var(--pane-line)}
+@media(min-width:760px){
+  #v3:checked ~ .page .top{padding-bottom:84px}
+}
+
+
+
+#v3:checked ~ .page .convo,#v5:checked ~ .page .convo{border:0;background:var(--pane);color:var(--pane-ink);padding:34px 22px}
+#v3:checked ~ .page .convo .prose,#v5:checked ~ .page .convo .prose{color:var(--pane-muted)}
+#v3:checked ~ .page .convo .btn,#v5:checked ~ .page .convo .btn{background:var(--pane-accent);border-color:var(--pane-accent);color:var(--pane)!important}
+#v3:checked ~ .page .convo .btn.alt,#v5:checked ~ .page .convo .btn.alt{background:none;border-color:var(--pane-ink);color:var(--pane-ink)!important}
+@media(min-width:760px){
+  #v3:checked ~ .page .convo,#v5:checked ~ .page .convo{padding:72px 56px}
+}
+
+
+
+#v4:checked ~ .page{--pane:#D3CCBE;--pane-ink:#1B1917;--pane-muted:#574F43;--pane-line:#B9B09F;--pane-accent:#8F3F1D}
+#v4:checked ~ .page .ph .ov{display:block;z-index:1;position:absolute;left:0;right:0;bottom:0;padding:90px 20px 22px;background:linear-gradient(to top,rgba(20,18,15,.8),rgba(20,18,15,0));color:#F5F3EE;font:400 31px/1.08 var(--serif);letter-spacing:-.02em}
+#v4:checked ~ .page .intro .tag{display:none}
+#v4:checked ~ .page .r-hero{padding-bottom:112%}
+#v4:checked ~ .page .top .intro{padding-top:18px}
+#v4:checked ~ .page .bodies a{position:relative}
+#v4:checked ~ .page .bodies .ph::after{content:'';position:absolute;z-index:1;left:0;right:0;bottom:0;height:52%;background:linear-gradient(to top,rgba(20,18,15,.78),rgba(20,18,15,0))}
+#v4:checked ~ .page .bodies .ttl{position:absolute;z-index:2;left:18px;right:18px;bottom:36px;margin:0;color:#F5F3EE}
+#v4:checked ~ .page .bodies .cnt{position:absolute;z-index:2;left:18px;bottom:16px;margin:0;color:#D9D3C7}
+#v4:checked ~ .page .room{position:relative}
+#v4:checked ~ .page .room .ph::after{content:'';position:absolute;z-index:1;left:0;right:0;bottom:0;height:60%;background:linear-gradient(to top,rgba(20,18,15,.8),rgba(20,18,15,0))}
+#v4:checked ~ .page .room .cap{position:absolute;z-index:2;left:18px;right:18px;bottom:14px;padding:0;color:#F5F3EE}
+#v4:checked ~ .page .room .sub{color:#D9D3C7}
+#v4:checked ~ .page .grid{display:flex;overflow-x:auto;margin:0 calc(var(--gut) * -1);padding:0 var(--gut) 8px;scrollbar-width:none}
+#v4:checked ~ .page .grid li{flex:0 0 62%;margin-right:16px}
+@media(min-width:760px){
+  #v4:checked ~ .page .ph .ov{padding:170px 44px 40px;font-size:68px}
+  #v4:checked ~ .page .r-hero{padding-bottom:52%}
+  #v4:checked ~ .page .top .intro{display:block;padding-top:10px}
+  #v4:checked ~ .page .grid li{flex:0 0 29%;margin-right:28px}
+}
+
+
+
+#v5:checked ~ .page{--pane:#7A3417;--pane-ink:#F5F3EE;--pane-muted:#E6CFC3;--pane-line:#96502F;--pane-accent:#F5F3EE}
+#v5:checked ~ .page .top .intro{order:1;display:block;padding-top:34px}
+#v5:checked ~ .page .top .hero{order:2;padding-top:24px}
+#v5:checked ~ .page .tag{font:700 11.6vw/0.98 var(--name);text-transform:uppercase;letter-spacing:.005em;margin:0 0 18px}
+@media(min-width:760px){
+  #v5:checked ~ .page .top .intro{padding-top:56px}
+  #v5:checked ~ .page .tag{font-size:7.3vw;margin-bottom:26px}
+  #v5:checked ~ .page .r-hero{padding-bottom:46%}
+  #v5:checked ~ .page .top .hero{padding-top:36px}
+}
+@media(min-width:1460px){
+  #v5:checked ~ .page .tag{font-size:106px}
+}
+
+</style>
+</head>
+<body>
+<input class="vr" type="radio" name="v" id="v1" checked>
+<input class="vr" type="radio" name="v" id="v2">
+<input class="vr" type="radio" name="v" id="v3">
+<input class="vr" type="radio" name="v" id="v4">
+<input class="vr" type="radio" name="v" id="v5">
+<div class="switch">
+  <span class="t">Version</span>
+  <label for="v1">A<i>Gallery</i></label>
+  <label for="v3">B<i>Charcoal</i></label>
+</div>
+<div class="page">
+<p class="vnote">
+  <span class="n1"><b>A · Gallery.</b> The photograph runs edge to edge under the bar; your line sits large beneath it. Black pane with three pictures.</span>
+  <span class="n2"><b>2 · Split.</b> Your line very large on the left, a tall photograph on the right. The bodies of work as a list in the pane; two works shown large, four smaller; boxed cards.</span>
+  <span class="n3"><b>B · Charcoal.</b> The whole top of the page is charcoal, running straight into the gallery pane, then the page turns light. Dark closing pane.</span>
+  <span class="n4"><b>4 · Line on the photo.</b> Your line is set on the photograph itself. Stone-coloured pane, names on the pictures, works in a row you swipe sideways.</span>
+  <span class="n5"><b>5 · Statement.</b> Your line in the big Bodoni capitals where the name used to be, photograph under it. Rust pane and rust closing.</span>
+</p>
+<div class="hdr-band"><header class="wrap hdr">
+  <a class="name" href="#">Isaac Anderson<span class="art">Art</span></a>
+  <nav aria-label="Main"><a href="#">Works</a><a href="#">Commissions</a><a href="#">Process</a><a href="#">About</a></nav>
+  <div class="tools"><a class="ask" href="#">Ask</a>
+    <svg class="sw" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="8.5" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M10 1.5a8.5 8.5 0 0 1 0 17z" fill="currentColor"/></svg>
+  </div>
+</header></div>
+<main>
+  <div class="top">
+  <div class="wrap intro">
+    <h1><span class="a">Isaac</span><span class="plus" aria-hidden="true">+</span><span class="b">Anderson</span><span class="c">Art</span></h1>
+    <p class="tag">Revelation in the midst of decay.</p>
+    <p class="desc">Site-specific sculptural work in cement and plaster — for private collections, commercial, interior and exterior.</p>
+  </div>
+  <div class="wrap hero"><span class="ph r-hero"><span class="ov">Revelation in the midst of decay.</span><img src="https://studio-site.bobdylan2000.workers.dev/v1/public/studios/isaac-anderson-art-ddm6dy/images/01M76V7PR7YSM8ARPEGCSS21VE/1600.webp" alt="A wide horizontal artwork with a pale cream upper area and dark grey lower band, hung above a low bench beside an olive tree in a bright room."></span>
+    <p class="note">Typical lead 8–12 weeks · to-the-trade inquiries welcome</p>
+  </div>
+  </div>
+
+  <section class="pane">
+    <div class="wrap">
+      <div class="sec-head"><h2><span class="num">01</span>Gallery</h2>
+        <p class="prose">Site-specific work, framed by project type — for the specifier who needs to picture the piece in a space.</p></div>
+      <ul class="bodies">
+        <li><a href="#"><span class="ph"><img src="https://studio-site.bobdylan2000.workers.dev/v1/public/studios/isaac-anderson-art-ddm6dy/images/01M76V5JSWT7WQWN461AV6B6ES/960.webp" alt=""></span><span class="ttl">Abstract</span><span class="cnt">18 works</span></a></li>
+        <li><a href="#"><span class="ph"><img src="https://studio-site.bobdylan2000.workers.dev/v1/public/studios/isaac-anderson-art-ddm6dy/images/01M76V7VK68PP1WJJS41A8BGJB/960.webp" alt=""></span><span class="ttl">Figurative</span><span class="cnt">11 works</span></a></li>
+        <li><a href="#"><span class="ph"><img src="https://studio-site.bobdylan2000.workers.dev/v1/public/studios/isaac-anderson-art-ddm6dy/images/01M76V709RTQWCD4KY6KBDH7GV/960.webp" alt=""></span><span class="ttl">Sculptural</span><span class="cnt">11 works</span></a></li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="wrap sec">
+    <div class="sec-head"><h2><span class="num">02</span>Available works</h2></div>
+    <ul class="grid">
+      <li><a class="card" href="#"><span class="ph work"><img src="https://studio-site.bobdylan2000.workers.dev/v1/public/studios/isaac-anderson-art-ddm6dy/images/01M76V5JSWT7WQWN461AV6B6ES/960.webp" alt=""></span><span class="meta"><span class="no"><b>No. 01</b> · Abstract</span><span class="ttl">Abstract</span><span class="sz">27 × 18 in</span><span class="chip">Price on request</span></span></a></li>
+      <li><a class="card" href="#"><span class="ph work"><img src="https://studio-site.bobdylan2000.workers.dev/v1/public/studios/isaac-anderson-art-ddm6dy/images/01M76V5Q494CCKA2Y14F9J96YG/960.webp" alt=""></span><span class="meta"><span class="no"><b>No. 02</b> · Abstract</span><span class="ttl">Abstract No. 2</span><span class="chip">Price on request</span></span></a></li>
+      <li><a class="card" href="#"><span class="ph work"><img src="https://studio-site.bobdylan2000.workers.dev/v1/public/studios/isaac-anderson-art-ddm6dy/images/01M76V5VCQ6AMFN36XTPXGXTG1/960.webp" alt=""></span><span class="meta"><span class="no"><b>No. 03</b> · Abstract</span><span class="ttl">Abstract No. 3</span><span class="chip">Price on request</span></span></a></li>
+      <li><a class="card" href="#"><span class="ph work"><img src="https://studio-site.bobdylan2000.workers.dev/v1/public/studios/isaac-anderson-art-ddm6dy/images/01M76V630CNWZ54MSKSCFMBKNJ/960.webp" alt=""></span><span class="meta"><span class="no"><b>No. 04</b> · Abstract</span><span class="ttl">Abstract No. 5</span><span class="chip">Price on request</span></span></a></li>
+      <li><a class="card" href="#"><span class="ph work"><img src="https://studio-site.bobdylan2000.workers.dev/v1/public/studios/isaac-anderson-art-ddm6dy/images/01M76V66NC0J3B05VC59966C0G/960.webp" alt=""></span><span class="meta"><span class="no"><b>No. 05</b> · Abstract</span><span class="ttl">Abstract No. 6</span><span class="chip">Price on request</span></span></a></li>
+      <li><a class="card" href="#"><span class="ph work"><img src="https://studio-site.bobdylan2000.workers.dev/v1/public/studios/isaac-anderson-art-ddm6dy/images/01M76V6AQ83QRFHADM1XD2PDG2/960.webp" alt=""></span><span class="meta"><span class="no"><b>No. 06</b> · Abstract</span><span class="ttl">Green Horizon</span><span class="sz">48 × 34 in</span><span class="chip">Price on request</span></span></a></li>
+    </ul>
+    <p class="more"><a class="btn alt" href="#">See all available works</a></p>
+  </section>
+
+  <section class="wrap sec">
+    <div class="sec-head"><h2><span class="num">03</span>The work, closely</h2></div>
+    <article class="split">
+      <span class="ph r-closely"><img src="https://studio-site.bobdylan2000.workers.dev/v1/public/studios/isaac-anderson-art-ddm6dy/images/01M76V9F0132KHX56T3JNZP1A2/960.webp" alt="A dim lounge with a grey tufted sofa and a dark textured artwork with a pale glowing centre above a long sideboard."></span>
+      <div><p class="lab"><b>No. 014</b> — LOBBY COMMISSION - STRATA · FRAMED</p><p class="it">A custom art piece for a lobby in Beverly Hills.</p><p class="sm">Gypsum, cement, and custom pigments, framed on a wood panel.</p>
+        <ul class="spec"><li>Cement, plaster</li><li>48 × 48 × 2.5 in</li><li>~40 lb</li></ul></div>
+    </article>
+    <article class="split text">
+      <div><p class="lab"><b>No. 009</b> — 48" x 48" - Inspired a horizontal COMMISSION</p><p class="it">The beginning of a 72" x 48" custom piece.</p><p class="sm">Gypsum, cement, gilding, and custom pigments, on a wood panel.</p></div>
+      <ul class="spec"><li>Plaster, Cement and pigment</li><li>48 × 48 × 2.5 in</li><li>~40 lb</li></ul>
+    </article>
+  </section>
+
+  <section class="wrap sec rooms">
+    <h2 class="sr">Explore</h2>
+    <ul>
+      <li><a class="room" href="#"><span class="ph r-43"><img src="https://studio-site.bobdylan2000.workers.dev/v1/public/studios/isaac-anderson-art-ddm6dy/images/01M76V9CR2AVTA2PZ4TK65D3E6/480.webp" alt=""></span><span class="cap"><span><span class="ttl">Images</span><span class="sub">Residential + commercial</span></span><span class="arr" aria-hidden="true">→</span></span></a></li>
+      <li><a class="room" href="#"><span class="ph r-43"><img src="https://studio-site.bobdylan2000.workers.dev/v1/public/studios/isaac-anderson-art-ddm6dy/images/01M76V9AHVADS867SETB98B6P6/960.webp" alt=""></span><span class="cap"><span><span class="ttl">Collections</span><span class="sub">Homes + Commercial</span></span><span class="arr" aria-hidden="true">→</span></span></a></li>
+      <li><a class="room" href="#"><span class="ph r-43"><img src="https://studio-site.bobdylan2000.workers.dev/v1/public/studios/isaac-anderson-art-ddm6dy/images/01M76V9876QG0NG0K608R32G88/960.webp" alt=""></span><span class="cap"><span><span class="ttl">Commissions</span><span class="sub">Interior + Exterior</span></span><span class="arr" aria-hidden="true">→</span></span></a></li>
+    </ul>
+  </section>
+
+  <section class="wrap sec"><div class="seen">
+    <h2 class="seen-h">Seen in / installed for</h2>
+    <ul class="seen-l"><li>NEW WORKS</li><li>Private Collection</li><li>Southern California</li></ul>
+  </div></section>
+
+  <section class="wrap sec"><div class="convo">
+    <h2>Start a conversation</h2>
+    <div>
+      <div class="prose"><p>We would love to hear from you. Send us a quick note, with any questions, project ideas, timelines, etc — and let's see what we can create!</p><p>Studio — Southern California / Southern Kentucky</p></div>
+      <p class="btns"><a class="btn" href="#">Text</a><a class="btn alt" href="#">Email</a><a class="btn alt" href="#">Call</a></p>
+    </div>
+  </div></section>
+</main>
+<footer class="wrap ftr">
+  <p class="n">Isaac Anderson</p>
+  <p class="contact"><a href="#">Text</a><a href="#">Email</a><a href="#">Call</a></p>
+  <p class="hours">Calls 9am–6pm Pacific time</p>
+  <nav aria-label="Footer"><a href="#">Works</a><a href="#">Commissions</a><a href="#">Process</a><a href="#">About</a><a href="#">Questions</a></nav>
+  <p class="follow"><a href="#">Follow the studio</a>: new work comes to followers first.</p>
+  <p class="ver">Version 2026-11-13 12:59 PST · d112c7ba</p>
+</footer>
+</div>
+</body>
+</html>

@@ -740,3 +740,11 @@ across both forms, and a studio's site 60 an hour in all; past either, a plain "
 hash kept with questions, leads and code sends is now keyed with the server's `SIGNING_KEY`, so it can't be matched
 back to an address by trying them all. Rows written before this keep the old unkeyed hash; the limits that read it
 start fresh once.
+
+### D-180 · Two more templates, "Gallery" and "Charcoal", beside Plaster; template choice pulled forward · 2026-11-14 · Isaac
+After an audit and four rounds of mockups Isaac chose two looks to build as templates beside Plaster, to compare on
+his real site and pick one; later other artists pick too. Headings in Newsreader 400, Bodoni only for his name, no
+italics, the mono capitals kept by his choice, light mode first. Plaster stays as it is and stays the default until
+he says otherwise. A preview address (`?look=`) shows any page in a named template without changing what visitors
+get. The template dial moves forward from D-173's v2.1 list; the other dials stay there. Amends D-121. Brief:
+`docs/site-templates-design.md`; plan: `docs/phase-6-site.md` → "Templates". Nothing ships without his "ship".

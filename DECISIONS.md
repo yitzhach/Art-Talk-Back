@@ -740,3 +740,11 @@ across both forms, and a studio's site 60 an hour in all; past either, a plain "
 hash kept with questions, leads and code sends is now keyed with the server's `SIGNING_KEY`, so it can't be matched
 back to an address by trying them all. Rows written before this keep the old unkeyed hash; the limits that read it
 start fresh once.
+
+### D-180 · The public site's look is "Gallery wall, lighter" · 2026-11-16 · Isaac (chose it from three trials)
+The template moves from uniform grids to a gallery wall: a full-width hero with up to five cross-fading photos, works
+at their true shape on an uneven column wall, edge-to-edge object rows, rooms sized by shape, and dark bands into a
+dark footer. Words, section order, routes and data calls are unchanged. The palette and the four self-hosted fonts of
+D-121 are unchanged. The design system (colour tokens, one type scale, one spacing set, motion, the Forbidden list)
+now lives in `IA-ART-SITE-REPO/docs/DESIGN.md`; it covers the template, not yet `ask.css`, `wall.css` or
+`collector.css`. The template's stylesheet limit goes from 12 KB to 16 KB.

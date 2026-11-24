@@ -270,8 +270,18 @@ export const artworkActions = crudActions(artworkEntity, ArtworkInput, ArtworkPa
   touch: (ctx) => [bumpCatalogue(ctx)],
 });
 export const clientActions = crudActions(clientEntity, ClientInput, ClientPatch);
+/** A show's site page (meta.publicPage, D-182) is written by show.set_page alone: an update or a sync keeps it. */
+const keepShowPage = (_ctx: ActionCtx, before: Snapshot | null, fields: Snapshot): Snapshot => {
+  if (!("meta" in fields)) return fields;
+  const { publicPage: _drop, ...meta } = (fields.meta ?? {}) as Snapshot;
+  const kept = (before?.meta as Snapshot | undefined)?.publicPage;
+  return { ...fields, meta: kept === undefined ? meta : { ...meta, publicPage: kept } };
+};
 export const showActions = crudActions(showEntity, ShowInput, ShowPatch, {
   apps: ["show-tracker"],
+  shape: keepShowPage,
+  // A published show's page shows its name, place and dates: the site's caches move on with any show change.
+  touch: (ctx) => [bumpCatalogue(ctx)],
   about: "An art show or fair the artist applies to or exhibits at. Dates are YYYY-MM-DD; feeCents is the booth fee in whole cents ($650 = 65000); leave unknown values out rather than guessing.",
 });
 // A sale may name a show and an artwork in this studio (D-016: else 404). A deleted

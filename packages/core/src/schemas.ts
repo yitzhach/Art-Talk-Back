@@ -1156,5 +1156,52 @@ export const PublicFollowerPage = z.object({
 export const PublicShow = z.object({
   id: Id, name: z.string(), venue: z.string().nullable(), city: z.string().nullable(), startsOn: z.string().nullable(), endsOn: z.string().nullable(),
 });
+// ------------------------------------------------------------------- show pages (D-182)
+
+/**
+ * A show's own page on the studio's site, kept in the show's `meta.publicPage` (D-182). Only `show.set_page` writes it;
+ * a show update or a Show Tracker sync keeps it as it is. `photos` are the studio's artworks (booth shots are site
+ * photos), in order; only public ones ever show. The works on the page are the show's own list (show_artworks).
+ */
+export const ShowPage = z.object({
+  published: z.boolean(),
+  /** The page's address under /shows/, unique among the studio's shows, e.g. `red-dot-miami-2026`. */
+  slug: Slug,
+  description: nullableText(2000),
+  photos: z.array(Id).max(40),
+}).strict();
+export const ShowPageInput = z.object({
+  showId: Id,
+  /** The show's version the artist saw. */
+  version: z.number().int().min(1),
+  published: z.boolean().optional(),
+  slug: Slug.optional(),
+  description: nullableText(2000).optional(),
+  photos: z.array(Id).max(40).optional(),
+}).strict();
+
+/** One published show as the site's Shows page lists it. Never the fee, notes, status or what sold for how much. */
+export const PublicShowSummary = z.object({
+  slug: Slug,
+  name: z.string(),
+  venue: z.string().nullable(),
+  city: z.string().nullable(),
+  startsOn: z.string().nullable(),
+  endsOn: z.string().nullable(),
+  booth: z.string().nullable(),
+  /** The first photo that can show, else the first work's cover. */
+  cover: PublicImage.nullable(),
+  workCount: z.number().int(),
+  photoCount: z.number().int(),
+});
+export const PublicShowList = z.object({ items: z.array(PublicShowSummary), catalogueVersion: z.number().int() });
+export const PublicShowDetail = PublicShowSummary.extend({
+  description: z.string().nullable(),
+  /** The show's own website, when the Show Tracker has one (meta.url, http/https only). */
+  website: z.string().nullable(),
+  photos: z.array(PublicSitePhoto),
+  works: z.array(PublicArtwork),
+  catalogueVersion: z.number().int(),
+});
 export const FollowCodeInput = z.object({ email: z.email().max(200), showId: Id.optional(), website: z.string().max(200).optional() }).strict();
 export const FollowVerifyInput = z.object({ email: z.email().max(200), code: z.string().regex(/^\d{6}$/), showId: Id.optional() }).strict();

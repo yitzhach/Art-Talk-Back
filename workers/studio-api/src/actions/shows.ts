@@ -1,13 +1,13 @@
 // Show actions: what went to a show and what sold there.
-import { Id, MarkSoldInput, db as schema, newId } from "@studio/core";
-import { and, eq, isNull } from "drizzle-orm";
+import { Id, MarkSoldInput, ShowPage, ShowPageInput, db as schema, newId } from "@studio/core";
+import { and, eq, inArray, isNull, ne } from "drizzle-orm";
 import { z } from "zod";
 import type { Db } from "../env";
 import { HttpError } from "../lib/errors";
 import {
-  artworkEntity, checkVersion, clientEntity, getRecord, insertWrite, showArtworkEntity, showEntity, updateWrite,
+  artworkEntity, bumpCatalogue, checkVersion, clientEntity, getRecord, insertWrite, showArtworkEntity, showEntity, updateWrite,
 } from "./records";
-import { type Snapshot, type Write, defineAction } from "./runner";
+import { type ActionCtx, type Snapshot, type Write, defineAction } from "./runner";
 
 /** The live (not removed) row for an artwork at a show, if any. */
 async function findShowArtwork(db: Db, studioId: string, showId: string, artworkId: string) {
@@ -32,7 +32,7 @@ export const addArtworkToShow = defineAction({
     if (await findShowArtwork(ctx.db, ctx.actor.studioId, showId, artworkId)) {
       throw new HttpError("bad_request", "That artwork is already at this show");
     }
-    return { writes: [insertWrite(ctx, showArtworkEntity, { id: newId(), showId, artworkId, currency: art.currency })] };
+    return { writes: [insertWrite(ctx, showArtworkEntity, { id: newId(), showId, artworkId, currency: art.currency }), bumpCatalogue(ctx)] };
   },
   respond: (_c, a) => a[0] as Snapshot,
 });
@@ -47,7 +47,7 @@ export const removeArtworkFromShow = defineAction({
     const row = await findShowArtwork(ctx.db, ctx.actor.studioId, showId, artworkId);
     if (!row) throw new HttpError("not_found", "That artwork isn't at this show");
     if (row.outcome === "sold") throw new HttpError("version_conflict", "It sold at this show; undo the sale instead");
-    return { writes: [updateWrite(ctx, showArtworkEntity, row, { deletedAt: ctx.now })] };
+    return { writes: [updateWrite(ctx, showArtworkEntity, row, { deletedAt: ctx.now }), bumpCatalogue(ctx)] };
   },
   respond: (_c, a) => a[0] as Snapshot,
 });
@@ -79,4 +79,57 @@ export const markSold = defineAction({
     return { writes };
   },
   respond: (_c, a) => ({ artwork: a[0] as Snapshot, showArtwork: (a[1] as Snapshot | undefined) ?? null }),
+});
+
+// ------------------------------------------------------------------ the show's site page (D-182)
+
+/** "Red Dot Miami" starting 2026-12-02 → "red-dot-miami-2026". */
+export function showSlug(name: string, startsOn: string | null): string {
+  const base = name.normalize("NFKD").replace(/[\u0300-\u036f]/g, "").toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 60).replace(/-+$/, "") || "show";
+  const year = startsOn?.slice(0, 4);
+  return year && /^\d{4}$/.test(year) && !base.endsWith(year) ? `${base}-${year}` : base;
+}
+
+/** The slugs other live shows of the studio use for their pages. */
+async function takenShowSlugs(ctx: ActionCtx, showId: string) {
+  const t = schema.shows;
+  const rows = await ctx.db.select({ meta: t.meta }).from(t)
+    .where(and(eq(t.studioId, ctx.actor.studioId), isNull(t.deletedAt), ne(t.id, showId)));
+  return new Set(rows.map((r) => ((r.meta ?? {}) as { publicPage?: { slug?: string } }).publicPage?.slug).filter(Boolean));
+}
+
+export const setShowPage = defineAction({
+  name: "show.set_page",
+  description: "Set a show's page on the studio's site: whether it is published, its address, words and photos",
+  input: ShowPageInput,
+  permission: "shows:write",
+  risk: "confirm",
+  // What the public site says is the artist's to change, like publishing a work (D-110).
+  assistant: "never",
+  plan: async (ctx, { showId, version, ...change }) => {
+    const before = await getRecord(ctx.db, showEntity, ctx.actor.studioId, showId);
+    checkVersion(before, version);
+    const meta = (before.meta ?? {}) as Snapshot;
+    const old = ShowPage.safeParse(meta.publicPage);
+    const page = {
+      published: change.published ?? (old.success ? old.data.published : false),
+      slug: change.slug ?? (old.success ? old.data.slug : showSlug(before.name as string, before.startsOn as string | null)),
+      description: change.description !== undefined ? change.description : (old.success ? old.data.description : null),
+      photos: change.photos ?? (old.success ? old.data.photos : []),
+    };
+    if ((await takenShowSlugs(ctx, showId)).has(page.slug)) {
+      throw new HttpError("bad_request", "Another show's page already uses that address", { field: "slug" });
+    }
+    const photos = [...new Set(page.photos)];
+    if (photos.length) {
+      const t = schema.artworks;
+      const found = await ctx.db.select({ id: t.id }).from(t)
+        .where(and(eq(t.studioId, ctx.actor.studioId), isNull(t.deletedAt), inArray(t.id, photos)));
+      if (found.length !== photos.length) throw new HttpError("bad_request", "A photo isn't one of this studio's", { field: "photos" });
+    }
+    const publicPage = ShowPage.parse({ ...page, photos });
+    return { writes: [updateWrite(ctx, showEntity, before, { meta: { ...meta, publicPage } }), bumpCatalogue(ctx)] };
+  },
+  respond: (_c, a) => a[0] as Snapshot,
 });

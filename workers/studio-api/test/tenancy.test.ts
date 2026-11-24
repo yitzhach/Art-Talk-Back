@@ -66,6 +66,12 @@ beforeAll(async () => {
   await call("/v1/settings", { method: "PATCH", cookie: B.cookie, headers: { "If-Match": String(bs.version) },
     json: { meta: { ...bs.meta, site: { name: "B's site", phone: "5551234567", photos: { "home.hero": [b.banner.work.id, b.public.work.id] },
       checkout: { enabled: true, venmo: "@B-Artist", shippingCents: 1000 } } } } });
+  // B's published show page (D-182): its photo and its work.
+  await call("/v1/actions/show.add_artwork", { method: "POST", cookie: B.cookie, json: { showId: b.show.id, artworkId: b.public.work.id } });
+  const bShowPage = await call("/v1/actions/show.set_page", { method: "POST", cookie: B.cookie,
+    json: { showId: b.show.id, version: b.show.version, published: true, photos: [b.banner.work.id] } });
+  if (bShowPage.status !== 200) throw new Error(`show page ${bShowPage.status} ${bShowPage.raw}`);
+  b.show = bShowPage.data.result;
   // B's buyable piece (Site 3.0 stage 4).
   b.forSale = await makeWork(B, { title: "B's small heron", priceCents: 20_000, width: 10, height: 10, shipping: { tier: 1 } }, { publish: true });
   b.opKey = newId();
@@ -368,6 +374,21 @@ describe("studio A can't reach studio B", () => {
       const got = (await call(`/v1/public/studios/${await studioSlug(A.studioId)}`)).data;
       expect(JSON.stringify(got)).not.toContain("B's");
       expect(got.phone).toBeNull();
+    }],
+    // Show pages (D-182): B's published show page and its works never show under A's slug.
+    ["get", "/public/studios/{slug}/show-pages", async () => {
+      expect((await call(`/v1/public/studios/${await studioSlug(A.studioId)}/show-pages`)).data.items).toEqual([]);
+      expect((await call(`/v1/public/studios/${await studioSlug(B.studioId)}/show-pages`)).data.items).toHaveLength(1);
+    }],
+    ["get", "/public/studios/{slug}/show-pages/{showSlug}", async () => {
+      const page = (await call(`/v1/shows/${b.show.id}`, { cookie: B.cookie })).data.meta.publicPage;
+      expect(page?.slug).toBeTruthy();
+      expect((await call(`/v1/public/studios/${await studioSlug(A.studioId)}/show-pages/${page.slug}`)).status).toBe(404);
+      // An A show can't name B's photo.
+      const mine = (await call("/v1/shows", { method: "POST", cookie: A.cookie, json: { name: "A's show" } })).data;
+      expect((await call("/v1/actions/show.set_page", { method: "POST", cookie: A.cookie,
+        json: { showId: mine.id, version: mine.version, published: true, photos: [b.banner.work.id] } })).status).toBe(400);
+      await call(`/v1/shows/${mine.id}`, { method: "DELETE", cookie: A.cookie, headers: { "If-Match": String(mine.version) } });
     }],
     ["get", "/public/studios/{slug}/site-photos", async () => {
       // Even when A's own settings name B's works, A's site never shows them.

@@ -4,8 +4,8 @@
 // when it is public and not deleted, a picture only when it is ready, unlocked and has that size.
 // Rows are turned into answers field by field, never spread, so a new column can't leak.
 import {
-  ArtworkKind, ArtworkStatus, IMAGE_WIDTHS, PublicArtwork, PublicArtworkDetail, PublicArtworkList, PublicCollections, PublicSitePhotos,
-  PublicStudio, SitePlace, SiteProfile, Slug,
+  ArtworkKind, ArtworkStatus, IMAGE_WIDTHS, PublicArtwork, PublicArtworkDetail, PublicArtworkList, PublicCollections, PublicShowDetail,
+  PublicShowList, PublicShowSummary, PublicSitePhotos, PublicStudio, ShowPage, SitePlace, SiteProfile, Slug,
 } from "@studio/core";
 import { createRoute } from "@hono/zod-openapi";
 import type { Context } from "hono";
@@ -358,5 +358,136 @@ publicRoutes.openapi(
       });
     }
     return reply(c, { places }, studio.version);
+  },
+);
+
+// ------------------------------------------------------------------ show pages (D-182)
+
+type ShowPageT = z.infer<typeof ShowPage>;
+/** A show's page, only when it is stored whole and published. */
+const pageOf = (meta: unknown): ShowPageT | null => {
+  const ok = ShowPage.safeParse(parse<Row>(meta, {}).publicPage);
+  return ok.success && ok.data.published ? ok.data : null;
+};
+const SHOW_COLS = "id, name, venue, city, starts_on, ends_on, booth, meta";
+const PUBLISHED = "studio_id = ? AND deleted_at IS NULL AND status <> 'cancelled' AND json_extract(meta, '$.publicPage.published') = 1";
+
+/** The public, live photos among these ids (works or site photos), each with its first picture, in the ids' order. */
+async function photosOf(c: Context<AppEnv>, studio: { id: string }, slug: string, ids: string[]) {
+  const rows = new Map<string, Row>();
+  for (let i = 0; i < ids.length; i += 90) {
+    const part = ids.slice(i, i + 90);
+    const { results } = await c.env.DB.prepare(
+      `SELECT id, title, slug, kind, primary_file_id FROM artworks WHERE studio_id = ? AND public = 1 AND deleted_at IS NULL AND ${live()}
+       AND id IN (${part.map(() => "?").join(",")})`,
+    ).bind(studio.id, ...part).all<Row>();
+    for (const r of results) rows.set(r.id as string, r);
+  }
+  const files = await filesOf(c, studio.id, [...rows.keys()]);
+  const out = new Map<string, z.infer<typeof PublicShowDetail>["photos"][number]>();
+  for (const id of ids) {
+    const a = rows.get(id);
+    const img = a ? imagesOf(slug, files.get(id) ?? [], a.primary_file_id as string | null)[0] : undefined;
+    if (a && img) out.set(id, { ...img, title: a.title as string, workSlug: a.kind === "work" && a.slug ? (a.slug as string) : null });
+  }
+  return out;
+}
+
+/** The public works each show brought, in the order they were added (sold ones too: "exactly what I had"). */
+async function worksOf(c: Context<AppEnv>, studioId: string, showIds: string[]): Promise<Map<string, Row[]>> {
+  const out = new Map<string, Row[]>();
+  for (let i = 0; i < showIds.length; i += 90) {
+    const part = showIds.slice(i, i + 90);
+    const { results } = await c.env.DB.prepare(
+      `SELECT sa.show_id AS show_id, ${COLS.split(", ").map((k) => `a.${k}`).join(", ")}
+       FROM show_artworks sa JOIN artworks a ON a.id = sa.artwork_id AND a.studio_id = sa.studio_id
+       WHERE sa.studio_id = ? AND sa.deleted_at IS NULL AND a.public = 1 AND a.deleted_at IS NULL AND a.kind = 'work' AND ${live("a.")}
+       AND sa.show_id IN (${part.map(() => "?").join(",")}) ORDER BY sa.created_at, sa.id`,
+    ).bind(studioId, ...part).all<Row>();
+    for (const r of results) out.set(r.show_id as string, [...(out.get(r.show_id as string) ?? []), r]);
+  }
+  return out;
+}
+
+const showFields = (s: Row, page: ShowPageT) => ({
+  slug: page.slug,
+  name: s.name as string,
+  venue: (s.venue as string | null) ?? null,
+  city: (s.city as string | null) ?? null,
+  startsOn: (s.starts_on as string | null) ?? null,
+  endsOn: (s.ends_on as string | null) ?? null,
+  booth: (s.booth as string | null) ?? null,
+});
+/** Newest first; a show with no date last. */
+const byDate = (a: Row, b: Row) =>
+  Number(!a.starts_on) - Number(!b.starts_on) || String(b.starts_on ?? "").localeCompare(String(a.starts_on ?? "")) ||
+  String(a.name).localeCompare(String(b.name));
+
+publicRoutes.openapi(
+  createRoute({
+    method: "get", path: `${P}/show-pages`, tags: ["public"],
+    summary: "The studio's published show pages, newest first: name, place, dates, booth and a cover (no sign-in)",
+    security: [], request: { params: SlugParam },
+    responses: { 200: json(PublicShowList), 404: errors[404] },
+  }),
+  async (c) => {
+    const { slug } = c.req.valid("param");
+    const studio = await studioOf(c, slug);
+    const { results } = await c.env.DB.prepare(`SELECT ${SHOW_COLS} FROM shows WHERE ${PUBLISHED} LIMIT 500`).bind(studio.id).all<Row>();
+    const shows = results.map((s) => ({ s, page: pageOf(s.meta) })).filter((x): x is { s: Row; page: ShowPageT } => !!x.page)
+      .sort((x, y) => byDate(x.s, y.s));
+    const photos = await photosOf(c, studio, slug, [...new Set(shows.flatMap((x) => x.page.photos))]);
+    const works = await worksOf(c, studio.id, shows.map((x) => x.s.id as string));
+    const covers = await filesOf(c, studio.id, shows.map((x) => works.get(x.s.id as string)?.[0]?.id as string).filter(Boolean));
+    const items = shows.map(({ s, page }): z.infer<typeof PublicShowSummary> => {
+      const shown = page.photos.flatMap((id) => photos.get(id) ?? []);
+      const list = works.get(s.id as string) ?? [];
+      const first = list[0];
+      const fromWork = first ? imagesOf(slug, covers.get(first.id as string) ?? [], first.primary_file_id as string | null)[0] : undefined;
+      const top = shown[0];
+      return {
+        ...showFields(s, page),
+        cover: top ? { fileId: top.fileId, altText: top.altText, aspectRatio: top.aspectRatio, sizes: top.sizes } : (fromWork ?? null),
+        workCount: list.length,
+        photoCount: shown.length,
+      };
+    });
+    return reply(c, { items }, studio.version);
+  },
+);
+
+publicRoutes.openapi(
+  createRoute({
+    method: "get", path: `${P}/show-pages/{showSlug}`, tags: ["public"],
+    summary: "One published show page: its words, booth photos and the public works shown there (no sign-in)",
+    security: [], request: { params: SlugParam.extend({ showSlug: z.string().meta({ param: { name: "showSlug", in: "path" } }) }) },
+    responses: { 200: json(PublicShowDetail), 404: errors[404] },
+  }),
+  async (c) => {
+    const { slug, showSlug } = c.req.valid("param");
+    const studio = await studioOf(c, slug);
+    if (!Slug.safeParse(showSlug).success) throw notFound("Show");
+    const s = await c.env.DB.prepare(`SELECT ${SHOW_COLS} FROM shows WHERE ${PUBLISHED} AND json_extract(meta, '$.publicPage.slug') = ? LIMIT 1`)
+      .bind(studio.id, showSlug).first<Row>();
+    const page = s ? pageOf(s.meta) : null;
+    if (!s || !page || page.slug !== showSlug) throw notFound("Show");
+    const photos = await photosOf(c, studio, slug, page.photos);
+    const shown = page.photos.flatMap((id) => photos.get(id) ?? []);
+    const list = (await worksOf(c, studio.id, [s.id as string])).get(s.id as string) ?? [];
+    const files = await filesOf(c, studio.id, list.map((w) => w.id as string));
+    const ship = shippingOf((await siteFor(c.env, studio.id)).site);
+    const works = list.map((w) => publicWork(slug, w, files.get(w.id as string) ?? [], ship));
+    const url = parse<Row>(s.meta, {}).url;
+    const top = shown[0];
+    return reply(c, {
+      ...showFields(s, page),
+      cover: top ? { fileId: top.fileId, altText: top.altText, aspectRatio: top.aspectRatio, sizes: top.sizes } : (works[0]?.images[0] ?? null),
+      workCount: works.length,
+      photoCount: shown.length,
+      description: page.description,
+      website: typeof url === "string" && /^https?:\/\/[^\s]+$/.test(url) && url.length <= 500 ? url : null,
+      photos: shown,
+      works,
+    } satisfies Omit<z.infer<typeof PublicShowDetail>, "catalogueVersion">, studio.version);
   },
 );

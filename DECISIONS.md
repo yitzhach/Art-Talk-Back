@@ -759,3 +759,16 @@ leaves it out. The site Worker gains `SITE_ORIGIN` (input `site_origin` of "Depl
 moves, canonical links and data name it and every other host answers `x-robots-tag: noindex`, so search engines
 keep one copy. Cloudflare's bot settings on the domain stay Isaac's.
 
+### D-182 · Each show can have its own page on the studio's site · 2026-11-24 · Isaac asked; Claude built it
+Isaac asked for a Shows place on the site, so people who saw him at a fair can find what he showed, and so a search
+for the show finds him. A show's page (published or not, its address, a few words and its booth photos) is kept in the
+show's `meta.publicPage`, not in new columns, so no migration: only `show.set_page` writes it (risk confirm, the
+assistant never), and show updates and Show Tracker sync keep whatever is stored. The address defaults to the name and
+the year (`red-dot-miami-2026`) and is unique within the studio. Booth photos are site photos (artworks of kind
+`site_photo`), so the image pipeline and the public checks are the ones the site already uses. The works shown are the
+show's `show_artworks`, the same list the Show Tracker keeps; only public, live works appear. Two public routes,
+`/v1/public/studios/{slug}/show-pages` and `/show-pages/{showSlug}`, answer published shows that aren't cancelled,
+with no fee, notes or sale price. Any write to a show or its works bumps `catalogue_version`, so the site's cache
+turns over. On the site: `/shows` (coming up, then past), `/shows/{slug}` with an `ExhibitionEvent`, a Shows link in
+the menu only once a page is published, and sitemap and llms.txt entries. Later, not now: the show chat app's booth and
+piece photos can be brought in as site photos on a show, by a one-way import; the two stay uncoupled.

@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+### Show pages on the studio's site (D-182)
+- `show.set_page` (shows:write, confirm, never the assistant): publish a show's page, set its address, words and booth
+  photos. Kept in the show's `meta.publicPage`; show updates and Show Tracker sync leave it alone.
+- Public `GET /v1/public/studios/{slug}/show-pages` and `/show-pages/{showSlug}`: published, uncancelled shows only,
+  with public photos and public, live works; no fee, notes or sale price.
+- Show writes and adding or removing a work now bump `catalogue_version`.
+- Tests: `test/show-pages.test.ts`, and two tenancy cases.
+
 ### Site look: "Gallery wall, lighter" (D-180)
 - DECISIONS: D-180 records Isaac's choice of the new public-site look; the build is in IA-ART-SITE-REPO.
 

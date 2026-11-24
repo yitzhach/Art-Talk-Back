@@ -748,3 +748,14 @@ dark footer. Words, section order, routes and data calls are unchanged. The pale
 D-121 are unchanged. The design system (colour tokens, one type scale, one spacing set, motion, the Forbidden list)
 now lives in `IA-ART-SITE-REPO/docs/DESIGN.md`; it covers the template, not yet `ask.css`, `wall.css` or
 `collector.css`. The template's stylesheet limit goes from 12 KB to 16 KB.
+
+### D-181 · Search and AI readiness: one artist in the data, one address for search · 2026-11-24 · Claude (Isaac asked for SEO and AI search; the plan's default)
+Every public page carries one `WebSite` and one `Person` (the artist, `@id` `{origin}/#artist`); pieces, About
+(`ProfilePage`), Commissions (`Service`) and show pages point at that `@id` instead of describing the artist again.
+`Person` rather than `Organization`: the studio is one artist. Listed pages get a `BreadcrumbList`, the sitemap lists
+each piece's pictures, and `/llms-full.txt` holds every public page's words and every public piece in one file,
+from public fields only (never the phone). No words are invented: where a piece has no medium or year, the data
+leaves it out. The site Worker gains `SITE_ORIGIN` (input `site_origin` of "Deploy production site"): once the domain
+moves, canonical links and data name it and every other host answers `x-robots-tag: noindex`, so search engines
+keep one copy. Cloudflare's bot settings on the domain stay Isaac's.
+

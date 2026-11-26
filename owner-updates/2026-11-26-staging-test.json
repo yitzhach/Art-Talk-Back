@@ -1,0 +1,47 @@
+{
+  "target": "staging",
+  "studio": "isaac-anderson-art-sbtwkm",
+  "steps": [
+    {
+      "op": "show.create",
+      "fields": {
+        "name": "Red Dot Miami",
+        "venue": "Mana Wynwood Convention Center",
+        "city": "Miami",
+        "startsOn": "2026-12-02",
+        "endsOn": "2026-12-06",
+        "booth": null
+      }
+    },
+    {
+      "op": "show.page",
+      "show": "Red Dot Miami",
+      "change": {
+        "slug": "red-dot-miami-2026",
+        "description": "Red Dot Miami runs December 2–6, 2026, at Mana Wynwood Convention Center in Miami, during Miami Art Week, the same week as Art Basel Miami Beach (December 4–6) and the other fairs in town. I'm showing at Red Dot Miami only, and I'm not part of Art Basel or the other fairs. If you're in Miami for Art Week, come find me at the booth.",
+        "published": true
+      }
+    },
+    {
+      "op": "show.add_photo",
+      "show": "red-dot-miami-2026",
+      "file": "owner-updates/files/red-dot-miami-sample.jpg",
+      "first": true,
+      "title": "Red Dot Miami sample"
+    },
+    {
+      "op": "show.update",
+      "show": "red-dot-miami-2026",
+      "fields": {
+        "booth": "TEST"
+      }
+    },
+    {
+      "op": "show.update",
+      "show": "red-dot-miami-2026",
+      "fields": {
+        "booth": null
+      }
+    }
+  ]
+}

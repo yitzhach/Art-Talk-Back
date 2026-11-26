@@ -1,0 +1,94 @@
+name: Owner update
+
+# Owner updates without a browser sign-in (D-183). Push an update file to owner-updates/*.json on a branch named
+# owner-updates/..., and this run makes each change through studio-api as the studio's owner, the same way the
+# Studio app does (same actions, checks and activity log). It signs in by writing a 20-minute session straight into
+# D1 with the repo's Cloudflare token, and always deletes that session at the end. The Studio's own sign-in is
+# untouched. Staging only until Isaac says yes to production.
+on:
+  push:
+    branches: ["owner-updates/**"]
+    paths: ["owner-updates/*.json"]
+  workflow_dispatch:
+    inputs:
+      update:
+        description: "Update file to run, e.g. owner-updates/red-dot-booth.json"
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: owner-update
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      TARGET: staging
+      SITE_ORIGIN: https://studio-site-staging.bobdylan2000.workers.dev
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: npm ci --no-audit --no-fund
+        working-directory: scripts/owner-update
+      - run: node --test
+        working-directory: scripts/owner-update
+      - name: Pick the update files
+        id: pick
+        env:
+          INPUT: ${{ inputs.update }}
+        run: |
+          if [ -n "$INPUT" ]; then files="$INPUT"; else
+            files=$(git diff --name-only --diff-filter=AM HEAD~1 HEAD -- 'owner-updates/*.json' | tr '\n' ' ')
+          fi
+          for f in $files; do
+            case "$f" in owner-updates/*.json) [ -f "$f" ] || { echo "::error::$f not found"; exit 1; } ;; *) echo "::error::$f is not an update file"; exit 1 ;; esac
+          done
+          [ -n "$files" ] || { echo "::error::No update file in this push"; exit 1; }
+          studio=$(node -e 'const fs=require("fs");const s=new Set(process.argv.slice(1).map(f=>JSON.parse(fs.readFileSync(f,"utf8")).studio));if(s.size!==1)process.exit(1);console.log([...s][0])' $files) \
+            || { echo "::error::The update files must name one studio"; exit 1; }
+          echo "$studio" | grep -Eq '^[a-z0-9-]+$' || { echo "::error::Bad studio slug"; exit 1; }
+          echo "files=$files" >> "$GITHUB_OUTPUT"
+          echo "studio=$studio" >> "$GITHUB_OUTPUT"
+      - name: Make the changes as the owner, in a 20-minute session
+        id: session
+        env:
+          STUDIO: ${{ steps.pick.outputs.studio }}
+          FILES: ${{ steps.pick.outputs.files }}
+        run: |
+          token=$(openssl rand -hex 32)
+          echo "::add-mask::$token"
+          hash=$(printf '%s' "$token" | sha256sum | cut -d' ' -f1)
+          id="owner-update-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          echo "id=$id" >> "$GITHUB_OUTPUT"
+          now=$(date -u +%Y-%m-%dT%H:%M:%S.000Z)
+          exp=$(date -u -d '+20 minutes' +%Y-%m-%dT%H:%M:%S.000Z)
+          out=$(pnpm --dir workers/studio-api exec wrangler d1 execute DB --remote --env "$TARGET" --json --command "
+            INSERT INTO sessions (id, token_hash, user_id, studio_id, user_agent, created_at, last_seen_at, expires_at)
+            SELECT '$id', '$hash', m.user_id, s.id, 'owner-update', '$now', '$now', '$exp'
+              FROM studios s JOIN memberships m ON m.studio_id = s.id AND m.role = 'owner' AND m.deleted_at IS NULL
+             WHERE s.slug = '$STUDIO' ORDER BY m.created_at LIMIT 1")
+          echo "$out" | grep -Eq '"changes": *1[,}[:space:]]' || { echo "::error::No owner found for $STUDIO"; exit 1; }
+          for f in $FILES; do
+            echo "## $f" | tee -a "$GITHUB_STEP_SUMMARY"
+            STUDIO_SESSION="$token" node scripts/owner-update/run.mjs "$f" 2>&1 | tee -a "$GITHUB_STEP_SUMMARY"
+            [ "${PIPESTATUS[0]}" = 0 ] || exit 1
+          done
+      - name: Close the session
+        if: always() && steps.session.outputs.id != ''
+        working-directory: workers/studio-api
+        env:
+          ID: ${{ steps.session.outputs.id }}
+        run: pnpm exec wrangler d1 execute DB --remote --env "$TARGET" --command "DELETE FROM sessions WHERE id = '$ID'"

@@ -772,3 +772,14 @@ with no fee, notes or sale price. Any write to a show or its works bumps `catalo
 turns over. On the site: `/shows` (coming up, then past), `/shows/{slug}` with an `ExhibitionEvent`, a Shows link in
 the menu only once a page is published, and sitemap and llms.txt entries. Later, not now: the show chat app's booth and
 piece photos can be brought in as site photos on a show, by a one-way import; the two stay uncoupled.
+
+### D-183 · Owner updates through Cloudflare, without a browser sign-in · 2026-11-26 · Isaac asked; Claude built it
+Isaac asked to be able to tell Claude what to change on the site without signing in to the Studio each time, and to
+keep the Studio working for his own edits. "Owner update" (`.github/workflows/owner-update.yml`) runs an update file
+from `owner-updates/*.json`, pushed on a branch named `owner-updates/...`. It writes a 20-minute session for the
+studio's owner straight into D1 with the repo's Cloudflare token, makes each change through studio-api as that owner
+(`scripts/owner-update/run.mjs`: create or change a show, its page, booth photos with the same WebP copies the Studio
+makes, and the works shown), and always deletes the session at the end. So every change goes through the same actions,
+checks, activity log and cache bump as the Studio; nothing writes the database directly but the session row. Only
+someone who can push to this repo can run it, which is already who can deploy. The Studio's sign-in is unchanged.
+Staging only until Isaac says yes to production.

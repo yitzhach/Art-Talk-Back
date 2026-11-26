@@ -1,0 +1,9 @@
+{
+  "name": "owner-update",
+  "private": true,
+  "type": "module",
+  "description": "Owner updates through the studio API without a browser sign-in (D-183)",
+  "dependencies": {
+    "sharp": "0.34.4"
+  }
+}
